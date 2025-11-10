@@ -17,11 +17,6 @@ export interface CrawlerConfig {
    * @default '.crawler'
    */
   configDir?: string;
-  /** 
-   * 进度文件名（相对于 configDir）
-   * @default 'progress.json'
-   */
-  progressFileName?: string;
   /** Block 定位符（XPath 或 CSS 选择器），不传则表示处理单页面 */
   blockLocator?: string;
   /** 

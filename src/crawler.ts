@@ -2,6 +2,7 @@ import type { Page, Locator } from "@playwright/test";
 import pLimit from "p-limit";
 import fse from "fs-extra";
 import path from "path";
+import crypto from "crypto";
 import { TaskProgress } from "./utils/task-progress";
 import type {
   CrawlerConfig,
@@ -42,7 +43,9 @@ export class BlockCrawler {
   constructor(config: CrawlerConfig) {
     // 设置默认配置
     const configDir = config.configDir ?? ".crawler";
-    const progressFileName = config.progressFileName ?? "progress.json";
+    
+    // 根据 startUrl 生成唯一的进度文件名
+    const progressFileName = this.generateProgressFileName(config.startUrl);
     
     this.config = {
       startUrl: config.startUrl,
@@ -65,6 +68,30 @@ export class BlockCrawler {
         this.config.progressFile,
         this.config.outputDir
       );
+    }
+  }
+
+  /**
+   * 根据 URL 生成唯一的进度文件名
+   */
+  private generateProgressFileName(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      // 使用 hostname + pathname 的前8位 hash 来生成唯一标识
+      const identifier = `${urlObj.hostname}${urlObj.pathname}`;
+      const hash = crypto
+        .createHash("md5")
+        .update(identifier)
+        .digest("hex")
+        .substring(0, 8);
+      
+      // 使用 hostname 和 hash 组合，既直观又唯一
+      const sanitizedHost = urlObj.hostname.replace(/[^a-z0-9]/gi, "-");
+      return `progress-${sanitizedHost}-${hash}.json`;
+    } catch (error) {
+      // 如果 URL 解析失败，使用完整 URL 的 hash
+      const hash = crypto.createHash("md5").update(url).digest("hex").substring(0, 8);
+      return `progress-${hash}.json`;
     }
   }
 
@@ -92,7 +119,6 @@ export class BlockCrawler {
       maxConcurrency: this.config.maxConcurrency,
       outputDir: this.config.outputDir,
       configDir: this.config.configDir,
-      progressFileName: path.basename(this.config.progressFile),
       blockLocator: this.config.blockLocator,
       blockNameLocator: this.config.blockNameLocator,
       enableProgressResume: this.config.enableProgressResume,
@@ -100,6 +126,7 @@ export class BlockCrawler {
 
     await fse.outputJson(configPath, configToSave, { spaces: 2 });
     console.log(`✅ 配置已保存到: ${configPath}`);
+    console.log(`📝 进度文件将保存到: ${this.config.progressFile}`);
   }
 
   /**
