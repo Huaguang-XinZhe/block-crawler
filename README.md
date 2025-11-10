@@ -1,4 +1,4 @@
-# Block Crawler Framework
+# UI Blocks Crawler Framework
 
 基于 Playwright 的通用 Block 爬虫框架，支持受限并发、进度恢复、单页面或单 Block 处理模式。
 
@@ -13,7 +13,7 @@
 ## 项目结构
 
 ```
-playwright-demo/
+ui-blocks-crawler/
 ├── src/                          # 框架源代码
 │   ├── index.ts                  # 主入口文件
 │   ├── types.ts                  # 类型定义
@@ -347,11 +347,11 @@ npm publish --registry https://your-registry.com
 其他项目中使用：
 
 ```bash
-npm install block-crawler-framework
+npm install ui-blocks-crawler
 ```
 
 ```typescript
-import { BlockCrawler } from "block-crawler-framework";
+import { BlockCrawler } from "ui-blocks-crawler";
 ```
 
 ## License
