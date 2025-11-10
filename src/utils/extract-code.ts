@@ -1,12 +1,13 @@
 import type { Locator } from "@playwright/test";
 
+
 /**
  * 从 block 元素中提取代码内容
  * @param block - Playwright Locator 元素
  * @returns 提取的代码字符串
  */
 export async function extractCodeFromBlock(block: Locator): Promise<string> {
-  return await block.evaluate((element) => {
+  return await block.evaluate((element: Element) => {
     const pre = element.querySelector("pre");
     if (!pre) return "";
 
@@ -14,26 +15,30 @@ export async function extractCodeFromBlock(block: Locator): Promise<string> {
     const clone = pre.cloneNode(true) as HTMLElement;
 
     // 移除所有导致重复的元素
-    clone.querySelectorAll(".copy-token").forEach((el) => el.remove());
+    clone.querySelectorAll(".copy-token").forEach((el: Element) => el.remove());
 
     // 每个 summary 内的 ellipsis-token 其后所有兄弟元素都移除（它们都是 span）
-    clone.querySelectorAll("summary").forEach((summary) => {
+    clone.querySelectorAll("summary").forEach((summary: Element) => {
       const ellipsis = summary.querySelector(".ellipsis-token");
       if (ellipsis) {
         let sibling = ellipsis.nextSibling;
         while (sibling) {
           const next = sibling.nextSibling;
-          sibling.remove();
+          if (sibling.parentNode) {
+            sibling.parentNode.removeChild(sibling);
+          }
           sibling = next;
         }
-        ellipsis.remove();
+        if (ellipsis.parentNode) {
+          ellipsis.parentNode.removeChild(ellipsis);
+        }
       }
     });
 
     // 获取所有 token-line 的文本内容并用换行符连接
     const lines = Array.from(clone.querySelectorAll(".token-line"));
     return lines
-      .map((line) => (line as HTMLElement).textContent || "")
+      .map((line: Element) => (line as HTMLElement).textContent || "")
       .join("\n");
   });
 }

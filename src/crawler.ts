@@ -47,7 +47,8 @@ export class BlockCrawler {
       progressFile: config.progressFile ?? "progress.json",
       timeout: config.timeout ?? 2 * 60 * 1000,
       blockLocator: config.blockLocator,
-      blockNameLocator: config.blockNameLocator ?? "role=heading[level=1] >> role=link",
+      blockNameLocator:
+        config.blockNameLocator ?? "role=heading[level=1] >> role=link",
       enableProgressResume: config.enableProgressResume ?? true,
     };
 
@@ -87,7 +88,9 @@ export class BlockCrawler {
     console.log(`⚙️  最大并发数: ${this.config.maxConcurrency}`);
     console.log(`📂 输出目录: ${this.config.outputDir}`);
     console.log(
-      `🎯 运行模式: ${this.config.blockLocator ? "Block 处理模式" : "页面处理模式"}`
+      `🎯 运行模式: ${
+        this.config.blockLocator ? "Block 处理模式" : "页面处理模式"
+      }`
     );
 
     // 初始化任务进度
@@ -117,7 +120,9 @@ export class BlockCrawler {
       }
 
       console.log(`\n✨ 收集完成！总共 ${this.totalBlockCount} 个 blocks`);
-      console.log(`📊 总共 ${this.allCollectionLinks.length} 个集合链接待处理\n`);
+      console.log(
+        `📊 总共 ${this.allCollectionLinks.length} 个集合链接待处理\n`
+      );
 
       // 并发处理所有链接
       console.log(
@@ -144,7 +149,7 @@ export class BlockCrawler {
    */
   private async getAllTabs(page: Page): Promise<Locator[]> {
     if (this.config.tabListAriaLabel) {
-      const tabList = await page.getByRole("tablist", {
+      const tabList = page.getByRole("tablist", {
         name: this.config.tabListAriaLabel,
       });
       return await tabList.getByRole("tab").all();
@@ -177,10 +182,10 @@ export class BlockCrawler {
   private async handleSingleTab(page: Page, tab: Locator): Promise<void> {
     const text = (await tab.textContent()) ?? "";
     console.log(`   🔍 正在处理分类: ${text}`);
-    const section = await page
+    const section = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: text }) });
-    
+
     // 收集所有的链接
     await this.collectAllLinks(section);
     console.log(`   ✅ 分类 [${text}] 处理完成`);
@@ -197,7 +202,7 @@ export class BlockCrawler {
     // 遍历，获取 a 标签内部的 block 集合名称、内部 block 个数、集合链接
     for (let i = 0; i < aTags.length; i++) {
       const aTag = aTags[i];
-      
+
       // 通过 XPath 定位
       const blockCollectionName = await aTag
         .locator("xpath=/div[2]/div[1]/div[1]")
@@ -254,11 +259,15 @@ export class BlockCrawler {
           try {
             await this.handleSingleLink(page, collectionLink.link, index === 0);
             completed++;
-            const linkName = collectionLink.link.split("/").pop() || collectionLink.link;
-            console.log(`✅ [${completed + failed}/${total}] 完成: ${linkName}\n`);
+            const linkName =
+              collectionLink.link.split("/").pop() || collectionLink.link;
+            console.log(
+              `✅ [${completed + failed}/${total}] 完成: ${linkName}\n`
+            );
           } catch (error) {
             failed++;
-            const linkName = collectionLink.link.split("/").pop() || collectionLink.link;
+            const linkName =
+              collectionLink.link.split("/").pop() || collectionLink.link;
             console.error(
               `❌ [${completed + failed}/${total}] 失败: ${linkName}\n`,
               error
@@ -291,7 +300,7 @@ export class BlockCrawler {
 
     try {
       await newPage.goto(url);
-      
+
       // 根据是否传入 blockLocator 决定处理模式
       if (this.config.blockLocator) {
         // Block 处理模式
@@ -431,4 +440,3 @@ export class BlockCrawler {
     return this.config;
   }
 }
-
