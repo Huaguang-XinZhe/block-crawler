@@ -29,6 +29,14 @@ interface InternalConfig {
   blockLocator?: string;
   blockNameLocator: string;
   enableProgressResume: boolean;
+  startUrlWaitOptions?: {
+    waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+    timeout?: number;
+  };
+  collectionLinkWaitOptions?: {
+    waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+    timeout?: number;
+  };
   collectionLinkLocator?: string;
   collectionNameLocator?: string;
   collectionCountLocator?: string;
@@ -65,6 +73,8 @@ export class BlockCrawler {
       blockNameLocator:
         config.blockNameLocator ?? "role=heading[level=1] >> role=link",
       enableProgressResume: config.enableProgressResume ?? true,
+      startUrlWaitOptions: config.startUrlWaitOptions,
+      collectionLinkWaitOptions: config.collectionLinkWaitOptions,
       collectionLinkLocator: config.collectionLinkLocator,
       collectionNameLocator: config.collectionNameLocator,
       collectionCountLocator: config.collectionCountLocator,
@@ -171,6 +181,8 @@ export class BlockCrawler {
       blockLocator: this.config.blockLocator,
       blockNameLocator: this.config.blockNameLocator,
       enableProgressResume: this.config.enableProgressResume,
+      startUrlWaitOptions: this.config.startUrlWaitOptions,
+      collectionLinkWaitOptions: this.config.collectionLinkWaitOptions,
       collectionLinkLocator: this.config.collectionLinkLocator,
       collectionNameLocator: this.config.collectionNameLocator,
       collectionCountLocator: this.config.collectionCountLocator,
@@ -220,7 +232,7 @@ export class BlockCrawler {
     try {
       // 访问目标链接
       console.log("\n📡 正在访问目标链接...");
-      await page.goto(this.config.startUrl);
+      await page.goto(this.config.startUrl, this.config.startUrlWaitOptions);
       console.log("✅ 页面加载完成");
 
       // 获取所有分类标签
@@ -273,7 +285,7 @@ export class BlockCrawler {
       return await tabList.getByRole("tab").all();
     } else {
       // 如果没有指定 aria-label，获取第一个 tablist
-      const tabList = page.locator("role=tablist").first();
+      const tabList = page.getByRole("tablist").first();
       return await tabList.getByRole("tab").all();
     }
   }
@@ -311,28 +323,39 @@ export class BlockCrawler {
 
   /**
    * 获取 tab 对应的 section 内容区域
-   * 子类可以覆写此方法以适配不同的 DOM 结构
+   * ⚠️ 此方法必须由子类实现，框架不提供默认实现
    * 
    * @param page - 页面对象
    * @param tabText - tab 的文本内容
    * @returns tab 对应的 section 元素
    * 
    * @example
-   * // 默认实现（heroui-pro）
-   * protected getTabSection(page: Page, tabText: string): Locator {
-   *   return page.locator("section").filter({ has: page.getByRole("heading", { name: tabText }) });
+   * // heroui-pro 实现
+   * class HeroUICrawler extends BlockCrawler {
+   *   protected getTabSection(page: Page, tabText: string): Locator {
+   *     return page.locator("section").filter({ has: page.getByRole("heading", { name: tabText }) });
+   *   }
    * }
    * 
    * @example
-   * // shadcndesign 自定义实现
-   * protected getTabSection(page: Page, tabText: string): Locator {
-   *   return page.getByRole("tabpanel", { name: tabText });
+   * // shadcndesign 实现
+   * class ShadcnCrawler extends BlockCrawler {
+   *   protected getTabSection(page: Page, tabText: string): Locator {
+   *     return page.getByRole("tabpanel", { name: tabText });
+   *   }
    * }
    */
   protected getTabSection(page: Page, tabText: string): Locator {
-    return page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: tabText }) });
+    throw new Error(
+      "getTabSection() 方法必须由子类实现！\n" +
+      "请创建一个继承自 BlockCrawler 的类，并重写 getTabSection 方法。\n\n" +
+      "示例：\n" +
+      "class MyCrawler extends BlockCrawler {\n" +
+      "  protected getTabSection(page: Page, tabText: string): Locator {\n" +
+      "    return page.locator('section').filter({ has: page.getByRole('heading', { name: tabText }) });\n" +
+      "  }\n" +
+      "}"
+    );
   }
 
   /**
@@ -478,7 +501,7 @@ export class BlockCrawler {
     const newPage = isFirst ? page : await page.context().newPage();
 
     try {
-      await newPage.goto(url);
+      await newPage.goto(url, this.config.collectionLinkWaitOptions);
 
       // 根据是否传入 blockLocator 决定处理模式
       if (this.config.blockLocator) {

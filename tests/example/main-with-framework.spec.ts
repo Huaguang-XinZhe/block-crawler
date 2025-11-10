@@ -1,19 +1,30 @@
-import { test, type Locator } from "@playwright/test";
+import { test, type Locator, type Page } from "@playwright/test";
 import fse from "fs-extra";
 import { BlockCrawler, type BlockContext } from "../../src";
 import { extractCodeFromBlock } from "../utils/extract-code";
 
 /**
+ * heroui-pro 爬虫 - 继承 BlockCrawler 并重写 getTabSection 方法
+ */
+class HeroUICrawler extends BlockCrawler {
+  protected getTabSection(page: Page, tabText: string): Locator {
+    // heroui-pro 使用 section 并通过 heading 定位
+    return page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: tabText }) });
+  }
+}
+
+/**
  * 使用新框架重构后的爬虫示例
  * 展示如何使用 BlockCrawler 框架来爬取组件
  */
-
 test("使用 BlockCrawler 框架爬取组件", async ({ page }) => {
   // 设置超时
   test.setTimeout(2 * 60 * 1000);
 
-  // 创建爬虫实例，配置化参数
-  const crawler = new BlockCrawler({
+  // 创建 heroui 爬虫实例，配置化参数
+  const crawler = new HeroUICrawler({
     startUrl: "https://pro.mufengapp.cn/components",
     tabListAriaLabel: "Categories",
     maxConcurrency: 5,

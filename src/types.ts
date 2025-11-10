@@ -26,6 +26,25 @@ export interface CrawlerConfig {
   blockNameLocator?: string;
   /** 是否启用进度恢复功能 */
   enableProgressResume?: boolean;
+
+  // ========== 等待配置 ==========
+  /**
+   * 访问起始 URL 后的等待选项
+   * @example { waitUntil: 'networkidle' }
+   * @example { waitUntil: 'domcontentloaded' }
+   */
+  startUrlWaitOptions?: {
+    waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+    timeout?: number;
+  };
+  /**
+   * 访问集合链接后的等待选项
+   * @example { waitUntil: 'networkidle' }
+   */
+  collectionLinkWaitOptions?: {
+    waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+    timeout?: number;
+  };
   
   // ========== 链接收集定位符配置 ==========
   /**
