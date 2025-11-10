@@ -29,6 +29,9 @@ interface InternalConfig {
   blockLocator?: string;
   blockNameLocator: string;
   enableProgressResume: boolean;
+  collectionLinkLocator: string;
+  collectionNameLocator: string;
+  collectionCountLocator: string;
 }
 
 export class BlockCrawler {
@@ -62,6 +65,11 @@ export class BlockCrawler {
       blockNameLocator:
         config.blockNameLocator ?? "role=heading[level=1] >> role=link",
       enableProgressResume: config.enableProgressResume ?? true,
+      collectionLinkLocator: config.collectionLinkLocator ?? "section > a",
+      collectionNameLocator:
+        config.collectionNameLocator ?? "xpath=/div[2]/div[1]/div[1]",
+      collectionCountLocator:
+        config.collectionCountLocator ?? "xpath=/div[2]/div[1]/div[2]",
     };
 
     this.limit = pLimit(this.config.maxConcurrency);
@@ -165,6 +173,9 @@ export class BlockCrawler {
       blockLocator: this.config.blockLocator,
       blockNameLocator: this.config.blockNameLocator,
       enableProgressResume: this.config.enableProgressResume,
+      collectionLinkLocator: this.config.collectionLinkLocator,
+      collectionNameLocator: this.config.collectionNameLocator,
+      collectionCountLocator: this.config.collectionCountLocator,
     };
 
     await fse.outputJson(configPath, configToSave, { spaces: 2 });
@@ -302,30 +313,33 @@ export class BlockCrawler {
 
   /**
    * 收集所有的链接
+   * 使用配置的定位符来适配不同网站的 DOM 结构
    */
   private async collectAllLinks(section: Locator): Promise<void> {
-    // 获取子 section 中的所有 a 标签
-    const aTags = await section.locator("section > a").all();
-    console.log(`      🔗 找到 ${aTags.length} 个集合链接`);
+    // 使用配置的定位符获取所有链接
+    const linkElements = await section
+      .locator(this.config.collectionLinkLocator)
+      .all();
+    console.log(`      🔗 找到 ${linkElements.length} 个集合链接`);
 
-    // 遍历，获取 a 标签内部的 block 集合名称、内部 block 个数、集合链接
-    for (let i = 0; i < aTags.length; i++) {
-      const aTag = aTags[i];
+    // 遍历，获取链接内部的 block 集合名称、内部 block 个数、集合链接
+    for (let i = 0; i < linkElements.length; i++) {
+      const linkElement = linkElements[i];
 
-      // 通过 XPath 定位
-      const blockCollectionName = await aTag
-        .locator("xpath=/div[2]/div[1]/div[1]")
+      // 使用配置的定位符获取名称和数量
+      const blockCollectionName = await linkElement
+        .locator(this.config.collectionNameLocator)
         .textContent();
-      const blockCountText = await aTag
-        .locator("xpath=/div[2]/div[1]/div[2]")
+      const blockCountText = await linkElement
+        .locator(this.config.collectionCountLocator)
         .textContent();
-      const collectionLink = await aTag.getAttribute("href");
+      const collectionLink = await linkElement.getAttribute("href");
 
       const blockCount = this.extractBlockCount(blockCountText);
 
       // 树状结构打印
       console.log(
-        `      ├─ [${i + 1}/${aTags.length}] 📦 ${blockCollectionName}`
+        `      ├─ [${i + 1}/${linkElements.length}] 📦 ${blockCollectionName}`
       );
       console.log(`      │  ├─ Path: ${collectionLink}`);
       console.log(`      │  └─ Count: ${blockCountText}`);

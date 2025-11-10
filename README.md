@@ -202,6 +202,8 @@ class CustomCrawler extends BlockCrawler {
 
 ## 配置选项
 
+### 基础配置
+
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
 | `startUrl` | string | - | 起始 URL（必填，进度文件和输出目录将根据此 URL 自动生成） |
@@ -212,6 +214,29 @@ class CustomCrawler extends BlockCrawler {
 | `outputDir` | string | 自动生成 | 输出目录（不指定时根据 `startUrl` 自动生成，如 `output/example-com-a1b2c3`） |
 | `configDir` | string | ".crawler" | 配置目录（存放进度文件等） |
 | `enableProgressResume` | boolean | true | 是否启用进度恢复 |
+
+### 链接收集定位符配置
+
+用于适配不同网站的 DOM 结构，自定义链接收集逻辑。
+
+| 配置项 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `collectionLinkLocator` | string? | `"section > a"` | 集合链接容器定位符（在 section 下查找所有链接） |
+| `collectionNameLocator` | string? | `"xpath=/div[2]/div[1]/div[1]"` | 集合名称定位符（在链接元素下查找名称） |
+| `collectionCountLocator` | string? | `"xpath=/div[2]/div[1]/div[2]"` | 集合数量文本定位符（在链接元素下查找数量文本） |
+
+**示例：shadcndesign 网站配置**
+
+```typescript
+const crawler = new BlockCrawler({
+  startUrl: "https://www.shadcndesign.com/pro-blocks",
+  blockLocator: "xpath=//main/div/div/div",
+  // 自定义定位符以适配 shadcndesign 的 DOM 结构
+  collectionLinkLocator: "role=link",
+  collectionNameLocator: '[data-slot="card-title"]',
+  collectionCountLocator: "p",
+});
+```
 
 **自动生成规则：**
 - **进度文件**：根据 `startUrl` 自动生成唯一的进度文件名

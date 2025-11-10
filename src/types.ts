@@ -26,6 +26,26 @@ export interface CrawlerConfig {
   blockNameLocator?: string;
   /** 是否启用进度恢复功能 */
   enableProgressResume?: boolean;
+  
+  // ========== 链接收集定位符配置 ==========
+  /**
+   * 集合链接容器定位符（在 section 下查找所有链接）
+   * @default 'section > a'
+   * @example 'role=link' (shadcndesign)
+   */
+  collectionLinkLocator?: string;
+  /**
+   * 集合名称定位符（在链接元素下查找名称）
+   * @default 'xpath=/div[2]/div[1]/div[1]'
+   * @example '[data-slot="card-title"]' (shadcndesign)
+   */
+  collectionNameLocator?: string;
+  /**
+   * 集合数量文本定位符（在链接元素下查找数量文本）
+   * @default 'xpath=/div[2]/div[1]/div[2]'
+   * @example 'p' (shadcndesign)
+   */
+  collectionCountLocator?: string;
 }
 
 /**
