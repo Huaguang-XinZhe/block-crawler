@@ -1,5 +1,7 @@
 import type { Page, Locator } from "@playwright/test";
 import pLimit from "p-limit";
+import fse from "fs-extra";
+import path from "path";
 import { TaskProgress } from "./utils/task-progress";
 import type {
   CrawlerConfig,
@@ -21,6 +23,7 @@ interface InternalConfig {
   tabListAriaLabel?: string;
   maxConcurrency: number;
   outputDir: string;
+  configDir: string;
   progressFile: string;
   blockLocator?: string;
   blockNameLocator: string;
@@ -38,12 +41,16 @@ export class BlockCrawler {
 
   constructor(config: CrawlerConfig) {
     // 设置默认配置
+    const configDir = config.configDir ?? ".crawler";
+    const progressFileName = config.progressFileName ?? "progress.json";
+    
     this.config = {
       startUrl: config.startUrl,
       tabListAriaLabel: config.tabListAriaLabel,
       maxConcurrency: config.maxConcurrency ?? 5,
       outputDir: config.outputDir ?? "output",
-      progressFile: config.progressFile ?? "progress.json",
+      configDir,
+      progressFile: path.join(configDir, progressFileName),
       blockLocator: config.blockLocator,
       blockNameLocator:
         config.blockNameLocator ?? "role=heading[level=1] >> role=link",
@@ -59,6 +66,40 @@ export class BlockCrawler {
         this.config.outputDir
       );
     }
+  }
+
+  /**
+   * 从配置文件创建爬虫实例
+   * @param configPath 配置文件路径，默认为 '.crawler/config.json'
+   */
+  static async fromConfigFile(configPath: string = ".crawler/config.json"): Promise<BlockCrawler> {
+    if (!(await fse.pathExists(configPath))) {
+      throw new Error(`配置文件不存在: ${configPath}`);
+    }
+
+    const config = await fse.readJson(configPath);
+    return new BlockCrawler(config);
+  }
+
+  /**
+   * 保存配置到文件
+   * @param configPath 配置文件路径，默认为 '.crawler/config.json'
+   */
+  async saveConfigFile(configPath: string = ".crawler/config.json"): Promise<void> {
+    const configToSave: CrawlerConfig = {
+      startUrl: this.config.startUrl,
+      tabListAriaLabel: this.config.tabListAriaLabel,
+      maxConcurrency: this.config.maxConcurrency,
+      outputDir: this.config.outputDir,
+      configDir: this.config.configDir,
+      progressFileName: path.basename(this.config.progressFile),
+      blockLocator: this.config.blockLocator,
+      blockNameLocator: this.config.blockNameLocator,
+      enableProgressResume: this.config.enableProgressResume,
+    };
+
+    await fse.outputJson(configPath, configToSave, { spaces: 2 });
+    console.log(`✅ 配置已保存到: ${configPath}`);
   }
 
   /**

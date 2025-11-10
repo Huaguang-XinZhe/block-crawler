@@ -3,7 +3,11 @@ node_modules/
 /playwright-report/
 /playwright/.cache/
 output/
-progress.json
-progress-pages.json
 dist/
 *.tsbuildinfo
+
+# 爬虫配置和进度文件
+.crawler/progress*.json
+.crawler/config.json
+.crawler-*/
+progress.json

@@ -45,6 +45,12 @@ pnpm build
 
 ### 3. 运行示例
 
+**使用配置文件的示例：**
+
+```bash
+pnpm test tests/use-config-file.spec.ts
+```
+
 **Block 处理模式示例：**
 
 ```bash
@@ -65,9 +71,42 @@ pnpm test tests/main.spec.ts
 
 ## 快速开始
 
-### Block 处理模式
+### 方式 1: 使用配置文件（推荐）
 
-适用于需要处理页面中多个相似组件的场景。
+**首次使用：创建配置文件**
+
+```typescript
+import { BlockCrawler } from "./src";
+
+const crawler = new BlockCrawler({
+  startUrl: "https://example.com/components",
+  blockLocator: "xpath=//main/div/div/div",
+  maxConcurrency: 5,
+});
+
+// 保存配置到 .crawler/config.json
+await crawler.saveConfigFile();
+```
+
+**后续使用：从配置文件加载**
+
+```typescript
+import { test } from "@playwright/test";
+import { BlockCrawler } from "./src";
+
+test("爬取组件", async ({ page }) => {
+  // 从 .crawler/config.json 加载配置
+  const crawler = await BlockCrawler.fromConfigFile();
+  
+  crawler.onBlock(async (context) => {
+    // 处理逻辑...
+  });
+
+  await crawler.run(page);
+});
+```
+
+### 方式 2: 直接传入配置
 
 ```typescript
 import { test } from "@playwright/test";
@@ -82,8 +121,7 @@ test("爬取组件", async ({ page }) => {
   });
 
   crawler.onBlock(async (context: BlockContext) => {
-    const { block, blockName, currentPath, outputDir } = context;
-    // currentPath = URL路径 + blockName
+    const { block, blockName, blockPath, outputDir } = context;
     // 自定义处理逻辑...
   });
 
@@ -144,7 +182,8 @@ class CustomCrawler extends BlockCrawler {
 | `tabListAriaLabel` | string? | undefined | 分类标签的 aria-label |
 | `maxConcurrency` | number | 5 | 最大并发页面数 |
 | `outputDir` | string | "output" | 输出目录 |
-| `progressFile` | string | "progress.json" | 进度文件路径 |
+| `configDir` | string | ".crawler" | 配置目录（存放进度文件等） |
+| `progressFileName` | string | "progress.json" | 进度文件名 |
 | `enableProgressResume` | boolean | true | 是否启用进度恢复 |
 
 ## Context 对象

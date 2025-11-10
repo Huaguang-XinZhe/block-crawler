@@ -1,0 +1,12 @@
+{
+  "startUrl": "https://example.com/components",
+  "tabListAriaLabel": "Categories",
+  "maxConcurrency": 5,
+  "outputDir": "output",
+  "configDir": ".crawler",
+  "progressFileName": "progress.json",
+  "blockLocator": "xpath=//main/div/div/div",
+  "blockNameLocator": "role=heading[level=1] >> role=link",
+  "enableProgressResume": true
+}
+

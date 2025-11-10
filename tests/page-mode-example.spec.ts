@@ -17,7 +17,7 @@ test("使用页面处理模式爬取", async ({ page }) => {
     tabListAriaLabel: "Categories",
     maxConcurrency: 3,
     outputDir: "output-pages",
-    progressFile: "progress-pages.json",
+    configDir: ".crawler-pages",
     // 不传 blockLocator，使用页面处理模式
     enableProgressResume: true,
   });
