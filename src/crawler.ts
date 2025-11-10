@@ -153,6 +153,27 @@ export class BlockCrawler {
   }
 
   /**
+   * 获取输出目录路径
+   */
+  get outputDir(): string {
+    return this.config.outputDir;
+  }
+
+  /**
+   * 获取配置目录路径
+   */
+  get configDir(): string {
+    return this.config.configDir;
+  }
+
+  /**
+   * 获取进度文件路径
+   */
+  get progressFile(): string {
+    return this.config.progressFile;
+  }
+
+  /**
    * 从配置文件创建爬虫实例
    * @param configPath 配置文件路径，默认为 '.crawler/config.json'
    */

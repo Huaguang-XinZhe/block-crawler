@@ -15,23 +15,27 @@ test("shadcndesign", async ({ page }) => {
       waitUntil: "domcontentloaded",
     },
     // shadcndesign 的定位符配置
-    tabSectionLocator: '[role="tabpanel"][aria-label="{tabText}"]', // 配置 tabSection 定位符
+    tabSectionLocator: '[role="tabpanel"]:has-text("{tabText}")', // 配置 tabSection 定位符
     collectionLinkLocator: "role=link", // 在 tabpanel 中查找链接
     collectionNameLocator: '[data-slot="card-title"]', // 通过 data-slot 找到标题
     collectionCountLocator: "p", // 通过 p 标签找到数量文本
   } as CrawlerConfig);
 
+  const names: string[] = [];
+
   // 设置页面处理器并自动运行
   await crawler.onPage(
     page,
-    async ({ currentPage, outputDir }: PageContext) => {
-      const names = await getPageBlockNames(currentPage);
-      // 输出到文件
-      await fse.outputFile(
-        `${outputDir}/shadcndesign-blocks-names.json`,
-        JSON.stringify(names, null, 2)
-      );
+    async ({ currentPage }: PageContext) => {
+      const blockNames = await getPageBlockNames(currentPage);
+      names.push(...blockNames);
     }
+  );
+
+  // 输出到文件
+  await fse.outputFile(
+    `${crawler.outputDir}/shadcndesign-blocks-names.json`,
+    JSON.stringify(names, null, 2)
   );
 });
 
@@ -49,6 +53,7 @@ async function getPageBlockNames(page: Page) {
         console.log(`🔍 name: ${name}`);
         return name;
       }
+      return null;
     })
   );
 
@@ -62,5 +67,6 @@ async function getPageBlockNames(page: Page) {
   //     console.log(`🔍 name: ${name}`);
   //   }
   // }
-  return names;
+
+  return names.filter((name) => name !== null);
 }
