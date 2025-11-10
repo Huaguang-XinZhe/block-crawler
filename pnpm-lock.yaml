@@ -42,6 +42,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      ui-blocks-crawler:
+        specifier: ^1.0.0
+        version: 1.0.0(@playwright/test@1.56.1)
 
 packages:
 
@@ -1071,6 +1074,11 @@ packages:
   ufo@1.6.1:
     resolution: {integrity: sha512-9a4/uxlTWJ4+a5i0ooc1rU7C7YOw3wT+UGqdeNNHWnOF9qcMBgLRS+4IYUqbczewFx4mLEig6gawh7X6mFlEkA==}
 
+  ui-blocks-crawler@1.0.0:
+    resolution: {integrity: sha512-elWU7O0PhZzd1rQtYuECsrSWZyI6ia86T/ifIYVAGItyzDCD7jqWo9KEqDp1uc/jeyUNITMNMk8fcbmVeffF0g==}
+    peerDependencies:
+      '@playwright/test': ^1.0.0
+
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
@@ -2083,6 +2091,12 @@ snapshots:
   typescript@5.9.3: {}
 
   ufo@1.6.1: {}
+
+  ui-blocks-crawler@1.0.0(@playwright/test@1.56.1):
+    dependencies:
+      '@playwright/test': 1.56.1
+      fs-extra: 11.3.2
+      p-limit: 7.2.0
 
   undici-types@7.16.0: {}
 
