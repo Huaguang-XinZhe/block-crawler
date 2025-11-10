@@ -78,7 +78,7 @@ async function saveAllLanguageFiles(
   context: BlockContext,
   language: "ts" | "js"
 ) {
-  const { block, currentPath, blockName } = context;
+  const { block, currentPath, blockName, outputDir } = context;
 
   // 复制当前文件的内容
   const fileTabs = await block
@@ -102,14 +102,13 @@ async function saveAllLanguageFiles(
     const code = await extractCodeFromBlock(block);
 
     // 输出到文件
-    if (blockName && fileName) {
+    if (fileName) {
       await fse.outputFile(
-        `${context.outputDir}/${currentPath}/${blockName}/${language}/${fileName}`,
+        `${outputDir}/${currentPath}/${language}/${fileName}`,
         code
       );
     } else {
-      console.warn("blockName or fileName is null");
-      console.log(`blockName: ${blockName}, fileName: ${fileName}`);
+      console.warn("fileName is null");
     }
   }
 }

@@ -24,6 +24,7 @@ interface InternalConfig {
   progressFile: string;
   timeout: number;
   blockLocator?: string;
+  blockNameLocator: string;
   enableProgressResume: boolean;
 }
 
@@ -46,6 +47,7 @@ export class BlockCrawler {
       progressFile: config.progressFile ?? "progress.json",
       timeout: config.timeout ?? 2 * 60 * 1000,
       blockLocator: config.blockLocator,
+      blockNameLocator: config.blockNameLocator ?? "role=heading[level=1] >> role=link",
       enableProgressResume: config.enableProgressResume ?? true,
     };
 
@@ -337,7 +339,7 @@ export class BlockCrawler {
     }
 
     // 拿到所有 block 节点
-    const blocks = await page.locator(this.config.blockLocator!).all();
+    const blocks = await this.getAllBlocks(page);
 
     // 遍历 blocks
     for (let i = 0; i < blocks.length; i++) {
@@ -347,12 +349,20 @@ export class BlockCrawler {
   }
 
   /**
+   * 获取页面中的所有 Block 元素
+   * 可以被子类覆盖以自定义获取逻辑
+   */
+  protected async getAllBlocks(page: Page): Promise<Locator[]> {
+    return await page.locator(this.config.blockLocator!).all();
+  }
+
+  /**
    * 处理单个 Block
    */
   private async handleSingleBlock(
     page: Page,
     block: Locator,
-    currentPath: string
+    urlPath: string
   ): Promise<void> {
     if (!this.blockHandler) {
       return;
@@ -368,14 +378,14 @@ export class BlockCrawler {
 
     console.log(`\n🔍 正在处理 block: ${blockName}`);
 
-    // 构建 block 完整路径（移除前导斜杠，确保格式一致）
-    const normalizedPath = currentPath.startsWith("/")
-      ? currentPath.slice(1)
-      : currentPath;
-    const blockPath = `${normalizedPath}/${blockName}`;
+    // 构建当前路径（URL 路径 + Block 名称）
+    const normalizedUrlPath = urlPath.startsWith("/")
+      ? urlPath.slice(1)
+      : urlPath;
+    const currentPath = `${normalizedUrlPath}/${blockName}`;
 
     // 检查是否已完成
-    if (this.taskProgress?.isComplete(blockPath)) {
+    if (this.taskProgress?.isComplete(currentPath)) {
       console.log(`⏭️  跳过已完成的 block: ${blockName}`);
       return;
     }
@@ -385,14 +395,13 @@ export class BlockCrawler {
       block,
       currentPath,
       blockName,
-      blockPath,
       outputDir: this.config.outputDir,
     };
 
     await this.blockHandler(context);
 
     // 标记为已完成
-    this.taskProgress?.markComplete(blockPath);
+    this.taskProgress?.markComplete(currentPath);
   }
 
   /**
@@ -401,10 +410,7 @@ export class BlockCrawler {
    */
   protected async getBlockName(block: Locator): Promise<string | null> {
     try {
-      return await block
-        .getByRole("heading", { level: 1 })
-        .getByRole("link")
-        .textContent();
+      return await block.locator(this.config.blockNameLocator).textContent();
     } catch {
       // 如果获取失败，返回 null
       return null;

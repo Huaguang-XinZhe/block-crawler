@@ -18,6 +18,11 @@ export interface CrawlerConfig {
   timeout?: number;
   /** Block 定位符（XPath 或 CSS 选择器），不传则表示处理单页面 */
   blockLocator?: string;
+  /** 
+   * Block 名称定位符，用于获取 Block 名称
+   * @default 'role=heading[level=1] >> role=link'
+   */
+  blockNameLocator?: string;
   /** 是否启用进度恢复功能 */
   enableProgressResume?: boolean;
 }
@@ -42,12 +47,10 @@ export interface BlockContext {
   page: Page;
   /** Block 元素 */
   block: Locator;
-  /** 当前路径（相对路径） */
+  /** 当前路径（URL 路径 + Block 名称） */
   currentPath: string;
   /** Block 名称 */
   blockName: string;
-  /** Block 完整路径 */
-  blockPath: string;
   /** 输出目录 */
   outputDir: string;
 }

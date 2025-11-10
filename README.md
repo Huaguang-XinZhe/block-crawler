@@ -2,6 +2,14 @@
 
 基于 Playwright 的通用 Block 爬虫框架，支持受限并发、进度恢复、单页面或单 Block 处理模式。
 
+## 特性
+
+✨ **双模式支持** - Block 模式和页面模式自由切换  
+🚀 **受限并发** - 可配置并发数，避免封禁  
+💾 **进度恢复** - 支持中断后继续爬取  
+⚙️ **完全配置化** - 所有参数可配置  
+🔧 **易于扩展** - 提供 protected 方法供子类覆盖
+
 ## 项目结构
 
 ```
@@ -18,8 +26,7 @@ playwright-demo/
 │   ├── main-with-framework.spec.ts  # Block 模式示例
 │   └── page-mode-example.spec.ts    # 页面模式示例
 ├── dist/                         # 构建输出目录
-├── output/                       # 爬取结果输出目录
-└── FRAMEWORK.md                  # 详细的框架文档
+└── output/                       # 爬取结果输出目录
 ```
 
 ## 快速开始
@@ -56,7 +63,7 @@ pnpm test tests/page-mode-example.spec.ts
 pnpm test tests/main.spec.ts
 ```
 
-## 使用方式
+## 快速开始
 
 ### Block 处理模式
 
@@ -69,13 +76,15 @@ import { BlockCrawler, type BlockContext } from "./src";
 test("爬取组件", async ({ page }) => {
   const crawler = new BlockCrawler({
     startUrl: "https://example.com/components",
-    blockLocator: "xpath=//main/div/div/div", // 指定 Block 定位符
+    blockLocator: "xpath=//main/div/div/div",
+    blockNameLocator: "role=heading[level=1] >> role=link", // 可选，默认值
     maxConcurrency: 5,
   });
 
   crawler.onBlock(async (context: BlockContext) => {
-    // 自定义处理每个 Block
-    console.log(`处理: ${context.blockName}`);
+    const { block, blockName, currentPath, outputDir } = context;
+    // currentPath = URL路径 + blockName
+    // 自定义处理逻辑...
   });
 
   await crawler.run(page);
@@ -93,71 +102,37 @@ import { BlockCrawler, type PageContext } from "./src";
 test("爬取页面", async ({ page }) => {
   const crawler = new BlockCrawler({
     startUrl: "https://example.com/pages",
-    // 不传 blockLocator，使用页面模式
     maxConcurrency: 3,
+    // 不传 blockLocator = 页面模式
   });
 
   crawler.onPage(async (context: PageContext) => {
-    // 自定义处理整个页面
-    console.log(`处理: ${context.currentPath}`);
+    const { page, currentPath, outputDir } = context;
+    // 自定义处理逻辑...
   });
 
   await crawler.run(page);
 });
 ```
 
-## 核心功能
+### 扩展框架
 
-### ✨ 双模式支持
-
-- **Block 模式**：自动遍历页面中的 Block 元素
-- **页面模式**：直接处理整个页面
-
-### 🚀 受限并发
-
-使用 `p-limit` 实现并发控制，避免过多请求。
+通过继承 `BlockCrawler` 可以自定义核心逻辑：
 
 ```typescript
-{
-  maxConcurrency: 5  // 最多同时打开 5 个页面
+class CustomCrawler extends BlockCrawler {
+  // 自定义获取所有 Block 的逻辑
+  protected async getAllBlocks(page: Page): Promise<Locator[]> {
+    return await page.locator(".custom-block").all();
+  }
+
+  // 自定义获取 Block 名称的逻辑
+  protected async getBlockName(block: Locator): Promise<string | null> {
+    return await block.locator(".title").textContent();
+  }
 }
 ```
 
-### 💾 进度恢复
-
-自动保存进度，意外中断后可继续。
-
-```typescript
-{
-  enableProgressResume: true,
-  progressFile: "progress.json"
-}
-```
-
-### 📊 友好日志
-
-清晰的树状结构展示爬取过程。
-
-```
-🚀 ===== 开始执行爬虫任务 =====
-📍 目标URL: https://example.com
-⚙️  最大并发数: 5
-📂 输出目录: output
-🎯 运行模式: Block 处理模式
-
-📑 正在获取所有分类标签...
-✅ 找到 3 个分类标签
-
-🔄 开始遍历所有分类标签...
-📌 [1/3] 处理分类标签...
-   🖱️  点击标签: Components
-   🔍 正在处理分类: Components
-      🔗 找到 5 个集合链接
-      ├─ [1/5] 📦 Authentication
-      │  ├─ Path: /components/authentication
-      │  └─ Count: 10 blocks
-...
-```
 
 ## 配置选项
 
@@ -165,6 +140,7 @@ test("爬取页面", async ({ page }) => {
 |--------|------|--------|------|
 | `startUrl` | string | - | 起始 URL（必填） |
 | `blockLocator` | string? | undefined | Block 定位符（传入则启用 Block 模式） |
+| `blockNameLocator` | string? | `role=heading[level=1] >> role=link` | Block 名称定位符 |
 | `tabListAriaLabel` | string? | undefined | 分类标签的 aria-label |
 | `maxConcurrency` | number | 5 | 最大并发页面数 |
 | `outputDir` | string | "output" | 输出目录 |
@@ -172,9 +148,29 @@ test("爬取页面", async ({ page }) => {
 | `timeout` | number | 120000 | 超时时间（毫秒） |
 | `enableProgressResume` | boolean | true | 是否启用进度恢复 |
 
-## API 文档
+## Context 对象
 
-详细的 API 文档请查看 [FRAMEWORK.md](./FRAMEWORK.md)
+### BlockContext
+
+```typescript
+interface BlockContext {
+  page: Page;           // 当前页面
+  block: Locator;       // Block 元素
+  currentPath: string;  // URL路径 + Block名称
+  blockName: string;    // Block 名称
+  outputDir: string;    // 输出目录
+}
+```
+
+### PageContext
+
+```typescript
+interface PageContext {
+  page: Page;           // 当前页面
+  currentPath: string;  // 当前 URL 路径
+  outputDir: string;    // 输出目录
+}
+```
 
 ## 开发命令
 
@@ -196,6 +192,11 @@ pnpm test:debug
 
 # 有头模式（显示浏览器）
 pnpm test:headed
+
+# 版本管理（使用 changesets）
+pnpm changeset        # 创建 changeset
+pnpm version          # 应用 changesets 并更新版本
+pnpm release          # 构建并发布
 ```
 
 ## 技术栈
@@ -206,45 +207,29 @@ pnpm test:headed
 - **fs-extra** - 文件操作
 - **tsup** - 快速构建工具
 
-## 迁移指南
+## 版本管理
 
-### 从原始实现迁移到框架
+本项目使用 [Changesets](https://github.com/changesets/changesets) 进行版本管理。
 
-**原始实现：**
+### 发布流程
 
-```typescript
-test("test", async ({ page }) => {
-  const START_URL = "https://example.com";
-  const MAX_PAGE_COUNT = 5;
-  
-  await page.goto(START_URL);
-  // ... 大量代码
-});
-```
+1. **创建 changeset**
+   ```bash
+   pnpm changeset
+   ```
+   选择版本类型（major/minor/patch）并描述更改。
 
-**使用框架后：**
+2. **应用 changesets**
+   ```bash
+   pnpm version
+   ```
+   自动更新版本号和生成 CHANGELOG。
 
-```typescript
-test("test", async ({ page }) => {
-  const crawler = new BlockCrawler({
-    startUrl: "https://example.com",
-    maxConcurrency: 5,
-    blockLocator: "xpath=//main/div/div/div",
-  });
-
-  crawler.onBlock(async (context) => {
-    // 只需实现 Block 处理逻辑
-  });
-
-  await crawler.run(page);
-});
-```
-
-**优势：**
-- ✅ 配置与逻辑分离
-- ✅ 代码更简洁（从 388 行减少到 ~50 行）
-- ✅ 可复用性强
-- ✅ 易于维护和扩展
+3. **发布到 npm**
+   ```bash
+   pnpm release
+   ```
+   构建并发布到 npm 仓库。
 
 ## 作为 npm 包使用
 

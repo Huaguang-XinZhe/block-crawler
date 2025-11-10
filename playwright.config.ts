@@ -29,7 +29,7 @@ export default defineConfig({
     // baseURL: 'http://localhost:3000',
 
     /* 显示浏览器界面（调试时启用，正式测试时可注释掉） */
-    headless: false,
+    headless: true,
     
     /* 减慢操作速度，方便观察（单位：毫秒） */
     // slowMo: 500,
