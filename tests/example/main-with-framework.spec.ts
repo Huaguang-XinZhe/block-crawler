@@ -21,6 +21,10 @@ test("使用 BlockCrawler 框架爬取组件", async ({ page }) => {
     // 传入 blockLocator 启用 Block 处理模式
     blockLocator: "xpath=//main/div/div/div",
     enableProgressResume: true,
+    // 链接收集定位符（必需配置）
+    collectionLinkLocator: "section > a",
+    collectionNameLocator: "xpath=/div[2]/div[1]/div[1]",
+    collectionCountLocator: "xpath=/div[2]/div[1]/div[2]",
   });
 
   // 设置 Block 处理器并自动运行（page 参数可以直接在闭包中使用）

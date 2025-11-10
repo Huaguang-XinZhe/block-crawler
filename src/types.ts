@@ -29,20 +29,23 @@ export interface CrawlerConfig {
   
   // ========== 链接收集定位符配置 ==========
   /**
-   * 集合链接容器定位符（在 section 下查找所有链接）
-   * @default 'section > a'
+   * 集合链接容器定位符（在容器下查找所有链接）
+   * 必须配置，每个网站的 DOM 结构不同
+   * @example 'section > a' (heroui-pro)
    * @example 'role=link' (shadcndesign)
    */
   collectionLinkLocator?: string;
   /**
    * 集合名称定位符（在链接元素下查找名称）
-   * @default 'xpath=/div[2]/div[1]/div[1]'
+   * 必须配置，每个网站的 DOM 结构不同
+   * @example 'xpath=/div[2]/div[1]/div[1]' (heroui-pro)
    * @example '[data-slot="card-title"]' (shadcndesign)
    */
   collectionNameLocator?: string;
   /**
    * 集合数量文本定位符（在链接元素下查找数量文本）
-   * @default 'xpath=/div[2]/div[1]/div[2]'
+   * 必须配置，每个网站的 DOM 结构不同
+   * @example 'xpath=/div[2]/div[1]/div[2]' (heroui-pro)
    * @example 'p' (shadcndesign)
    */
   collectionCountLocator?: string;

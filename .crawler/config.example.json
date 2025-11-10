@@ -1,11 +1,14 @@
 {
-  "startUrl": "https://example.com/components",
+  "startUrl": "https://pro.mufengapp.cn/components",
   "tabListAriaLabel": "Categories",
   "maxConcurrency": 5,
   "outputDir": "output",
   "configDir": ".crawler",
   "blockLocator": "xpath=//main/div/div/div",
   "blockNameLocator": "role=heading[level=1] >> role=link",
-  "enableProgressResume": true
+  "enableProgressResume": true,
+  "collectionLinkLocator": "section > a",
+  "collectionNameLocator": "xpath=/div[2]/div[1]/div[1]",
+  "collectionCountLocator": "xpath=/div[2]/div[1]/div[2]"
 }
 

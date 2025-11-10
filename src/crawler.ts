@@ -29,9 +29,9 @@ interface InternalConfig {
   blockLocator?: string;
   blockNameLocator: string;
   enableProgressResume: boolean;
-  collectionLinkLocator: string;
-  collectionNameLocator: string;
-  collectionCountLocator: string;
+  collectionLinkLocator?: string;
+  collectionNameLocator?: string;
+  collectionCountLocator?: string;
 }
 
 export class BlockCrawler {
@@ -65,11 +65,9 @@ export class BlockCrawler {
       blockNameLocator:
         config.blockNameLocator ?? "role=heading[level=1] >> role=link",
       enableProgressResume: config.enableProgressResume ?? true,
-      collectionLinkLocator: config.collectionLinkLocator ?? "section > a",
-      collectionNameLocator:
-        config.collectionNameLocator ?? "xpath=/div[2]/div[1]/div[1]",
-      collectionCountLocator:
-        config.collectionCountLocator ?? "xpath=/div[2]/div[1]/div[2]",
+      collectionLinkLocator: config.collectionLinkLocator,
+      collectionNameLocator: config.collectionNameLocator,
+      collectionCountLocator: config.collectionCountLocator,
     };
 
     this.limit = pLimit(this.config.maxConcurrency);
@@ -302,20 +300,54 @@ export class BlockCrawler {
   private async handleSingleTab(page: Page, tab: Locator): Promise<void> {
     const text = (await tab.textContent()) ?? "";
     console.log(`   🔍 正在处理分类: ${text}`);
-    const section = page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: text }) });
+    
+    // 获取 tab 对应的 section 内容区域
+    const section = this.getTabSection(page, text);
 
     // 收集所有的链接
-    await this.collectAllLinks(section);
+    await this.collectAllLinks(section, text);
     console.log(`   ✅ 分类 [${text}] 处理完成`);
+  }
+
+  /**
+   * 获取 tab 对应的 section 内容区域
+   * 子类可以覆写此方法以适配不同的 DOM 结构
+   * 
+   * @param page - 页面对象
+   * @param tabText - tab 的文本内容
+   * @returns tab 对应的 section 元素
+   * 
+   * @example
+   * // 默认实现（heroui-pro）
+   * protected getTabSection(page: Page, tabText: string): Locator {
+   *   return page.locator("section").filter({ has: page.getByRole("heading", { name: tabText }) });
+   * }
+   * 
+   * @example
+   * // shadcndesign 自定义实现
+   * protected getTabSection(page: Page, tabText: string): Locator {
+   *   return page.getByRole("tabpanel", { name: tabText });
+   * }
+   */
+  protected getTabSection(page: Page, tabText: string): Locator {
+    return page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: tabText }) });
   }
 
   /**
    * 收集所有的链接
    * 使用配置的定位符来适配不同网站的 DOM 结构
    */
-  private async collectAllLinks(section: Locator): Promise<void> {
+  private async collectAllLinks(section: Locator, tabText: string): Promise<void> {
+    if (!this.config.collectionLinkLocator || 
+        !this.config.collectionNameLocator || 
+        !this.config.collectionCountLocator) {
+      throw new Error(
+        "链接收集定位符未配置！请设置 collectionLinkLocator、collectionNameLocator 和 collectionCountLocator"
+      );
+    }
+
     // 使用配置的定位符获取所有链接
     const linkElements = await section
       .locator(this.config.collectionLinkLocator)
