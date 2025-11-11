@@ -11,7 +11,6 @@ test("heroui-pro crawler", async ({ page }) => {
     startUrl: "https://pro.mufengapp.cn/components",
     tabListAriaLabel: "Categories",
     maxConcurrency: 5,
-    enableProgressResume: true,
     
     // 配置链接收集定位符
     collectionLinkLocator: "section > a",
@@ -37,14 +36,11 @@ test("heroui-pro crawler", async ({ page }) => {
       await clickCodeTab(block);
 
       // 获取 ts 部分代码
-      const currentPath = blockPath.substring(0, blockPath.lastIndexOf("/"));
       await saveAllLanguageFiles(
         block,
-        currentPath,
-        blockName,
+        blockPath,
         "ts",
         outputDir,
-        currentPage
       );
 
       // 切换到 JavaScript
@@ -60,11 +56,9 @@ test("heroui-pro crawler", async ({ page }) => {
       // 获取 js 部分代码
       await saveAllLanguageFiles(
         block,
-        currentPath,
-        blockName,
+        blockPath,
         "js",
         outputDir,
-        currentPage
       );
 
       console.log(`✅ Block [${blockName}] 处理完成`);
@@ -99,11 +93,9 @@ async function clickCodeTab(block: Locator) {
  */
 async function saveAllLanguageFiles(
   block: Locator,
-  currentPath: string,
-  blockName: string,
+  blockPath: string,
   language: "ts" | "js",
   outputDir: string,
-  page: Page
 ) {
   // 获取所有文件 Tab
   const fileTabs = await block
@@ -127,15 +119,15 @@ async function saveAllLanguageFiles(
     const code = await extractCodeFromBlock(block);
 
     // 输出到文件
-    if (blockName && fileName) {
+    if (fileName) {
       await fse.outputFile(
-        `${outputDir}/${currentPath}/${blockName}/${language}/${fileName}`,
+        `${outputDir}/${blockPath}/${language}/${fileName}`,
         code
       );
       console.log(`   📝 已保存: ${language}/${fileName}`);
     } else {
-      console.warn("⚠️ blockName or fileName is null");
-      console.log(`blockName: ${blockName}, fileName: ${fileName}`);
+      console.warn("⚠️ fileName is null");
+      console.log(`blockPath: ${blockPath}, fileName: ${fileName}`);
     }
   }
 }

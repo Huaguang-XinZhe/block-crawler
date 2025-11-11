@@ -28,21 +28,22 @@ test("shadcndesign", async ({ page }) => {
     collectionCountLocator: "p", // 通过 p 标签找到数量文本
   });
 
-  const names: string[] = [];
+  // 改为 Set
+  const names: Set<string> = new Set();
 
   // 设置页面处理器并自动运行
   await crawler.onPage(
     page,
     async ({ currentPage }: PageContext) => {
       const blockNames = await getPageBlockNames(currentPage);
-      names.push(...blockNames);
+      blockNames.forEach(name => names.add(name));
     }
   );
 
   // 输出到文件
   await fse.outputFile(
     `${crawler.outputDir}/shadcndesign-blocks-names.json`,
-    JSON.stringify(names, null, 2)
+    JSON.stringify(Array.from(names), null, 2)
   );
 });
 

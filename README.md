@@ -308,77 +308,6 @@ const crawlerB = new BlockCrawler({
 // 输出: output/site-b-com-d4e5f6
 ```
 
-## 📚 完整示例
-
-### 示例 1: heroui-pro
-
-```typescript
-import { test } from "@playwright/test";
-import { BlockCrawler } from "ui-blocks-crawler";
-import { extractCodeFromBlock } from "./utils/extract-code";
-
-test("heroui-pro crawler", async ({ page }) => {
-  test.setTimeout(2 * 60 * 1000);
-
-  const crawler = new BlockCrawler({
-    startUrl: "https://pro.mufengapp.cn/components",
-    tabListAriaLabel: "Categories",
-    maxConcurrency: 5,
-    collectionLinkLocator: "section > a",
-    collectionNameLocator: "xpath=/div[2]/div[1]/div[1]",
-    collectionCountLocator: "xpath=/div[2]/div[1]/div[2]",
-    getTabSection: (page, tabText) => {
-      return page.locator("section")
-        .filter({ has: page.getByRole("heading", { name: tabText }) });
-    },
-  });
-
-  await crawler.onBlock(
-    page,
-    "xpath=//main/div/div/div",
-    async ({ block, blockPath, blockName, outputDir, currentPage }) => {
-      // 点击 Code Tab
-      await block.getByRole("tab", { name: "Code" }).click();
-      
-      // 提取代码
-      const code = await extractCodeFromBlock(block);
-      
-      // 保存文件
-      await fse.outputFile(`${outputDir}/${blockPath}.tsx`, code);
-    }
-  );
-});
-```
-
-### 示例 2: shadcndesign
-
-```typescript
-import { test } from "@playwright/test";
-import { BlockCrawler } from "ui-blocks-crawler";
-
-test("shadcndesign crawler", async ({ page }) => {
-  const crawler = new BlockCrawler({
-    startUrl: "https://www.shadcndesign.com/pro-blocks",
-    maxConcurrency: 5,
-    collectionLinkLocator: "role=link",
-    collectionNameLocator: '[data-slot="card-title"]',
-    collectionCountLocator: "p",
-    getTabSection: (page, tabText) => {
-      return page.getByRole("tabpanel", { name: tabText });
-    },
-  });
-
-  await crawler.onBlock(
-    page,
-    "xpath=//main/div/div/div",
-    async ({ block, blockName }) => {
-      const code = await block.textContent();
-      console.log(`处理 ${blockName}:`, code?.length);
-    }
-  );
-});
-```
-
 ## 🛠️ 开发命令
 
 ```bash
@@ -436,5 +365,5 @@ ISC
 ## 🔗 链接
 
 - [npm 包](https://www.npmjs.com/package/ui-blocks-crawler)
-- [GitHub 仓库](https://github.com/yourusername/ui-blocks-crawler)
+- [GitHub 仓库](https://github.com/Huaguang-XinZhe/ui-blocks-crawler)
 - [更新日志](./CHANGELOG.md)

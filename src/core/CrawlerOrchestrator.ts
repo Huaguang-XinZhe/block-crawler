@@ -1,6 +1,5 @@
 import type { Page } from "@playwright/test";
 import pLimit from "p-limit";
-import type { CollectionLink } from "../types";
 import type { InternalConfig } from "./ConfigManager";
 import type { TaskProgress } from "../utils/task-progress";
 import { TabProcessor } from "./TabProcessor";
