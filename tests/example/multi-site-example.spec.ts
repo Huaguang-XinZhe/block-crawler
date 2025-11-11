@@ -12,14 +12,16 @@ test("爬取网站 A", async ({ page }) => {
 
   const crawlerA = new BlockCrawler({
     startUrl: "https://site-a.com/components",
-    blockLocator: "xpath=//main/div",
     maxConcurrency: 5,
+    collectionLinkLocator: "a",
+    collectionNameLocator: ".name",
+    collectionCountLocator: ".count",
   });
 
   // 进度文件将自动保存到：.crawler/progress-site-a-com-xxxxxxxx.json
   // 输出目录将自动设置为：output/site-a-com-xxxxxx
 
-  await crawlerA.onBlock(page, async (context) => {
+  await crawlerA.onBlock(page, "xpath=//main/div", async (context) => {
     console.log(`[Site A] 处理: ${context.blockName}`);
     // 处理逻辑...
   });
@@ -30,15 +32,17 @@ test("爬取网站 B", async ({ page }) => {
 
   const crawlerB = new BlockCrawler({
     startUrl: "https://site-b.com/library",
-    blockLocator: ".component-block",
     maxConcurrency: 3,
     outputDir: "output-site-b", // 自定义输出目录
+    collectionLinkLocator: "a",
+    collectionNameLocator: ".name",
+    collectionCountLocator: ".count",
   });
 
   // 进度文件将自动保存到：.crawler/progress-site-b-com-yyyyyyyy.json
   // 输出目录使用自定义：output-site-b
 
-  await crawlerB.onBlock(page, async (context) => {
+  await crawlerB.onBlock(page, ".component-block", async (context) => {
     console.log(`[Site B] 处理: ${context.blockName}`);
     // 处理逻辑...
   });
@@ -49,14 +53,16 @@ test("爬取网站 C - 不同路径", async ({ page }) => {
 
   const crawlerC = new BlockCrawler({
     startUrl: "https://site-a.com/gallery", // 同一域名，不同路径
-    blockLocator: ".gallery-item",
+    collectionLinkLocator: "a",
+    collectionNameLocator: ".name",
+    collectionCountLocator: ".count",
   });
 
   // 进度文件将自动保存到：.crawler/progress-site-a-com-zzzzzzzz.json
   // 输出目录将自动设置为：output/site-a-com-zzzzzz
   // 注意：与网站 A 的进度文件和输出目录都不同，因为路径不同
 
-  await crawlerC.onBlock(page, async (context) => {
+  await crawlerC.onBlock(page, ".gallery-item", async (context) => {
     console.log(`[Site C] 处理: ${context.blockName}`);
     // 处理逻辑...
   });

@@ -1,5 +1,60 @@
 # block-crawler-framework
 
+## 2.0.0
+
+### Major Changes
+
+- 重大 API 重构：简化配置和使用方式
+
+  **Breaking Changes:**
+
+  1. **`blockSectionLocator` 移至 `onBlock` 参数**
+
+     - 之前：在配置中传入 `blockSectionLocator`
+     - 现在：作为 `onBlock` 的第二个参数传入
+
+     ```typescript
+     // 旧的
+     const crawler = new BlockCrawler({
+       blockSectionLocator: "xpath=//main/div"
+     });
+     await crawler.onBlock(page, handler);
+
+     // 新的
+     const crawler = new BlockCrawler({ ... });
+     await crawler.onBlock(page, "xpath=//main/div", handler);
+     ```
+
+  2. **`getTabSection` 支持直接配置函数**
+
+     - 现在可以直接在配置中传入 `getTabSection` 函数，无需继承子类
+     - 优先级：配置函数 > `tabSectionLocator` > 子类重写
+
+     ```typescript
+     // 方式 1：配置函数（推荐，无需继承）
+     const crawler = new BlockCrawler({
+       getTabSection: (page, tabText) =>
+         page.getByRole("tabpanel", { name: tabText })
+     });
+
+     // 方式 2：配置定位符
+     const crawler = new BlockCrawler({
+       tabSectionLocator: '[role="tabpanel"][aria-label="{tabText}"]'
+     });
+
+     // 方式 3：继承重写（复杂场景）
+     class MyCrawler extends BlockCrawler {
+       protected getTabSection(page, tabText) { ... }
+     }
+     ```
+
+  **改进：**
+
+  - 🎯 更清晰的 API：`blockSectionLocator` 只在 Block 模式需要时传入
+  - 🚀 更简单的使用：无需继承子类，直接配置函数即可
+  - 📝 更好的日志：显示使用了哪种 `getTabSection` 方式
+  - ✨ 更灵活的配置：同时支持字符串定位符、配置函数和继承重写三种方式
+
 ## 1.0.1
 
 ### Patch Changes

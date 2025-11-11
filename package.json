@@ -1,6 +1,6 @@
 {
   "name": "ui-blocks-crawler",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "基于 Playwright 的通用 UI Blocks 爬虫框架，支持受限并发、进度恢复、单页面或单 Block 处理模式",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -48,7 +48,7 @@
     "ora": "^9.0.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
-    "ui-blocks-crawler": "^1.0.1"
+    "ui-blocks-crawler": "^2.0.0"
   },
   "dependencies": {
     "fs-extra": "^11.3.2",

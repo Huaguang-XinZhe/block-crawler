@@ -23,14 +23,16 @@ test("从配置文件加载配置", async ({ page }) => {
     startUrl: "https://pro.mufengapp.cn/components",
     tabListAriaLabel: "Categories",
     maxConcurrency: 5,
-    blockLocator: "xpath=//main/div/div/div",
+    collectionLinkLocator: "section > a",
+    collectionNameLocator: "xpath=/div[2]/div[1]/div[1]",
+    collectionCountLocator: "xpath=/div[2]/div[1]/div[2]",
   });
 
   // 保存配置到文件
   await crawler.saveConfigFile(".crawler/config.json");
 
   // 设置 Block 处理器并自动运行
-  await crawler.onBlock(page, async ({ block, blockPath, outputDir }: BlockContext) => {
+  await crawler.onBlock(page, "xpath=//main/div/div/div", async ({ block, blockPath, outputDir }: BlockContext) => {
     // 点击切换到 Code
     await clickCodeTab(block);
 

@@ -19,7 +19,17 @@ export interface CrawlerConfig {
    * @example '[role="tabpanel"][aria-label="{tabText}"]' (shadcndesign)
    */
   tabSectionLocator?: string;
-  /** 最大并发页面数量 */
+  /**
+   * 自定义获取 Tab Section 的函数
+   * 如果同时配置了 tabSectionLocator 和 getTabSection，优先使用此函数
+   * 
+   * @example (page, tabText) => page.getByRole("tabpanel", { name: tabText })
+   */
+  getTabSection?: (page: Page, tabText: string) => Locator;
+  /** 
+   * 最大并发页面数量
+   * @default 5
+   */
   maxConcurrency?: number;
   /** 输出目录 */
   outputDir?: string;
@@ -28,8 +38,6 @@ export interface CrawlerConfig {
    * @default '.crawler'
    */
   configDir?: string;
-  /** Block 定位符（XPath 或 CSS 选择器），不传则表示处理单页面 */
-  blockLocator?: string;
   /** 
    * Block 名称定位符，用于获取 Block 名称
    * @default 'role=heading[level=1] >> role=link'
@@ -64,21 +72,21 @@ export interface CrawlerConfig {
    * @example 'section > a' (heroui-pro)
    * @example 'role=link' (shadcndesign)
    */
-  collectionLinkLocator?: string;
+  collectionLinkLocator: string;
   /**
    * 集合名称定位符（在链接元素下查找名称）
    * 必须配置，每个网站的 DOM 结构不同
    * @example 'xpath=/div[2]/div[1]/div[1]' (heroui-pro)
    * @example '[data-slot="card-title"]' (shadcndesign)
    */
-  collectionNameLocator?: string;
+  collectionNameLocator: string;
   /**
    * 集合数量文本定位符（在链接元素下查找数量文本）
    * 必须配置，每个网站的 DOM 结构不同
    * @example 'xpath=/div[2]/div[1]/div[2]' (heroui-pro)
    * @example 'p' (shadcndesign)
    */
-  collectionCountLocator?: string;
+  collectionCountLocator: string;
 }
 
 /**

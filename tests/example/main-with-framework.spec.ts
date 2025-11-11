@@ -4,34 +4,26 @@ import { BlockCrawler, type BlockContext } from "../../src";
 import { extractCodeFromBlock } from "../utils/extract-code";
 
 /**
- * heroui-pro 爬虫 - 继承 BlockCrawler 并重写 getTabSection 方法
- */
-class HeroUICrawler extends BlockCrawler {
-  protected getTabSection(page: Page, tabText: string): Locator {
-    // heroui-pro 使用 section 并通过 heading 定位
-    return page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: tabText }) });
-  }
-}
-
-/**
  * 使用新框架重构后的爬虫示例
  * 展示如何使用 BlockCrawler 框架来爬取组件
+ * 
+ * 方式 1：使用配置函数（推荐）
+ * 方式 2：继承 BlockCrawler 并重写 getTabSection 方法
  */
 test("使用 BlockCrawler 框架爬取组件", async ({ page }) => {
   // 设置超时
   test.setTimeout(2 * 60 * 1000);
 
   // 创建 heroui 爬虫实例，配置化参数
-  const crawler = new HeroUICrawler({
+  const crawler = new BlockCrawler({
     startUrl: "https://pro.mufengapp.cn/components",
     tabListAriaLabel: "Categories",
     maxConcurrency: 5,
     outputDir: "output",
-    // 传入 blockLocator 启用 Block 处理模式
-    blockLocator: "xpath=//main/div/div/div",
     enableProgressResume: true,
+    // 方式 1：使用 getTabSection 函数配置（推荐）
+    getTabSection: (page, tabText) => 
+      page.locator("section").filter({ has: page.getByRole("heading", { name: tabText }) }),
     // 链接收集定位符（必需配置）
     collectionLinkLocator: "section > a",
     collectionNameLocator: "xpath=/div[2]/div[1]/div[1]",
@@ -39,7 +31,11 @@ test("使用 BlockCrawler 框架爬取组件", async ({ page }) => {
   });
 
   // 设置 Block 处理器并自动运行
-  await crawler.onBlock(page, async ({ currentPage, block, blockPath, outputDir }: BlockContext) => {
+  // blockSectionLocator 作为参数传入（Block 模式必需）
+  await crawler.onBlock(
+    page,
+    "xpath=//main/div/div/div",
+    async ({ currentPage, block, blockPath, outputDir }: BlockContext) => {
     // 点击切换到 Code
     await clickCodeTab(block);
 

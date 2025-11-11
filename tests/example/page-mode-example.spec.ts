@@ -11,15 +11,18 @@ test("使用页面处理模式爬取", async ({ page }) => {
   // 设置超时
   test.setTimeout(2 * 60 * 1000);
 
-  // 创建爬虫实例，不传 blockLocator 启用页面处理模式
+  // 创建爬虫实例，不调用 onBlock 即为页面处理模式
   const crawler = new BlockCrawler({
     startUrl: "https://example.com/components",
     tabListAriaLabel: "Categories",
     maxConcurrency: 3,
     outputDir: "output-pages",
     configDir: ".crawler-pages",
-    // 不传 blockLocator，使用页面处理模式
     enableProgressResume: true,
+    // 必需的链接收集定位符
+    collectionLinkLocator: "a",
+    collectionNameLocator: ".name",
+    collectionCountLocator: ".count",
   });
 
   // 设置页面处理器并自动运行

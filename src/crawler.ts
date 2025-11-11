@@ -23,11 +23,11 @@ interface InternalConfig {
   startUrl: string;
   tabListAriaLabel?: string;
   tabSectionLocator?: string;
+  getTabSection?: (page: Page, tabText: string) => Locator;
   maxConcurrency: number;
   outputDir: string;
   configDir: string;
   progressFile: string;
-  blockLocator?: string;
   blockNameLocator: string;
   enableProgressResume: boolean;
   startUrlWaitOptions?: {
@@ -38,15 +38,16 @@ interface InternalConfig {
     waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
     timeout?: number;
   };
-  collectionLinkLocator?: string;
-  collectionNameLocator?: string;
-  collectionCountLocator?: string;
+  collectionLinkLocator: string;
+  collectionNameLocator: string;
+  collectionCountLocator: string;
 }
 
 export class BlockCrawler {
   private config: InternalConfig;
   private pageHandler?: PageHandler;
   private blockHandler?: BlockHandler;
+  private blockSectionLocator?: string; // Block 模式下的定位符
   private taskProgress?: TaskProgress;
   private limit: ReturnType<typeof pLimit>;
   private allCollectionLinks: CollectionLink[] = [];
@@ -67,11 +68,11 @@ export class BlockCrawler {
       startUrl: config.startUrl,
       tabListAriaLabel: config.tabListAriaLabel,
       tabSectionLocator: config.tabSectionLocator,
+      getTabSection: config.getTabSection,
       maxConcurrency: config.maxConcurrency ?? 5,
       outputDir,
       configDir,
       progressFile: path.join(configDir, progressFileName),
-      blockLocator: config.blockLocator,
       blockNameLocator:
         config.blockNameLocator ?? "role=heading[level=1] >> role=link",
       enableProgressResume: config.enableProgressResume ?? true,
@@ -202,7 +203,6 @@ export class BlockCrawler {
       maxConcurrency: this.config.maxConcurrency,
       outputDir: this.config.outputDir,
       configDir: this.config.configDir,
-      blockLocator: this.config.blockLocator,
       blockNameLocator: this.config.blockNameLocator,
       enableProgressResume: this.config.enableProgressResume,
       startUrlWaitOptions: this.config.startUrlWaitOptions,
@@ -227,8 +227,16 @@ export class BlockCrawler {
 
   /**
    * 设置 Block 处理器并运行爬虫（单 Block 模式）
+   * @param page Playwright Page 实例
+   * @param blockSectionLocator Block 区域定位符（必传）
+   * @param handler Block 处理函数
    */
-  async onBlock(page: Page, handler: BlockHandler): Promise<void> {
+  async onBlock(
+    page: Page,
+    blockSectionLocator: string,
+    handler: BlockHandler
+  ): Promise<void> {
+    this.blockSectionLocator = blockSectionLocator;
     this.blockHandler = handler;
     await this.run(page);
   }
@@ -243,7 +251,7 @@ export class BlockCrawler {
     console.log(`📂 输出目录: ${this.config.outputDir}`);
     console.log(
       `🎯 运行模式: ${
-        this.config.blockLocator ? "Block 处理模式" : "页面处理模式"
+        this.blockSectionLocator ? "Block 处理模式" : "页面处理模式"
       }`
     );
 
@@ -357,40 +365,69 @@ export class BlockCrawler {
   /**
    * 获取 tab 对应的 section 内容区域
    *
-   * 当没有配置 tabSectionLocator 时，此方法会被调用。
-   * 子类可以重写此方法以实现自定义逻辑。
-   * 如果既没有配置也没有重写，则会抛出错误。
+   * 优先级：
+   * 1. 配置的 getTabSection 函数（最灵活）
+   * 2. 配置的 tabSectionLocator（简单场景）
+   * 3. 子类重写此方法（复杂场景）
    *
    * @param page - 页面对象
    * @param tabText - tab 的文本内容
    * @returns tab 对应的 section 元素
    *
    * @example
-   * // heroui-pro 实现
+   * // 方式 1：配置函数（推荐）
+   * const crawler = new BlockCrawler({
+   *   getTabSection: (page, tabText) => page.getByRole("tabpanel", { name: tabText }),
+   *   // ... 其他配置
+   * });
+   *
+   * @example
+   * // 方式 2：配置定位符
+   * const crawler = new BlockCrawler({
+   *   tabSectionLocator: '[role="tabpanel"][aria-label="{tabText}"]',
+   *   // ... 其他配置
+   * });
+   *
+   * @example
+   * // 方式 3：继承重写
    * class HeroUICrawler extends BlockCrawler {
    *   protected getTabSection(page: Page, tabText: string): Locator {
    *     return page.locator("section").filter({ has: page.getByRole("heading", { name: tabText }) });
    *   }
    * }
-   *
-   * @example
-   * // shadcndesign 实现
-   * class ShadcnCrawler extends BlockCrawler {
-   *   protected getTabSection(page: Page, tabText: string): Locator {
-   *     return page.getByRole("tabpanel", { name: tabText });
-   *   }
-   * }
    */
   protected getTabSection(page: Page, tabText: string): Locator {
+    // 优先级 1：配置的函数
+    if (this.config.getTabSection) {
+      console.log("  ✅ 使用配置的 getTabSection 函数");
+      return this.config.getTabSection(page, tabText);
+    }
+
+    // 优先级 2：配置的定位符
+    if (this.config.tabSectionLocator) {
+      const locator = this.config.tabSectionLocator.replace(
+        "{tabText}",
+        tabText
+      );
+      console.log(`  ✅ 使用配置的 tabSectionLocator: ${locator}`);
+      return page.locator(locator);
+    }
+
+    // 优先级 3：未配置，报错
     throw new Error(
-      "未配置 tabSectionLocator 且未重写 getTabSection 方法！\n\n" +
+      "未配置 getTabSection 函数、tabSectionLocator 且未重写 getTabSection 方法！\n\n" +
         "请选择以下任一方式：\n\n" +
-        "方式 1：配置 tabSectionLocator（推荐，简单场景）\n" +
+        "方式 1：配置 getTabSection 函数（推荐，最灵活）\n" +
+        "const crawler = new BlockCrawler({\n" +
+        "  getTabSection: (page, tabText) => page.getByRole('tabpanel', { name: tabText }),\n" +
+        "  // ... 其他配置\n" +
+        "});\n\n" +
+        "方式 2：配置 tabSectionLocator（简单场景）\n" +
         "const crawler = new BlockCrawler({\n" +
         '  tabSectionLocator: \'[role="tabpanel"][aria-label="{tabText}"]\',\n' +
         "  // ... 其他配置\n" +
         "});\n\n" +
-        "方式 2：继承并重写 getTabSection 方法（复杂场景）\n" +
+        "方式 3：继承并重写 getTabSection 方法（复杂场景）\n" +
         "class MyCrawler extends BlockCrawler {\n" +
         "  protected getTabSection(page: Page, tabText: string): Locator {\n" +
         "    return page.locator('section').filter({ has: page.getByRole('heading', { name: tabText }) });\n" +
@@ -547,8 +584,8 @@ export class BlockCrawler {
     try {
       await newPage.goto(url, this.config.collectionLinkWaitOptions);
 
-      // 根据是否传入 blockLocator 决定处理模式
-      if (this.config.blockLocator) {
+      // 根据是否传入 blockSectionLocator 决定处理模式
+      if (this.blockSectionLocator) {
         // Block 处理模式
         await this.handleBlocksInPage(newPage, relativeLink);
       } else {
@@ -619,7 +656,7 @@ export class BlockCrawler {
    * 可以被子类覆盖以自定义获取逻辑
    */
   protected async getAllBlocks(page: Page): Promise<Locator[]> {
-    return await page.locator(this.config.blockLocator!).all();
+    return await page.locator(this.blockSectionLocator!).all();
   }
 
   /**
