@@ -79,21 +79,28 @@ export class CrawlerOrchestrator {
    * 处理所有 Tabs 并收集链接
    */
   private async processTabsAndCollectLinks(page: Page): Promise<void> {
-    // 如果配置了 getAllTabTexts，直接使用文本数组
-    const tabTexts = await this.tabProcessor.getAllTabTexts(page);
+    // 优先级 1：如果配置了 getAllTabSections，使用新模式（跳过 tab 点击）
+    const tabSections = await this.tabProcessor.getAllTabSections(page);
     
-    if (tabTexts) {
-      console.log("\n📑 正在获取所有分类标签文本（使用配置的 getAllTabTexts）...");
-      console.log(`✅ 找到 ${tabTexts.length} 个分类标签`);
+    if (tabSections) {
+      console.log("\n📑 正在获取所有 Tab Sections（跳过 tab 点击）...");
+      console.log(`✅ 找到 ${tabSections.length} 个 Tab Section`);
 
-      console.log("\n🔄 开始遍历所有分类标签...");
-      for (let i = 0; i < tabTexts.length; i++) {
-        const tabText = tabTexts[i];
-        console.log(`\n📌 [${i + 1}/${tabTexts.length}] 处理分类标签: ${tabText}`);
-        await this.handleSingleTab(page, tabText);
+      console.log("\n🔄 开始遍历所有 Tab Sections...");
+      for (let i = 0; i < tabSections.length; i++) {
+        const section = tabSections[i];
+        console.log(`\n📌 [${i + 1}/${tabSections.length}] 处理 Tab Section ${i + 1}...`);
+        
+        // 从 section 中提取 tabText
+        const tabText = await this.tabProcessor.extractTabText(section, i);
+        console.log(`   🏷️  Tab 文本: ${tabText}`);
+        
+        // 收集链接
+        await this.linkCollector.collectLinks(section);
+        console.log(`   ✅ Tab Section [${tabText}] 处理完成`);
       }
     } else {
-      // 原有逻辑：获取 tab 元素并点击
+      // 优先级 2：原有逻辑 - 获取 tab 元素并点击
       console.log("\n📑 正在获取所有分类标签...");
       const tabs = await this.tabProcessor.getAllTabs(page);
       console.log(`✅ 找到 ${tabs.length} 个分类标签`);

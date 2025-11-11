@@ -78,13 +78,77 @@ export class TabProcessor {
   }
 
   /**
-   * 获取所有 Tab 的文本（如果配置了 getAllTabTexts）
+   * 获取所有 Tab Sections（如果配置了 getAllTabSections）
+   * @returns Tab sections 数组或 null
    */
-  async getAllTabTexts(page: Page): Promise<string[] | null> {
-    if (this.config.getAllTabTexts) {
-      return await this.config.getAllTabTexts(page);
+  async getAllTabSections(page: Page): Promise<Locator[] | null> {
+    if (this.config.getAllTabSections) {
+      console.log("  ✅ 使用配置的 getAllTabSections 函数");
+      return await this.config.getAllTabSections(page);
     }
     return null;
+  }
+
+  /**
+   * 从 Tab Section 中提取 Tab 文本
+   * 
+   * 优先级：
+   * 1. 配置的 extractTabTextFromSection 函数
+   * 2. 自动查找 section 中的 heading 元素（h1-h6）
+   */
+  async extractTabText(section: Locator, index: number): Promise<string> {
+    // 优先级 1：配置的函数
+    if (this.config.extractTabTextFromSection) {
+      console.log(`    🔧 使用配置的 extractTabTextFromSection 函数`);
+      const text = await this.config.extractTabTextFromSection(section);
+      if (!text) {
+        throw new Error(`Tab Section ${index + 1} 提取文本失败：extractTabTextFromSection 返回了 null`);
+      }
+      return text;
+    }
+
+    // 优先级 2：自动查找 heading
+    console.log(`    📝 自动查找 Tab Section ${index + 1} 中的 heading 元素`);
+    
+    // 尝试查找所有级别的 heading
+    const headings = await section.getByRole("heading").all();
+    
+    if (headings.length === 0) {
+      throw new Error(
+        `Tab Section ${index + 1} 中未找到 heading 元素！\n\n` +
+        `请配置 extractTabTextFromSection 函数来自定义提取逻辑：\n\n` +
+        `const crawler = new BlockCrawler({\n` +
+        `  getAllTabSections: async (page) => page.locator('section').all(),\n` +
+        `  extractTabTextFromSection: async (section) => {\n` +
+        `    return await section.locator('[data-tab-title]').textContent();\n` +
+        `  },\n` +
+        `  // ... 其他配置\n` +
+        `});\n`
+      );
+    }
+
+    if (headings.length > 1) {
+      throw new Error(
+        `Tab Section ${index + 1} 中找到 ${headings.length} 个 heading 元素，无法自动确定使用哪个！\n\n` +
+        `请配置 extractTabTextFromSection 函数来明确指定：\n\n` +
+        `const crawler = new BlockCrawler({\n` +
+        `  getAllTabSections: async (page) => page.locator('section').all(),\n` +
+        `  extractTabTextFromSection: async (section) => {\n` +
+        `    // 例如：使用第一个 h2 标题\n` +
+        `    return await section.getByRole('heading', { level: 2 }).first().textContent();\n` +
+        `  },\n` +
+        `  // ... 其他配置\n` +
+        `});\n`
+      );
+    }
+
+    const text = await headings[0].textContent();
+    if (!text) {
+      throw new Error(`Tab Section ${index + 1} 的 heading 元素文本为空`);
+    }
+
+    console.log(`    ✅ 提取到 tab 文本: "${text}"`);
+    return text;
   }
 }
 

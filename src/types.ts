@@ -27,17 +27,26 @@ export interface CrawlerConfig {
    */
   getTabSection?: (page: Page, tabText: string) => Locator;
   /**
-   * 自定义获取所有 Tab 文本的函数
-   * 如果配置了此函数，将跳过点击 tab 的逻辑，直接使用返回的文本数组进行处理
-   * 适用于不需要切换 tab 就能获取所有内容的场景
+   * 获取所有 Tab Section 的函数
+   * 如果配置了此函数，将跳过 tab 点击逻辑，直接获取所有 tab sections
+   * 框架会自动从每个 section 中提取 tabText（通过查找 heading 元素）
    * 
-   * @example async (page) => ["Components", "Blocks", "Templates"]
-   * @example async (page) => {
-   *   const tabs = await page.getByRole("tab").all();
-   *   return Promise.all(tabs.map(tab => tab.textContent() || ""));
-   * }
+   * 注意：如果单个 section 中存在多个 heading，框架会报错提示你自定义提取逻辑
+   * 
+   * @example async (page) => page.locator('section[data-tab-content]').all()
+   * @example async (page) => page.locator('div.tab-panel').all()
    */
-  getAllTabTexts?: (page: Page) => Promise<string[]>;
+  getAllTabSections?: (page: Page) => Promise<Locator[]>;
+  /**
+   * 自定义从 Tab Section 中提取 Tab 文本的函数
+   * 仅在配置了 getAllTabSections 时生效
+   * 如果不配置，框架会自动查找 section 中的第一个 heading 元素
+   * 
+   * @param section 当前 tab section 的 Locator
+   * @returns Tab 文本
+   * @example async (section) => section.getByRole("heading", { level: 2 }).textContent()
+   */
+  extractTabTextFromSection?: (section: Locator) => Promise<string | null>;
   /**
    * 自定义获取所有 Block 元素的函数
    * 
