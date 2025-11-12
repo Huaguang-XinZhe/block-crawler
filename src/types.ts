@@ -239,8 +239,6 @@ export interface SiteMeta {
     /** 具体的 Free Block */
     blockNames: string[];
   };
-  /** 最后更新时间 */
-  lastUpdate: string;
   /** 是否完整运行（未中断/未发生错误） */
   isComplete: boolean;
   /** 本次运行耗时（秒） */

@@ -1,5 +1,11 @@
 # block-crawler
 
+## 0.5.2
+
+### Patch Changes
+
+- 移除 meta.json 中的 lastUpdate 字段
+
 ## 0.5.1
 
 ### Patch Changes

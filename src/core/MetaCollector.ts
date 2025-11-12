@@ -30,7 +30,6 @@ export class MetaCollector {
         total: 0,
         blockNames: [],
       },
-      lastUpdate: new Date().toISOString(),
       isComplete: false,
     };
   }
@@ -106,7 +105,6 @@ export class MetaCollector {
   async save(isComplete: boolean = false): Promise<void> {
     // 更新时间和完成状态
     const endTime = new Date();
-    this.meta.lastUpdate = endTime.toISOString();
     this.meta.isComplete = isComplete;
     this.meta.startTime = this.startTime.toISOString();
     this.meta.duration = Math.floor((endTime.getTime() - this.startTime.getTime()) / 1000);
