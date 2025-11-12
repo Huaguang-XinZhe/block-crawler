@@ -30,6 +30,9 @@ importers:
       '@types/node':
         specifier: ^24.10.0
         version: 24.10.0
+      block-crawler:
+        specifier: ^0.2.0
+        version: 0.2.0(@playwright/test@1.56.1)
       cli-progress:
         specifier: ^3.12.0
         version: 3.12.0
@@ -482,6 +485,11 @@ packages:
   better-path-resolve@1.0.0:
     resolution: {integrity: sha512-pbnl5XzGBdrFU/wT4jqmJVPn2B6UHPBOhzMQkY/SPUPB6QtUXtmBHBIwCbXJol93mOpGMnQyP/+BB19q04xj7g==}
     engines: {node: '>=4'}
+
+  block-crawler@0.2.0:
+    resolution: {integrity: sha512-FT31sBDJ4CS1uLz2zk8KyKFcxFWShUtRPzSaxcqz6Sv+66E9kdhtyjdwcajN++jAOHqni9/aeQa8PKodcX7J4A==}
+    peerDependencies:
+      '@playwright/test': ^1.0.0
 
   brace-expansion@2.0.2:
     resolution: {integrity: sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==}
@@ -1514,6 +1522,12 @@ snapshots:
   better-path-resolve@1.0.0:
     dependencies:
       is-windows: 1.0.2
+
+  block-crawler@0.2.0(@playwright/test@1.56.1):
+    dependencies:
+      '@playwright/test': 1.56.1
+      fs-extra: 11.3.2
+      p-limit: 7.2.0
 
   brace-expansion@2.0.2:
     dependencies:
