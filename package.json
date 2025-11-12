@@ -25,7 +25,8 @@
     "test:headed": "playwright test --headed",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "release-all": "node scripts/release-all.js"
   },
   "keywords": [
     "playwright",

@@ -41,8 +41,11 @@ alwaysApply: false
 
 写好 changeset 的 md 文件后：
 
-- 更新 README.md
-- 马上执行 `pnpm changeset version` 更新版本号
-- 然后执行 `pnpm release` 发布到 npm
-- 再执行 `pnpm update block-crawler` 更新依赖
-- 最后进行 git 提交（不要推送到远程）
+1. 更新 README.md
+2. 执行一键发布脚本：
+
+```bash
+pnpm release-all
+```
+
+
