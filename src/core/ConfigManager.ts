@@ -140,7 +140,6 @@ export class ConfigManager {
       enableProgressResume: config.enableProgressResume ?? true,
       startUrlWaitOptions: config.startUrlWaitOptions,
       collectionLinkWaitOptions: config.collectionLinkWaitOptions,
-      collectionLinkLocator: config.collectionLinkLocator,
       collectionNameLocator: config.collectionNameLocator,
       collectionCountLocator: config.collectionCountLocator,
       hostname,

@@ -16,15 +16,8 @@ export class LinkCollector {
    * 收集所有的链接
    */
   async collectLinks(section: Locator): Promise<void> {
-    // 验证必需的定位符配置
-    if (!this.config.collectionLinkLocator) {
-      throw new Error(
-        "链接收集定位符未配置！请设置 collectionLinkLocator"
-      );
-    }
-
-    // 获取所有链接元素
-    const aTags = await section.locator(this.config.collectionLinkLocator).all();
+    // 获取所有链接元素（统一使用 getByRole('link')）
+    const aTags = await section.getByRole('link').all();
     console.log(`      🔗 找到 ${aTags.length} 个集合链接`);
 
     // 遍历每个链接

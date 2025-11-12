@@ -13,7 +13,6 @@ test("heroui-pro crawler", async ({ page }) => {
     maxConcurrency: 5,
     
     // 配置链接收集定位符
-    collectionLinkLocator: "section > a",
     collectionNameLocator: "xpath=/div[2]/div[1]/div[1]",
     collectionCountLocator: "xpath=/div[2]/div[1]/div[2]",
 

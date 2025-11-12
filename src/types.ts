@@ -113,13 +113,6 @@ export interface CrawlerConfig {
   
   // ========== 链接收集定位符配置 ==========
   /**
-   * 集合链接容器定位符（在容器下查找所有链接）
-   * 必须配置，每个网站的 DOM 结构不同
-   * @example 'section > a' (heroui-pro)
-   * @example 'role=link' (shadcndesign)
-   */
-  collectionLinkLocator: string;
-  /**
    * 集合名称定位符（在链接元素下查找名称）
    * 可选，如果不提供则只记录 link
    * @example 'xpath=/div[2]/div[1]/div[1]' (heroui-pro)

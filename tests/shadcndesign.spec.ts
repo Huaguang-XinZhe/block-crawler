@@ -23,7 +23,6 @@ test("shadcndesign", async ({ page }) => {
     //   return Promise.all(tabs.map(tab => tab.textContent() || ""));
     // },
     
-    collectionLinkLocator: "role=link", // 在 tabpanel 中查找链接
     collectionNameLocator: '[data-slot="card-title"]', // 通过 data-slot 找到标题
     collectionCountLocator: "p", // 通过 p 标签找到数量文本
   });
