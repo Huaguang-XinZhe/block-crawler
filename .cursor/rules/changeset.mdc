@@ -36,3 +36,12 @@ alwaysApply: false
 - 🐛 Bug 修复说明
 - 🔄 Breaking Changes 前加 "BREAKING CHANGE:"
 ```
+
+### 后续流程
+
+写好 changeset 的 md 文件后：
+
+- 马上执行 `pnpm changeset version` 更新版本号
+- 然后执行 `pnpm release` 发布到 npm
+- 再执行 `pnpm update block-crawler` 更新依赖
+- 最后进行 git 提交（不要推送到远程）
