@@ -13,6 +13,7 @@ export class MetaCollector {
     this.meta = {
       startUrl,
       collectionLinks: [],
+      totalLinks: 0,
       displayedTotalCount: 0,
       actualTotalCount: 0,
       freePages: {
@@ -74,13 +75,16 @@ export class MetaCollector {
     const endTime = new Date();
     this.meta.endTime = endTime.toISOString();
     this.meta.duration = Math.floor((endTime.getTime() - new Date(this.meta.startTime).getTime()) / 1000);
+    
+    // 更新链接总数
+    this.meta.totalLinks = this.meta.collectionLinks.length;
 
     await fse.ensureDir(this.metaFile.substring(0, this.metaFile.lastIndexOf("/")));
     await fse.writeJson(this.metaFile, this.meta, { spaces: 2 });
     
     console.log(`\n✅ 元信息已保存到: ${this.metaFile}`);
     console.log(`📊 统计信息:`);
-    console.log(`   - 收集链接数: ${this.meta.collectionLinks.length}`);
+    console.log(`   - 收集链接数: ${this.meta.totalLinks}`);
     console.log(`   - 展示总组件数: ${this.meta.displayedTotalCount}`);
     console.log(`   - 真实总组件数: ${this.meta.actualTotalCount}`);
     console.log(`   - Free 页面数: ${this.meta.freePages.total}`);

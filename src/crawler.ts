@@ -31,6 +31,8 @@ export class BlockCrawler {
   private pageHandler?: PageHandler;
   private blockHandler?: BlockHandler;
   private blockSectionLocator?: string;
+  private orchestrator?: CrawlerOrchestrator;
+  private signalHandler?: NodeJS.SignalsListener;
 
   constructor(config: CrawlerConfig) {
     // 创建内部配置
@@ -90,13 +92,55 @@ export class BlockCrawler {
    * 运行爬虫（内部方法）
    */
   private async run(page: Page): Promise<void> {
-    const orchestrator = new CrawlerOrchestrator(this.config, this.taskProgress);
-    await orchestrator.run(
-      page,
-      this.blockSectionLocator || null,
-      this.blockHandler || null,
-      this.pageHandler || null
-    );
+    this.orchestrator = new CrawlerOrchestrator(this.config, this.taskProgress);
+    
+    // 设置 Ctrl+C 信号处理器
+    this.setupSignalHandlers();
+    
+    try {
+      await this.orchestrator.run(
+        page,
+        this.blockSectionLocator || null,
+        this.blockHandler || null,
+        this.pageHandler || null
+      );
+    } finally {
+      // 清理信号处理器
+      this.removeSignalHandlers();
+    }
+  }
+
+  /**
+   * 设置信号处理器（Ctrl+C）
+   */
+  private setupSignalHandlers(): void {
+    this.signalHandler = async (signal: NodeJS.Signals) => {
+      console.log(`\n\n⚠️  收到 ${signal} 信号，正在保存进度和元信息...\n`);
+      
+      if (this.orchestrator) {
+        try {
+          await this.orchestrator.cleanup();
+          console.log("\n✅ 进度和元信息已保存，程序退出\n");
+        } catch (error) {
+          console.error("\n❌ 保存失败:", error);
+        }
+      }
+      
+      process.exit(0);
+    };
+    
+    process.on("SIGINT", this.signalHandler);
+    process.on("SIGTERM", this.signalHandler);
+  }
+
+  /**
+   * 移除信号处理器
+   */
+  private removeSignalHandlers(): void {
+    if (this.signalHandler) {
+      process.off("SIGINT", this.signalHandler);
+      process.off("SIGTERM", this.signalHandler);
+    }
   }
 
   /**

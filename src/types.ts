@@ -221,6 +221,8 @@ export interface SiteMeta {
   startUrl: string;
   /** 所有收集到的链接 */
   collectionLinks: CollectionLink[];
+  /** 收集到的链接总数 */
+  totalLinks: number;
   /** 展示的总组件数（collectionCount 的加和） */
   displayedTotalCount: number;
   /** 真实的总组件数（实际爬取到的） */

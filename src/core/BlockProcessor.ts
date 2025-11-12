@@ -66,19 +66,30 @@ export class BlockProcessor {
       return false;
     }
 
-    try {
-      // 字符串配置：使用 getByText 精确匹配
-      if (typeof this.config.skipBlockFree === "string") {
-        const count = await block.getByText(this.config.skipBlockFree, { exact: true }).count();
-        return count > 0;
+    // 字符串配置：使用 getByText 精确匹配
+    if (typeof this.config.skipBlockFree === "string") {
+      const count = await block.getByText(this.config.skipBlockFree, { exact: true }).count();
+      
+      if (count === 0) {
+        return false;
       }
       
-      // 函数配置：使用自定义判断逻辑
-      return await this.config.skipBlockFree(block);
-    } catch (error) {
-      console.warn(`⚠️ 检查 Free Block 失败:`, error);
-      return false;
+      if (count !== 1) {
+        throw new Error(
+          `❌ Free Block 标记匹配错误：\n` +
+          `   期望找到 1 个匹配项，实际找到 ${count} 个\n` +
+          `   匹配文本: "${this.config.skipBlockFree}"\n\n` +
+          `请检查：\n` +
+          `   1. 文本是否唯一（建议使用更精确的文本）\n` +
+          `   2. 或使用自定义函数配置更精确的判断逻辑`
+        );
+      }
+      
+      return true;
     }
+    
+    // 函数配置：使用自定义判断逻辑
+    return await this.config.skipBlockFree(block);
   }
 
   /**

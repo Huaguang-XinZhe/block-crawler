@@ -68,17 +68,25 @@ export class CrawlerOrchestrator {
       console.error("\n❌ 处理过程中发生错误");
       throw error;
     } finally {
-      // 保存进度
-      if (this.taskProgress) {
-        await this.taskProgress.saveProgress();
-        console.log(
-          `\n💾 进度已保存 (已完成 Block: ${this.taskProgress.getCompletedBlockCount()}, 已完成 Page: ${this.taskProgress.getCompletedPageCount()})`
-        );
-      }
-      
-      // 保存元信息
-      await this.metaCollector.save();
+      await this.cleanup();
     }
+  }
+
+  /**
+   * 清理资源（保存进度和元信息）
+   * 在正常结束或中断时调用
+   */
+  async cleanup(): Promise<void> {
+    // 保存进度
+    if (this.taskProgress) {
+      await this.taskProgress.saveProgress();
+      console.log(
+        `\n💾 进度已保存 (已完成 Block: ${this.taskProgress.getCompletedBlockCount()}, 已完成 Page: ${this.taskProgress.getCompletedPageCount()})`
+      );
+    }
+    
+    // 保存元信息
+    await this.metaCollector.save();
   }
 
   /**
@@ -121,11 +129,15 @@ export class CrawlerOrchestrator {
       }
     }
 
-    console.log(`\n✨ 收集完成！总共 ${this.linkCollector.getTotalBlockCount()} 个 blocks`);
-    console.log(`📊 总共 ${this.linkCollector.getAllLinks().length} 个集合链接待处理\n`);
+    const allLinks = this.linkCollector.getAllLinks();
+    const totalBlocks = this.linkCollector.getTotalBlockCount();
+    
+    console.log(`\n✨ 收集完成！`);
+    console.log(`   📊 总链接数: ${allLinks.length}`);
+    console.log(`   📦 总组件数: ${totalBlocks} (展示的数量)\n`);
     
     // 将收集到的链接添加到元信息收集器
-    this.metaCollector.addCollectionLinks(this.linkCollector.getAllLinks());
+    this.metaCollector.addCollectionLinks(allLinks);
   }
 
   /**

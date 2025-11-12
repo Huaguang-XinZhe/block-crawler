@@ -20,19 +20,30 @@ export class PageProcessor {
       return false;
     }
 
-    try {
-      // 字符串配置：使用 getByText 精确匹配
-      if (typeof this.config.skipPageFree === "string") {
-        const count = await page.getByText(this.config.skipPageFree, { exact: true }).count();
-        return count > 0;
+    // 字符串配置：使用 getByText 精确匹配
+    if (typeof this.config.skipPageFree === "string") {
+      const count = await page.getByText(this.config.skipPageFree, { exact: true }).count();
+      
+      if (count === 0) {
+        return false;
       }
       
-      // 函数配置：使用自定义判断逻辑
-      return await this.config.skipPageFree(page);
-    } catch (error) {
-      console.warn(`⚠️ 检查 Free 页面失败:`, error);
-      return false;
+      if (count !== 1) {
+        throw new Error(
+          `❌ Free 页面标记匹配错误：\n` +
+          `   期望找到 1 个匹配项，实际找到 ${count} 个\n` +
+          `   匹配文本: "${this.config.skipPageFree}"\n\n` +
+          `请检查：\n` +
+          `   1. 文本是否唯一（建议使用更精确的文本）\n` +
+          `   2. 或使用自定义函数配置更精确的判断逻辑`
+        );
+      }
+      
+      return true;
     }
+    
+    // 函数配置：使用自定义判断逻辑
+    return await this.config.skipPageFree(page);
   }
 
   /**
