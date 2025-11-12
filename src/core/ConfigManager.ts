@@ -7,7 +7,8 @@ import type { CrawlerConfig } from "../types";
 export interface InternalConfig extends Required<Omit<CrawlerConfig, 
   'tabListAriaLabel' | 'tabSectionLocator' | 'getTabSection' | 'getAllTabSections' | 'extractTabTextFromSection' |
   'getAllBlocks' | 'getBlockName' | 'extractBlockCount' | 'outputDir' | 'stateDir' | 'blockNameLocator' | 
-  'startUrlWaitOptions' | 'collectionLinkWaitOptions'>> {
+  'startUrlWaitOptions' | 'collectionLinkWaitOptions' | 'collectionNameLocator' | 'collectionCountLocator' |
+  'skipPageFree' | 'skipBlockFree'>> {
   tabListAriaLabel?: string;
   tabSectionLocator?: string;
   getTabSection?: CrawlerConfig['getTabSection'];
@@ -16,9 +17,14 @@ export interface InternalConfig extends Required<Omit<CrawlerConfig,
   getAllBlocks?: CrawlerConfig['getAllBlocks'];
   getBlockName?: CrawlerConfig['getBlockName'];
   extractBlockCount?: CrawlerConfig['extractBlockCount'];
+  skipPageFree?: CrawlerConfig['skipPageFree'];
+  skipBlockFree?: CrawlerConfig['skipBlockFree'];
+  collectionNameLocator?: string;
+  collectionCountLocator?: string;
   outputDir: string;
   stateDir: string;
   progressFile: string;
+  metaFile: string;
   blockNameLocator: string;
   startUrlWaitOptions?: CrawlerConfig['startUrlWaitOptions'];
   collectionLinkWaitOptions?: CrawlerConfig['collectionLinkWaitOptions'];
@@ -105,11 +111,13 @@ export class ConfigManager {
     
     // 目录结构：
     // - .crawler/域名/progress.json
+    // - .crawler/域名/meta.json
     // - output/域名/
     const stateDir = config.stateDir ?? ".crawler";
     const outputBaseDir = config.outputDir ?? "output";
     const outputDir = path.join(outputBaseDir, hostname);
     const progressFile = path.join(stateDir, hostname, "progress.json");
+    const metaFile = path.join(stateDir, hostname, "meta.json");
 
     return {
       startUrl: config.startUrl,
@@ -121,10 +129,13 @@ export class ConfigManager {
       getAllBlocks: config.getAllBlocks,
       getBlockName: config.getBlockName,
       extractBlockCount: config.extractBlockCount,
+      skipPageFree: config.skipPageFree,
+      skipBlockFree: config.skipBlockFree,
       maxConcurrency: config.maxConcurrency ?? 5,
       outputDir,
       stateDir,
       progressFile,
+      metaFile,
       blockNameLocator: config.blockNameLocator ?? "role=heading[level=1] >> role=link",
       enableProgressResume: config.enableProgressResume ?? true,
       startUrlWaitOptions: config.startUrlWaitOptions,

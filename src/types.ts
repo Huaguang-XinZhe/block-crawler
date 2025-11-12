@@ -121,18 +121,36 @@ export interface CrawlerConfig {
   collectionLinkLocator: string;
   /**
    * 集合名称定位符（在链接元素下查找名称）
-   * 必须配置，每个网站的 DOM 结构不同
+   * 可选，如果不提供则只记录 link
    * @example 'xpath=/div[2]/div[1]/div[1]' (heroui-pro)
    * @example '[data-slot="card-title"]' (shadcndesign)
    */
-  collectionNameLocator: string;
+  collectionNameLocator?: string;
   /**
    * 集合数量文本定位符（在链接元素下查找数量文本）
-   * 必须配置，每个网站的 DOM 结构不同
+   * 可选，如果不提供则只记录 link
    * @example 'xpath=/div[2]/div[1]/div[2]' (heroui-pro)
    * @example 'p' (shadcndesign)
    */
-  collectionCountLocator: string;
+  collectionCountLocator?: string;
+  
+  // ========== Free 过滤配置 ==========
+  /**
+   * 跳过 Free 页面的配置
+   * - 字符串：使用 getByText(text, {exact: true}) 精确匹配文本
+   * - 函数：自定义判断逻辑
+   * @example "FREE" // 字符串配置
+   * @example async (page) => (await page.getByText("FREE", {exact: true}).count()) > 0 // 函数配置
+   */
+  skipPageFree?: string | ((page: Page) => Promise<boolean>);
+  /**
+   * 跳过 Free Block 的配置
+   * - 字符串：使用 getByText(text, {exact: true}) 精确匹配文本
+   * - 函数：自定义判断逻辑
+   * @example "Free" // 字符串配置
+   * @example async (block) => (await block.getByText("Free", {exact: true}).count()) > 0 // 函数配置
+   */
+  skipBlockFree?: string | ((block: Locator) => Promise<boolean>);
 }
 
 /**
@@ -183,5 +201,49 @@ export interface CollectionLink {
   name?: string;
   /** Block 数量 */
   count?: number;
+}
+
+/**
+ * Free 页面/Block 信息
+ */
+export interface FreeItem {
+  /** 链接或 Block 名称 */
+  name: string;
+  /** 是否为 free */
+  isFree: boolean;
+}
+
+/**
+ * 网站元信息
+ */
+export interface SiteMeta {
+  /** 起始 URL */
+  startUrl: string;
+  /** 所有收集到的链接 */
+  collectionLinks: CollectionLink[];
+  /** 展示的总组件数（collectionCount 的加和） */
+  displayedTotalCount: number;
+  /** 真实的总组件数（实际爬取到的） */
+  actualTotalCount: number;
+  /** Free 页面信息 */
+  freePages: {
+    /** Free 页面总数 */
+    total: number;
+    /** 具体的 Free 页面 */
+    links: string[];
+  };
+  /** Free Block 信息 */
+  freeBlocks: {
+    /** Free Block 总数 */
+    total: number;
+    /** 具体的 Free Block */
+    blockNames: string[];
+  };
+  /** 爬取开始时间 */
+  startTime: string;
+  /** 爬取结束时间 */
+  endTime?: string;
+  /** 爬取总耗时（秒） */
+  duration?: number;
 }
 

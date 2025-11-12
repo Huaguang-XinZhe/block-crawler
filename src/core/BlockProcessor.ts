@@ -18,7 +18,10 @@ export class BlockProcessor {
   /**
    * 处理页面中的所有 Blocks
    */
-  async processBlocksInPage(page: Page, pagePath: string): Promise<void> {
+  async processBlocksInPage(page: Page, pagePath: string): Promise<{
+    totalCount: number;
+    freeBlocks: string[];
+  }> {
     console.log(`\n🔄 开始处理页面中的 blocks: ${pagePath}`);
 
     // 获取所有 block 节点
@@ -26,13 +29,19 @@ export class BlockProcessor {
     console.log(`✅ 找到 ${blocks.length} 个 blocks`);
 
     let completedCount = 0;
+    const freeBlocks: string[] = [];
 
     // 遍历处理每个 block
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
-      const success = await this.processSingleBlock(page, block, pagePath);
-      if (success) {
+      const result = await this.processSingleBlock(page, block, pagePath);
+      
+      if (result.success) {
         completedCount++;
+      }
+      
+      if (result.isFree && result.blockName) {
+        freeBlocks.push(result.blockName);
       }
     }
 
@@ -41,6 +50,34 @@ export class BlockProcessor {
       const normalizedPath = this.normalizePagePath(pagePath);
       this.taskProgress?.markPageComplete(normalizedPath);
       console.log(`✨ 页面所有 block 已完成: ${normalizedPath}`);
+    }
+
+    return {
+      totalCount: blocks.length,
+      freeBlocks,
+    };
+  }
+
+  /**
+   * 检查 Block 是否为 Free
+   */
+  private async isBlockFree(block: Locator): Promise<boolean> {
+    if (!this.config.skipBlockFree) {
+      return false;
+    }
+
+    try {
+      // 字符串配置：使用 getByText 精确匹配
+      if (typeof this.config.skipBlockFree === "string") {
+        const count = await block.getByText(this.config.skipBlockFree, { exact: true }).count();
+        return count > 0;
+      }
+      
+      // 函数配置：使用自定义判断逻辑
+      return await this.config.skipBlockFree(block);
+    } catch (error) {
+      console.warn(`⚠️ 检查 Free Block 失败:`, error);
+      return false;
     }
   }
 
@@ -51,16 +88,23 @@ export class BlockProcessor {
     page: Page,
     block: Locator,
     urlPath: string
-  ): Promise<boolean> {
+  ): Promise<{ success: boolean; isFree: boolean; blockName?: string }> {
     // 获取 block 名称
     const blockName = await this.getBlockName(block);
 
     if (!blockName) {
       console.warn("⚠️ block 名称为空，跳过");
-      return false;
+      return { success: false, isFree: false };
     }
 
     console.log(`\n🔍 正在处理 block: ${blockName}`);
+
+    // 检查是否为 Free Block
+    const isFree = await this.isBlockFree(block);
+    if (isFree) {
+      console.log(`🆓 跳过 Free Block: ${blockName}`);
+      return { success: true, isFree: true, blockName };
+    }
 
     // 构建 blockPath
     const normalizedUrlPath = this.normalizePagePath(urlPath);
@@ -69,7 +113,7 @@ export class BlockProcessor {
     // 检查是否已完成
     if (this.taskProgress?.isBlockComplete(blockPath)) {
       console.log(`⏭️  跳过已完成的 block: ${blockName}`);
-      return true;
+      return { success: true, isFree: false, blockName };
     }
 
     const context: BlockContext = {
@@ -83,10 +127,10 @@ export class BlockProcessor {
     try {
       await this.blockHandler(context);
       this.taskProgress?.markBlockComplete(blockPath);
-      return true;
+      return { success: true, isFree: false, blockName };
     } catch (error) {
       console.error(`❌ 处理 block 失败: ${blockName}`, error);
-      return false;
+      return { success: false, isFree: false, blockName };
     }
   }
 

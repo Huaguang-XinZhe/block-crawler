@@ -13,5 +13,7 @@ export type {
   PageHandler,
   BlockHandler,
   CollectionLink,
+  SiteMeta,
+  FreeItem,
 } from "./types";
 

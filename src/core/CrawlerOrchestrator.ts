@@ -6,6 +6,7 @@ import { TabProcessor } from "./TabProcessor";
 import { LinkCollector } from "./LinkCollector";
 import { BlockProcessor } from "./BlockProcessor";
 import { PageProcessor } from "./PageProcessor";
+import { MetaCollector } from "./MetaCollector";
 
 /**
  * 爬虫协调器
@@ -14,6 +15,7 @@ import { PageProcessor } from "./PageProcessor";
 export class CrawlerOrchestrator {
   private tabProcessor: TabProcessor;
   private linkCollector: LinkCollector;
+  private metaCollector: MetaCollector;
   private limit: ReturnType<typeof pLimit>;
 
   constructor(
@@ -22,6 +24,7 @@ export class CrawlerOrchestrator {
   ) {
     this.tabProcessor = new TabProcessor(config);
     this.linkCollector = new LinkCollector(config);
+    this.metaCollector = new MetaCollector(config.startUrl, config.metaFile);
     this.limit = pLimit(config.maxConcurrency);
   }
 
@@ -72,6 +75,9 @@ export class CrawlerOrchestrator {
           `\n💾 进度已保存 (已完成 Block: ${this.taskProgress.getCompletedBlockCount()}, 已完成 Page: ${this.taskProgress.getCompletedPageCount()})`
         );
       }
+      
+      // 保存元信息
+      await this.metaCollector.save();
     }
   }
 
@@ -117,6 +123,9 @@ export class CrawlerOrchestrator {
 
     console.log(`\n✨ 收集完成！总共 ${this.linkCollector.getTotalBlockCount()} 个 blocks`);
     console.log(`📊 总共 ${this.linkCollector.getAllLinks().length} 个集合链接待处理\n`);
+    
+    // 将收集到的链接添加到元信息收集器
+    this.metaCollector.addCollectionLinks(this.linkCollector.getAllLinks());
   }
 
   /**
@@ -213,10 +222,21 @@ export class CrawlerOrchestrator {
           blockHandler,
           this.taskProgress
         );
-        await blockProcessor.processBlocksInPage(newPage, relativeLink);
+        const result = await blockProcessor.processBlocksInPage(newPage, relativeLink);
+        
+        // 记录实际组件数和 free blocks
+        this.metaCollector.incrementActualCount(result.totalCount);
+        result.freeBlocks.forEach(blockName => {
+          this.metaCollector.addFreeBlock(blockName);
+        });
       } else if (pageHandler) {
         const pageProcessor = new PageProcessor(this.config, pageHandler);
-        await pageProcessor.processPage(newPage, relativeLink);
+        const result = await pageProcessor.processPage(newPage, relativeLink);
+        
+        // 记录 free pages
+        if (result.isFree) {
+          this.metaCollector.addFreePage(relativeLink);
+        }
       }
     } finally {
       if (!isFirst) {

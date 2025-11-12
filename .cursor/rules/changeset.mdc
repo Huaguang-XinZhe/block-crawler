@@ -36,14 +36,3 @@ alwaysApply: false
 - 🐛 Bug 修复说明
 - 🔄 Breaking Changes 前加 "BREAKING CHANGE:"
 ```
-
-## 提交流程
-
-```bash
-# 1. 修改代码后创建 changeset
-pnpm changeset
-
-# 2. 提交代码和 changeset
-git add .
-git commit -m "feat: 功能描述"
-```

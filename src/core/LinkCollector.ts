@@ -17,13 +17,9 @@ export class LinkCollector {
    */
   async collectLinks(section: Locator): Promise<void> {
     // 验证必需的定位符配置
-    if (
-      !this.config.collectionLinkLocator ||
-      !this.config.collectionNameLocator ||
-      !this.config.collectionCountLocator
-    ) {
+    if (!this.config.collectionLinkLocator) {
       throw new Error(
-        "链接收集定位符未配置！请设置 collectionLinkLocator、collectionNameLocator 和 collectionCountLocator"
+        "链接收集定位符未配置！请设置 collectionLinkLocator"
       );
     }
 
@@ -35,29 +31,42 @@ export class LinkCollector {
     for (let i = 0; i < aTags.length; i++) {
       const aTag = aTags[i];
 
-      // 提取链接信息
-      const blockCollectionName = await aTag
-        .locator(this.config.collectionNameLocator)
-        .textContent();
-      const blockCountText = await aTag
-        .locator(this.config.collectionCountLocator)
-        .textContent();
+      // 提取链接
       const collectionLink = await aTag.getAttribute("href");
-
-      const blockCount = this.extractBlockCount(blockCountText);
+      
+      // 提取名称（可选）
+      let blockCollectionName: string | null = null;
+      if (this.config.collectionNameLocator) {
+        blockCollectionName = await aTag
+          .locator(this.config.collectionNameLocator)
+          .textContent();
+      }
+      
+      // 提取数量（可选）
+      let blockCountText: string | null = null;
+      let blockCount = 0;
+      if (this.config.collectionCountLocator) {
+        blockCountText = await aTag
+          .locator(this.config.collectionCountLocator)
+          .textContent();
+        blockCount = this.extractBlockCount(blockCountText);
+        this.totalBlockCount += blockCount;
+      }
 
       // 日志输出
-      console.log(`      ├─ [${i + 1}/${aTags.length}] 📦 ${blockCollectionName}`);
-      console.log(`      │  ├─ Path: ${collectionLink}`);
-      console.log(`      │  └─ Count: ${blockCountText}`);
-
-      this.totalBlockCount += blockCount;
+      console.log(`      ├─ [${i + 1}/${aTags.length}] 🔗 ${collectionLink}`);
+      if (blockCollectionName) {
+        console.log(`      │  ├─ Name: ${blockCollectionName}`);
+      }
+      if (blockCountText) {
+        console.log(`      │  └─ Count: ${blockCountText}`);
+      }
 
       if (collectionLink) {
         this.allCollectionLinks.push({
           link: collectionLink,
           name: blockCollectionName || undefined,
-          count: blockCount,
+          count: blockCount > 0 ? blockCount : undefined,
         });
       }
     }
