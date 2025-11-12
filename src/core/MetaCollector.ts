@@ -1,4 +1,4 @@
-import * as fse from "fs-extra";
+import fse from "fs-extra";
 import path from "path";
 import type { CollectionLink, SiteMeta } from "../types";
 import { createI18n, type I18n, type Locale } from "../utils/i18n";

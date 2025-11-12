@@ -1,5 +1,5 @@
 import { test, type Page } from "@playwright/test";
-import * as fse from "fs-extra";
+import fse from "fs-extra";
 import { BlockCrawler, type PageContext } from "block-crawler";
 
 test("shadcndesign", async ({ page }) => {

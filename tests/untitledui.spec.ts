@@ -13,7 +13,7 @@ test("untitledui", async ({ page }) => {
     },
   });
 
-  crawler.onPage(page, async ({ currentPage }) => {
+  await crawler.onPage(page, async ({ currentPage }) => {
     const url = currentPage.url();
     console.log(`url: ${url}`);
   });

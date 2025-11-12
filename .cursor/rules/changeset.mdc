@@ -1,8 +1,7 @@
 ---
-description: 在 block-crawler 框架代码变动时应用
+globs: src/**/*.ts
 alwaysApply: false
 ---
-
 # Changesets 版本管理规则
 
 ## 核心约定

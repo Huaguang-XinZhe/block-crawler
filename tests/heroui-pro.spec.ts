@@ -1,5 +1,5 @@
 import { test, type Page, type Locator } from "@playwright/test";
-import * as fse from "fs-extra";
+import fse from "fs-extra";
 import { BlockCrawler } from "block-crawler";
 import { extractCodeFromBlock } from "./utils/extract-code";
 
