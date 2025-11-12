@@ -1,0 +1,49 @@
+---
+description: 在 block-crawler 框架代码变动时应用
+alwaysApply: false
+---
+
+# Changesets 版本管理规则
+
+## 核心约定
+
+- ⚠️ **版本格式：0.x.x** - major 版本号始终为 0（开发阶段）
+- ❌ **永远不要选择 major** - 等项目稳定后手动发布 1.0.0
+- 📝 **每次修改都创建 changeset** - 运行 `pnpm changeset`
+
+## 版本选择
+
+**选择 minor (0.x.0)：**
+- 新功能
+- 重大改进
+- Breaking Changes
+
+**选择 patch (0.0.x)：**
+- Bug 修复
+- 小改进
+- 文档更新
+
+## Changeset 格式
+
+```markdown
+---
+"block-crawler": minor  # 或 patch，永远不要用 major
+---
+
+简短的变更描述
+
+- ✨ 新功能说明
+- 🐛 Bug 修复说明
+- 🔄 Breaking Changes 前加 "BREAKING CHANGE:"
+```
+
+## 提交流程
+
+```bash
+# 1. 修改代码后创建 changeset
+pnpm changeset
+
+# 2. 提交代码和 changeset
+git add .
+git commit -m "feat: 功能描述"
+```
