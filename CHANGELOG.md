@@ -1,5 +1,15 @@
 # block-crawler
 
+## 0.8.1
+
+### Patch Changes
+
+- 文档改进：明确 beforeProcessBlocks 的参数
+
+  - 📝 将参数名从 `page` 改为 `currentPage` 以保持一致性
+  - 📚 添加详细的 JSDoc 说明：参数是当前处理的页面，可能不是原始测试 page
+  - ✨ 在所有示例和文档中添加注释说明
+
 ## 0.8.0
 
 ### Minor Changes
