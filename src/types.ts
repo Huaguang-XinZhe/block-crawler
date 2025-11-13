@@ -183,6 +183,8 @@ export interface BlockContext {
   blockName: string;
   /** 输出目录 */
   outputDir: string;
+  /** 是否为 Free Block */
+  isFree?: boolean;
 }
 
 /**

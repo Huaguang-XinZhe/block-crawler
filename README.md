@@ -172,12 +172,18 @@ test("爬取页面", async ({ page }) => {
 
 支持通过配置函数来覆盖默认行为，无需继承子类：
 
-| 配置项 | 类型 | 说明 |
-|--------|------|------|
-| `getTabSection` | `(page: Page, tabText: string) => Locator` | 获取 Tab 对应的 Section |
-| `getAllTabTexts` | `(page: Page) => Promise<string[]>` | 直接返回所有 Tab 文本（跳过点击） |
-| `getAllBlocks` | `(page: Page) => Promise<Locator[]>` | 获取所有 Block 元素 |
-| `getBlockName` | `(block: Locator) => Promise<string \| null>` | 获取 Block 名称 |
+| 配置项 | 类型 | 默认行为 | 说明 |
+|--------|------|----------|------|
+| `getTabSection` | `(page: Page, tabText: string) => Locator` | - | 获取 Tab 对应的 Section |
+| `getAllTabTexts` | `(page: Page) => Promise<string[]>` | - | 直接返回所有 Tab 文本（跳过点击） |
+| `getAllBlocks` | `(page: Page) => Promise<Locator[]>` | - | 获取所有 Block 元素 |
+| `getBlockName` | `(block: Locator) => Promise<string \| null>` | `getByRole('heading')` | 获取 Block 名称 |
+
+**getBlockName 默认逻辑：**
+1. 使用 `block.getByRole('heading')` 查找 heading 元素
+2. 如果 heading 内部子元素 > 1（结构复杂），自动提取内部的 link 文本
+3. 如果 heading 内部子元素 ≤ 1，直接取 heading 的文本内容
+4. 如果结构复杂但未找到 link，会抛出错误提示配置 `getBlockName` 或 `blockNameLocator`
 
 **示例：shadcndesign 配置**
 

@@ -92,6 +92,7 @@ const messages = {
     'block.pageComplete': '✅ 页面处理完成，共 {total} 个 Block',
     'block.nameEmpty': '⚠️ block 名称为空，跳过',
     'block.processFailed': '❌ 处理 block 失败: {name}',
+    'block.complexHeading': '❌ 检测到 heading 内部结构复杂（子元素 > 1）但未找到 link 元素\n\n请配置以下选项之一：\n   1. getBlockName: (block) => Promise<string | null>\n   2. blockNameLocator: string',
     
     // 元信息
     'meta.saved': '✅ 元信息已保存到: {path}',
@@ -194,6 +195,7 @@ const messages = {
     'block.pageComplete': '✅ Page processing complete, {total} blocks total',
     'block.nameEmpty': '⚠️ Block name is empty, skipping',
     'block.processFailed': '❌ Failed to process block: {name}',
+    'block.complexHeading': '❌ Detected complex heading structure (children > 1) but no link element found\n\nPlease configure one of the following:\n   1. getBlockName: (block) => Promise<string | null>\n   2. blockNameLocator: string',
     
     // Meta information
     'meta.saved': '✅ Meta information saved to: {path}',

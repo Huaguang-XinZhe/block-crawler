@@ -5,7 +5,7 @@ test("untitledui", async ({ page }) => {
   const crawler = new BlockCrawler({
     startUrl: "https://www.untitledui.com/react/components",
     skipPageFree: "FREE",
-    locale: "en",
+    // locale: "en",
     collectionNameLocator: "p:first-of-type",
     collectionCountLocator: "p:last-of-type",
     // 使用新的 getAllTabSections 模式（跳过 tab 点击）
@@ -15,8 +15,11 @@ test("untitledui", async ({ page }) => {
     },
   });
 
-  await crawler.onPage(page, async ({ currentPage }) => {
-    const url = currentPage.url();
-    console.log(`url: ${url}`);
-  });
+  await crawler.onBlock(
+    page,
+    "xpath=//main/div/div[2]/div[@data-preview]",
+    async ({ block, blockName, blockPath, outputDir, currentPage }) => {
+      console.log(`blockName: ${blockName}`);
+    }
+  );
 });

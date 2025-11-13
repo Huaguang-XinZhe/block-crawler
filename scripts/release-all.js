@@ -7,7 +7,8 @@
  * 1. 执行 pnpm changeset version 更新版本号
  * 2. 执行 pnpm release 发布到 npm
  * 3. 执行 pnpm update block-crawler 更新依赖
- * 4. 进行 git 提交（不推送到远程）
+ * 4. 进行 git 提交
+ * 5. 推送到远程仓库
  */
 
 import { execSync } from 'child_process';
@@ -63,8 +64,10 @@ console.log('\n💾 步骤 4: Git 提交');
 exec('git add -A');
 exec(`git commit -m "chore: release version ${newVersion}\n\n- chore: 应用 changesets 更新版本号到 ${newVersion}\n- docs: 更新 CHANGELOG.md\n- chore: 更新 devDependencies 中的 block-crawler 到 ${newVersion}\n- chore: 删除已应用的 changeset 文件"`);
 
+// 步骤 5: 推送到远程
+console.log('\n🚀 步骤 5: 推送到远程仓库');
+exec('git push');
+
 console.log('\n🎉 发布流程完成！');
 console.log(`\n📊 版本: ${newVersion}`);
-console.log('⚠️  注意: 代码已提交到本地，未推送到远程');
-console.log('\n如需推送到远程，请手动执行: git push');
 
