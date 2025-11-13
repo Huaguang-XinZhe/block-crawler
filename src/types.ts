@@ -198,6 +198,12 @@ export type PageHandler = (context: PageContext) => Promise<void>;
 export type BlockHandler = (context: BlockContext) => Promise<void>;
 
 /**
+ * Block 处理前置函数类型
+ * 在匹配页面所有 Block 之前执行的前置逻辑（如点击按钮、toggle 切换等）
+ */
+export type BeforeProcessBlocksHandler = (page: Page) => Promise<void>;
+
+/**
  * 链接收集结果
  */
 export interface CollectionLink {

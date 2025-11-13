@@ -17,9 +17,19 @@ test("untitledui", async ({ page }) => {
 
   await crawler.onBlock(
     page,
-    "xpath=//main/div/div[2]/div[@data-preview]",
+    "[data-preview]",
     async ({ block, blockName, blockPath, outputDir, currentPage }) => {
       console.log(`blockName: ${blockName}`);
+    },
+    async (page) => {
+      // 前置逻辑示例：在匹配所有 Block 之前执行
+      // 比如点击按钮、toggle 切换等操作
+      // await page.getByRole('button', { name: 'Show All' }).click();
     }
   );
+
+  // await crawler.onPage(page, async ({ currentPage }) => {
+  //   const url = currentPage.url();
+  //   console.log(`url: ${url}`);
+  // });
 });

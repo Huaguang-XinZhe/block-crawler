@@ -96,6 +96,12 @@ test("爬取组件", async ({ page }) => {
       // 处理单个 Block
       const code = await block.textContent();
       await fse.outputFile(`${outputDir}/${blockPath}.txt`, code);
+    },
+    async (page) => {
+      // 可选：前置逻辑，在匹配页面所有 Block 之前执行
+      // 比如点击按钮、toggle 切换等操作
+      await page.getByRole('button', { name: 'Show All' }).click();
+      await page.waitForTimeout(1000); // 等待动画完成
     }
   );
 });
@@ -184,6 +190,37 @@ test("爬取页面", async ({ page }) => {
 2. 如果 heading 内部子元素 > 1（结构复杂），自动提取内部的 link 文本
 3. 如果 heading 内部子元素 ≤ 1，直接取 heading 的文本内容
 4. 如果结构复杂但未找到 link，会抛出错误提示配置 `getBlockName` 或 `blockNameLocator`
+
+### Block 前置逻辑
+
+`onBlock` 方法支持第四个可选参数 `beforeProcessBlocks`，用于在匹配页面所有 Block 之前执行前置逻辑：
+
+**函数签名：**
+```typescript
+beforeProcessBlocks?: (page: Page) => Promise<void>
+```
+
+**使用场景：**
+- 点击按钮展开隐藏的内容
+- Toggle 切换显示更多选项
+- 滚动页面触发懒加载
+- 等待动画或过渡完成
+
+**示例：**
+```typescript
+await crawler.onBlock(
+  page,
+  "[data-preview]",
+  async ({ block, blockName }) => {
+    // 处理 Block
+  },
+  async (page) => {
+    // 前置逻辑：点击"显示全部"按钮
+    await page.getByRole('button', { name: 'Show All' }).click();
+    await page.waitForTimeout(500); // 等待动画
+  }
+);
+```
 
 **示例：shadcndesign 配置**
 

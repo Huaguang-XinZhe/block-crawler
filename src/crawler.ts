@@ -4,6 +4,7 @@ import type {
   CrawlerConfig,
   PageHandler,
   BlockHandler,
+  BeforeProcessBlocksHandler,
 } from "./types";
 import { ConfigManager, type InternalConfig } from "./core/ConfigManager";
 import { CrawlerOrchestrator } from "./core/CrawlerOrchestrator";
@@ -32,6 +33,7 @@ export class BlockCrawler {
   private pageHandler?: PageHandler;
   private blockHandler?: BlockHandler;
   private blockSectionLocator?: string;
+  private beforeProcessBlocks?: BeforeProcessBlocksHandler;
   private orchestrator?: CrawlerOrchestrator;
   private signalHandler?: NodeJS.SignalsListener;
   private i18n: I18n;
@@ -75,20 +77,31 @@ export class BlockCrawler {
    * @param page Playwright Page 实例
    * @param blockSectionLocator Block 区域定位符（必传）
    * @param handler Block 处理函数
+   * @param beforeProcessBlocks 前置函数（可选），在匹配页面所有 Block 之前执行的逻辑
    * 
    * @example
-   * await crawler.onBlock(page, "xpath=//main/div", async ({ block, blockName }) => {
-   *   const code = await extractCodeFromBlock(block);
-   *   await fse.outputFile(`output/${blockName}.tsx`, code);
-   * });
+   * await crawler.onBlock(
+   *   page,
+   *   "xpath=//main/div",
+   *   async ({ block, blockName }) => {
+   *     const code = await extractCodeFromBlock(block);
+   *     await fse.outputFile(`output/${blockName}.tsx`, code);
+   *   },
+   *   async (page) => {
+   *     // 前置逻辑：点击按钮、toggle 切换等
+   *     await page.getByRole('button', { name: 'Show All' }).click();
+   *   }
+   * );
    */
   async onBlock(
     page: Page,
     blockSectionLocator: string,
-    handler: BlockHandler
+    handler: BlockHandler,
+    beforeProcessBlocks?: BeforeProcessBlocksHandler
   ): Promise<void> {
     this.blockSectionLocator = blockSectionLocator;
     this.blockHandler = handler;
+    this.beforeProcessBlocks = beforeProcessBlocks;
     await this.run(page);
   }
 
@@ -106,7 +119,8 @@ export class BlockCrawler {
         page,
         this.blockSectionLocator || null,
         this.blockHandler || null,
-        this.pageHandler || null
+        this.pageHandler || null,
+        this.beforeProcessBlocks || null
       );
     } finally {
       // 清理信号处理器

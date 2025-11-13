@@ -38,7 +38,8 @@ export class CrawlerOrchestrator {
     page: Page,
     blockSectionLocator: string | null,
     blockHandler: ((context: any) => Promise<void>) | null,
-    pageHandler: ((context: any) => Promise<void>) | null
+    pageHandler: ((context: any) => Promise<void>) | null,
+    beforeProcessBlocks: ((page: Page) => Promise<void>) | null
   ): Promise<void> {
     console.log(`\n${this.i18n.t('crawler.taskStart')}`);
     console.log(this.i18n.t('crawler.targetUrl', { url: this.config.startUrl }));
@@ -69,7 +70,7 @@ export class CrawlerOrchestrator {
       await this.processTabsAndCollectLinks(page);
 
       // 并发处理所有链接
-      await this.processAllLinks(page, blockSectionLocator, blockHandler, pageHandler);
+      await this.processAllLinks(page, blockSectionLocator, blockHandler, pageHandler, beforeProcessBlocks);
 
       console.log(`\n${this.i18n.t('crawler.allComplete')}\n`);
       isComplete = true; // 正常完成，标记为完整
@@ -171,7 +172,8 @@ export class CrawlerOrchestrator {
     page: Page,
     blockSectionLocator: string | null,
     blockHandler: ((context: any) => Promise<void>) | null,
-    pageHandler: ((context: any) => Promise<void>) | null
+    pageHandler: ((context: any) => Promise<void>) | null,
+    beforeProcessBlocks: ((page: Page) => Promise<void>) | null
   ): Promise<void> {
     const allLinks = this.linkCollector.getAllLinks();
     const total = allLinks.length;
@@ -202,7 +204,8 @@ export class CrawlerOrchestrator {
               index === 0,
               blockSectionLocator,
               blockHandler,
-              pageHandler
+              pageHandler,
+              beforeProcessBlocks
             );
             completed++;
             const progress = `${completed + failed}/${total}`;
@@ -230,7 +233,8 @@ export class CrawlerOrchestrator {
     isFirst: boolean,
     blockSectionLocator: string | null,
     blockHandler: ((context: any) => Promise<void>) | null,
-    pageHandler: ((context: any) => Promise<void>) | null
+    pageHandler: ((context: any) => Promise<void>) | null,
+    beforeProcessBlocks: ((page: Page) => Promise<void>) | null
   ): Promise<void> {
     const domain = new URL(this.config.startUrl).hostname;
     const url = `https://${domain}${relativeLink}`;
@@ -246,7 +250,8 @@ export class CrawlerOrchestrator {
           this.config,
           blockSectionLocator,
           blockHandler,
-          this.taskProgress
+          this.taskProgress,
+          beforeProcessBlocks
         );
         const result = await blockProcessor.processBlocksInPage(newPage, relativeLink);
         

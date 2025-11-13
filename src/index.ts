@@ -12,6 +12,7 @@ export type {
   BlockContext,
   PageHandler,
   BlockHandler,
+  BeforeProcessBlocksHandler,
   CollectionLink,
   SiteMeta,
   FreeItem,

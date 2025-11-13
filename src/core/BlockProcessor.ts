@@ -15,7 +15,8 @@ export class BlockProcessor {
     private config: InternalConfig,
     private blockSectionLocator: string,
     private blockHandler: BlockHandler,
-    private taskProgress?: TaskProgress
+    private taskProgress?: TaskProgress,
+    private beforeProcessBlocks?: ((page: Page) => Promise<void>) | null
   ) {
     this.i18n = createI18n(config.locale);
   }
@@ -27,6 +28,11 @@ export class BlockProcessor {
     totalCount: number;
     freeBlocks: string[];
   }> {
+    // 执行前置逻辑（如果配置了）
+    if (this.beforeProcessBlocks) {
+      await this.beforeProcessBlocks(page);
+    }
+    
     // 获取所有 block 节点
     const blocks = await this.getAllBlocks(page);
     console.log(this.i18n.t('block.found', { count: blocks.length }));
