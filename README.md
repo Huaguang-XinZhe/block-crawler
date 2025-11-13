@@ -145,8 +145,13 @@ test("爬取页面", async ({ page }) => {
 |--------|------|--------|------|
 | `collectionNameLocator` | `string?` | - | 集合名称定位符（可选，不提供则只记录 link） |
 | `collectionCountLocator` | `string?` | - | 集合数量定位符（可选，不提供则只记录 link） |
+| `extractBlockCount` | `(text: string \| null) => number` | 匹配所有数字并相加 | 自定义提取 Block 数量的函数 |
 
 **注意：** 框架自动使用 `getByRole('link')` 查找链接，无需配置链接定位符。
+
+**数量提取逻辑：**
+- 默认：匹配文本中的所有数字然后相加（如 `"1 component + 6 variants"` → `7`）
+- 自定义：可通过 `extractBlockCount` 函数覆盖默认行为
 
 ### 等待选项配置
 
