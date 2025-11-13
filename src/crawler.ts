@@ -78,6 +78,7 @@ export class BlockCrawler {
    * @param blockSectionLocator Block 区域定位符（必传）
    * @param handler Block 处理函数
    * @param beforeProcessBlocks 前置函数（可选），在匹配页面所有 Block 之前执行的逻辑
+   *   注意：接收的是 currentPage（可能是新页面），而不是原始测试 page
    * 
    * @example
    * await crawler.onBlock(
@@ -87,9 +88,10 @@ export class BlockCrawler {
    *     const code = await extractCodeFromBlock(block);
    *     await fse.outputFile(`output/${blockName}.tsx`, code);
    *   },
-   *   async (page) => {
+   *   async (currentPage) => {
    *     // 前置逻辑：点击按钮、toggle 切换等
-   *     await page.getByRole('button', { name: 'Show All' }).click();
+   *     // 注意：这里的 currentPage 是当前处理的页面，可能不是测试中的 page
+   *     await currentPage.getByRole('button', { name: 'Show All' }).click();
    *   }
    * );
    */

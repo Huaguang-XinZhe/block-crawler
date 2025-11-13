@@ -200,8 +200,16 @@ export type BlockHandler = (context: BlockContext) => Promise<void>;
 /**
  * Block 处理前置函数类型
  * 在匹配页面所有 Block 之前执行的前置逻辑（如点击按钮、toggle 切换等）
+ * 
+ * @param currentPage 当前正在处理的页面（可能是 newPage，而不是原始测试 page）
+ * 
+ * @example
+ * async (currentPage) => {
+ *   await currentPage.getByRole('button', { name: 'Show All' }).click();
+ *   await currentPage.waitForTimeout(500);
+ * }
  */
-export type BeforeProcessBlocksHandler = (page: Page) => Promise<void>;
+export type BeforeProcessBlocksHandler = (currentPage: Page) => Promise<void>;
 
 /**
  * 链接收集结果

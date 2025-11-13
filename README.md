@@ -97,11 +97,12 @@ test("爬取组件", async ({ page }) => {
       const code = await block.textContent();
       await fse.outputFile(`${outputDir}/${blockPath}.txt`, code);
     },
-    async (page) => {
+    async (currentPage) => {
       // 可选：前置逻辑，在匹配页面所有 Block 之前执行
       // 比如点击按钮、toggle 切换等操作
-      await page.getByRole('button', { name: 'Show All' }).click();
-      await page.waitForTimeout(1000); // 等待动画完成
+      // 注意：currentPage 是当前处理的页面，可能不是测试中的 page
+      await currentPage.getByRole('button', { name: 'Show All' }).click();
+      await currentPage.waitForTimeout(1000); // 等待动画完成
     }
   );
 });
@@ -197,8 +198,11 @@ test("爬取页面", async ({ page }) => {
 
 **函数签名：**
 ```typescript
-beforeProcessBlocks?: (page: Page) => Promise<void>
+beforeProcessBlocks?: (currentPage: Page) => Promise<void>
 ```
+
+**参数说明：**
+- `currentPage`：当前正在处理的页面（可能是新创建的页面，而不是原始测试 page）
 
 **使用场景：**
 - 点击按钮展开隐藏的内容
@@ -214,10 +218,11 @@ await crawler.onBlock(
   async ({ block, blockName }) => {
     // 处理 Block
   },
-  async (page) => {
+  async (currentPage) => {
     // 前置逻辑：点击"显示全部"按钮
-    await page.getByRole('button', { name: 'Show All' }).click();
-    await page.waitForTimeout(500); // 等待动画
+    // 注意：currentPage 是当前处理的页面，可能不是测试中的 page
+    await currentPage.getByRole('button', { name: 'Show All' }).click();
+    await currentPage.waitForTimeout(500); // 等待动画
   }
 );
 ```
