@@ -7,7 +7,7 @@ test("shadcndesign", async ({ page }) => {
   test.setTimeout(60 * 1000); // 1 分钟
 
   // 创建 shadcndesign 爬虫实例（使用配置函数，无需继承）
-  const crawler = new BlockCrawler({
+  const crawler = new BlockCrawler(page, {
     startUrl: "https://www.shadcndesign.com/pro-blocks",
     maxConcurrency: 5,
     enableProgressResume: false,
@@ -31,13 +31,12 @@ test("shadcndesign", async ({ page }) => {
   const names: Set<string> = new Set();
 
   // 设置页面处理器并自动运行
-  await crawler.onPage(
-    page,
-    async ({ currentPage }: PageContext) => {
+  await crawler
+    .pages()
+    .each(async ({ currentPage }: PageContext) => {
       const blockNames = await getPageBlockNames(currentPage);
       blockNames.forEach(name => names.add(name));
-    }
-  );
+    });
 
   // 输出到文件
   await fse.outputFile(

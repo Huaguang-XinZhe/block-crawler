@@ -11,34 +11,105 @@ import { CrawlerOrchestrator } from "./core/CrawlerOrchestrator";
 import { createI18n, type I18n } from "./utils/i18n";
 
 /**
+ * Block Chain - 用于链式调用 Block 处理模式
+ */
+class BlockChain {
+  private beforeHandler?: BeforeProcessBlocksHandler;
+
+  constructor(
+    private crawler: BlockCrawler,
+    private sectionLocator: string
+  ) {}
+
+  /**
+   * 设置前置处理函数（在匹配所有 Block 之前执行）
+   * 
+   * @param handler 前置处理函数
+   * @returns this 支持链式调用
+   * 
+   * @example
+   * .before(async (currentPage) => {
+   *   await currentPage.getByRole('tab', { name: 'List view' }).click();
+   * })
+   */
+  before(handler: BeforeProcessBlocksHandler): this {
+    this.beforeHandler = handler;
+    return this;
+  }
+
+  /**
+   * 执行 Block 处理逻辑
+   * 
+   * @param handler Block 处理函数
+   * 
+   * @example
+   * .each(async ({ block, blockName, currentPage }) => {
+   *   console.log(`处理 Block: ${blockName}`);
+   * })
+   */
+  async each(handler: BlockHandler): Promise<void> {
+    await this.crawler.runBlockMode(
+      this.sectionLocator,
+      handler,
+      this.beforeHandler
+    );
+  }
+}
+
+/**
+ * Page Chain - 用于链式调用 Page 处理模式
+ */
+class PageChain {
+  constructor(private crawler: BlockCrawler) {}
+
+  /**
+   * 执行 Page 处理逻辑
+   * 
+   * @param handler Page 处理函数
+   * 
+   * @example
+   * .each(async ({ currentPage, currentPath }) => {
+   *   const title = await currentPage.title();
+   * })
+   */
+  async each(handler: PageHandler): Promise<void> {
+    await this.crawler.runPageMode(handler);
+  }
+}
+
+/**
  * Block 爬虫核心类
  * 
  * 支持两种模式：
- * 1. 单页面处理模式（使用 onPage）
- * 2. 单 Block 处理模式（使用 onBlock）
- * 
- * @example
- * // Page 模式
- * const crawler = new BlockCrawler({ startUrl: "...", ... });
- * await crawler.onPage(page, async ({ currentPage }) => { ... });
+ * 1. Block 处理模式（使用 blocks()）
+ * 2. Page 处理模式（使用 pages()）
  * 
  * @example
  * // Block 模式
- * const crawler = new BlockCrawler({ startUrl: "...", ... });
- * await crawler.onBlock(page, "xpath=//div", async ({ block }) => { ... });
+ * const crawler = new BlockCrawler(page, { startUrl: "...", ... });
+ * await crawler
+ *   .blocks('[data-preview]')
+ *   .before(async (currentPage) => { ... })
+ *   .each(async ({ block, blockName }) => { ... });
+ * 
+ * @example
+ * // Page 模式
+ * const crawler = new BlockCrawler(page, { startUrl: "...", ... });
+ * await crawler
+ *   .pages()
+ *   .each(async ({ currentPage, currentPath }) => { ... });
  */
 export class BlockCrawler {
   private config: InternalConfig;
   private taskProgress?: TaskProgress;
-  private pageHandler?: PageHandler;
-  private blockHandler?: BlockHandler;
-  private blockSectionLocator?: string;
-  private beforeProcessBlocks?: BeforeProcessBlocksHandler;
   private orchestrator?: CrawlerOrchestrator;
   private signalHandler?: NodeJS.SignalsListener;
   private i18n: I18n;
 
-  constructor(config: CrawlerConfig) {
+  constructor(
+    private page: Page,
+    config: CrawlerConfig
+  ) {
     // 创建内部配置
     this.config = ConfigManager.createInternalConfig(config);
     this.i18n = createI18n(this.config.locale);
@@ -53,64 +124,69 @@ export class BlockCrawler {
     }
   }
 
-
   /**
-   * 设置页面处理器并运行爬虫（单页面模式）
+   * Block 处理模式
    * 
-   * @param page Playwright Page 实例
-   * @param handler 页面处理函数
+   * @param sectionLocator Block 区域定位符
+   * @returns BlockChain 支持链式调用
    * 
    * @example
-   * await crawler.onPage(page, async ({ currentPage, currentPath }) => {
-   *   const title = await currentPage.title();
-   *   console.log(title);
-   * });
+   * await crawler
+   *   .blocks('[data-preview]')
+   *   .before(async (currentPage) => {
+   *     await currentPage.getByRole('tab', { name: 'List view' }).click();
+   *   })
+   *   .each(async ({ block, blockName }) => {
+   *     console.log(`处理 Block: ${blockName}`);
+   *   });
    */
-  async onPage(page: Page, handler: PageHandler): Promise<void> {
-    this.pageHandler = handler;
-    await this.run(page);
+  blocks(sectionLocator: string): BlockChain {
+    return new BlockChain(this, sectionLocator);
   }
 
   /**
-   * 设置 Block 处理器并运行爬虫（单 Block 模式）
+   * Page 处理模式
    * 
-   * @param page Playwright Page 实例
-   * @param blockSectionLocator Block 区域定位符（必传）
-   * @param handler Block 处理函数
-   * @param beforeProcessBlocks 前置函数（可选），在匹配页面所有 Block 之前执行的逻辑
-   *   注意：接收的是 currentPage（可能是新页面），而不是原始测试 page
+   * @returns PageChain 支持链式调用
    * 
    * @example
-   * await crawler.onBlock(
-   *   page,
-   *   "xpath=//main/div",
-   *   async ({ block, blockName }) => {
-   *     const code = await extractCodeFromBlock(block);
-   *     await fse.outputFile(`output/${blockName}.tsx`, code);
-   *   },
-   *   async (currentPage) => {
-   *     // 前置逻辑：点击按钮、toggle 切换等
-   *     // 注意：这里的 currentPage 是当前处理的页面，可能不是测试中的 page
-   *     await currentPage.getByRole('button', { name: 'Show All' }).click();
-   *   }
-   * );
+   * await crawler
+   *   .pages()
+   *   .each(async ({ currentPage, currentPath }) => {
+   *     const title = await currentPage.title();
+   *   });
    */
-  async onBlock(
-    page: Page,
-    blockSectionLocator: string,
+  pages(): PageChain {
+    return new PageChain(this);
+  }
+
+  /**
+   * 运行 Block 模式（内部方法）
+   */
+  async runBlockMode(
+    sectionLocator: string,
     handler: BlockHandler,
-    beforeProcessBlocks?: BeforeProcessBlocksHandler
+    beforeHandler?: BeforeProcessBlocksHandler
   ): Promise<void> {
-    this.blockSectionLocator = blockSectionLocator;
-    this.blockHandler = handler;
-    this.beforeProcessBlocks = beforeProcessBlocks;
-    await this.run(page);
+    await this.run(sectionLocator, handler, null, beforeHandler);
+  }
+
+  /**
+   * 运行 Page 模式（内部方法）
+   */
+  async runPageMode(handler: PageHandler): Promise<void> {
+    await this.run(null, null, handler, undefined);
   }
 
   /**
    * 运行爬虫（内部方法）
    */
-  private async run(page: Page): Promise<void> {
+  private async run(
+    blockSectionLocator: string | null,
+    blockHandler: BlockHandler | null,
+    pageHandler: PageHandler | null,
+    beforeProcessBlocks: BeforeProcessBlocksHandler | undefined
+  ): Promise<void> {
     this.orchestrator = new CrawlerOrchestrator(this.config, this.taskProgress);
     
     // 设置 Ctrl+C 信号处理器
@@ -118,11 +194,11 @@ export class BlockCrawler {
     
     try {
       await this.orchestrator.run(
-        page,
-        this.blockSectionLocator || null,
-        this.blockHandler || null,
-        this.pageHandler || null,
-        this.beforeProcessBlocks || null
+        this.page,
+        blockSectionLocator,
+        blockHandler,
+        pageHandler,
+        beforeProcessBlocks || null
       );
     } finally {
       // 清理信号处理器

@@ -7,7 +7,7 @@ test("heroui-pro crawler", async ({ page }) => {
   // 设置超时
   test.setTimeout(2 * 60 * 1000); // 2 分钟
 
-  const crawler = new BlockCrawler({
+  const crawler = new BlockCrawler(page, {
     startUrl: "https://pro.mufengapp.cn/components",
     tabListAriaLabel: "Categories",
     maxConcurrency: 5,
@@ -25,10 +25,9 @@ test("heroui-pro crawler", async ({ page }) => {
   });
 
   // 使用 Block 模式，处理每个 Block
-  await crawler.onBlock(
-    page,
-    "xpath=//main/div/div/div", // Block 定位符
-    async ({ block, blockPath, blockName, outputDir, currentPage }) => {
+  await crawler
+    .blocks("xpath=//main/div/div/div") // Block 定位符
+    .each(async ({ block, blockPath, blockName, outputDir, currentPage }) => {
       console.log(`\n🔍 正在处理 block: ${blockName}`);
 
       // 点击切换到 Code
@@ -61,8 +60,7 @@ test("heroui-pro crawler", async ({ page }) => {
       );
 
       console.log(`✅ Block [${blockName}] 处理完成`);
-    }
-  );
+    });
 });
 
 /**

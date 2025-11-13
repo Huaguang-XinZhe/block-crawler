@@ -1,8 +1,8 @@
-import { test } from "@playwright/test";
+import { test, type Page, type Locator } from "@playwright/test";
 import { BlockCrawler } from "block-crawler";
 
 test("untitledui", async ({ page }) => {
-  const crawler = new BlockCrawler({
+  const crawler = new BlockCrawler(page, {
     startUrl: "https://www.untitledui.com/react/components",
     skipPageFree: "FREE",
     // locale: "en",
@@ -15,22 +15,21 @@ test("untitledui", async ({ page }) => {
     },
   });
 
-  await crawler.onBlock(
-    page,
-    "[data-preview]",
-    async ({ block, blockName, blockPath, outputDir, currentPage }) => {
-      console.log(`blockName: ${blockName}`);
-    },
-    async (currentPage) => {
+  await crawler
+    .blocks("[data-preview]")
+    .before(async (currentPage) => {
       // 前置逻辑示例：在匹配所有 Block 之前执行
-      // 比如点击按钮、toggle 切换等操作
-      // 注意：currentPage 是当前处理的页面，可能不是测试中的 page
-      // await currentPage.getByRole('button', { name: 'Show All' }).click();
-    }
-  );
-
-  // await crawler.onPage(page, async ({ currentPage }) => {
-  //   const url = currentPage.url();
-  //   console.log(`url: ${url}`);
-  // });
+      await clickIfVisibleNow(currentPage, currentPage.getByRole('tab', { name: 'List view' }));
+    })
+    .each(async ({ block, blockName, blockPath, outputDir, currentPage }) => {
+      console.log(`blockName: ${blockName}`);
+    });
 });
+
+
+// 如果元素存在且可见（立即判断），则点击
+async function clickIfVisibleNow(page: Page, locator: Locator) {
+  if (await locator.isVisible({ timeout: 0 })) {
+    await locator.click();
+  }
+}

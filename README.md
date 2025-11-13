@@ -71,7 +71,7 @@ import { BlockCrawler } from "block-crawler";
 test("爬取组件", async ({ page }) => {
   test.setTimeout(2 * 60 * 1000);
 
-  const crawler = new BlockCrawler({
+  const crawler = new BlockCrawler(page, {
     startUrl: "https://example.com/components",
     locale: "zh", // 可选：'zh' (中文，默认) 或 'en' (英文)
     tabListAriaLabel: "Categories",
@@ -88,23 +88,19 @@ test("爬取组件", async ({ page }) => {
     },
   });
 
-  // Block 定位符作为 onBlock 的参数传入
-  await crawler.onBlock(
-    page,
-    "xpath=//main/div/div/div",  // Block 定位符
-    async ({ block, blockName, blockPath, outputDir, currentPage }) => {
-      // 处理单个 Block
-      const code = await block.textContent();
-      await fse.outputFile(`${outputDir}/${blockPath}.txt`, code);
-    },
-    async (currentPage) => {
+  // 链式调用 Block 处理模式
+  await crawler
+    .blocks("xpath=//main/div/div/div")  // Block 定位符
+    .before(async (currentPage) => {
       // 可选：前置逻辑，在匹配页面所有 Block 之前执行
-      // 比如点击按钮、toggle 切换等操作
-      // 注意：currentPage 是当前处理的页面，可能不是测试中的 page
       await currentPage.getByRole('button', { name: 'Show All' }).click();
       await currentPage.waitForTimeout(1000); // 等待动画完成
-    }
-  );
+    })
+    .each(async ({ block, blockName, blockPath, outputDir, currentPage }) => {
+      // 处理每个 Block
+      const code = await block.textContent();
+      await fse.outputFile(`${outputDir}/${blockPath}.txt`, code);
+    });
 });
 ```
 
@@ -117,17 +113,19 @@ import { test } from "@playwright/test";
 import { BlockCrawler } from "block-crawler";
 
 test("爬取页面", async ({ page }) => {
-  const crawler = new BlockCrawler({
+  const crawler = new BlockCrawler(page, {
     startUrl: "https://example.com/pages",
     maxConcurrency: 3,
     collectionNameLocator: ".page-title",
     collectionCountLocator: ".page-count",
   });
 
-  await crawler.onPage(page, async ({ currentPath, outputDir, currentPage }) => {
-    const title = await currentPage.title();
-    console.log(`处理页面: ${currentPath}, 标题: ${title}`);
-  });
+  await crawler
+    .pages()
+    .each(async ({ currentPath, outputDir, currentPage }) => {
+      const title = await currentPage.title();
+      console.log(`处理页面: ${currentPath}, 标题: ${title}`);
+    });
 });
 ```
 
@@ -194,11 +192,11 @@ test("爬取页面", async ({ page }) => {
 
 ### Block 前置逻辑
 
-`onBlock` 方法支持第四个可选参数 `beforeProcessBlocks`，用于在匹配页面所有 Block 之前执行前置逻辑：
+`.before()` 方法用于在匹配页面所有 Block 之前执行前置逻辑，是链式调用中的可选步骤：
 
 **函数签名：**
 ```typescript
-beforeProcessBlocks?: (currentPage: Page) => Promise<void>
+.before(handler: (currentPage: Page) => Promise<void>)
 ```
 
 **参数说明：**
@@ -212,25 +210,22 @@ beforeProcessBlocks?: (currentPage: Page) => Promise<void>
 
 **示例：**
 ```typescript
-await crawler.onBlock(
-  page,
-  "[data-preview]",
-  async ({ block, blockName }) => {
-    // 处理 Block
-  },
-  async (currentPage) => {
+await crawler
+  .blocks("[data-preview]")
+  .before(async (currentPage) => {
     // 前置逻辑：点击"显示全部"按钮
-    // 注意：currentPage 是当前处理的页面，可能不是测试中的 page
     await currentPage.getByRole('button', { name: 'Show All' }).click();
     await currentPage.waitForTimeout(500); // 等待动画
-  }
-);
+  })
+  .each(async ({ block, blockName }) => {
+    // 处理 Block
+  });
 ```
 
 **示例：shadcndesign 配置**
 
 ```typescript
-const crawler = new BlockCrawler({
+const crawler = new BlockCrawler(page, {
   startUrl: "https://www.shadcndesign.com/pro-blocks",
   maxConcurrency: 5,
   collectionNameLocator: '[data-slot="card-title"]',
@@ -242,19 +237,17 @@ const crawler = new BlockCrawler({
   },
 });
 
-await crawler.onBlock(
-  page,
-  "xpath=//main/div/div/div",
-  async ({ block, blockName }) => {
+await crawler
+  .blocks("xpath=//main/div/div/div")
+  .each(async ({ block, blockName }) => {
     // 处理逻辑
-  }
-);
+  });
 ```
 
 **示例：直接提供所有 Tab 文本**
 
 ```typescript
-const crawler = new BlockCrawler({
+const crawler = new BlockCrawler(page, {
   startUrl: "https://example.com/components",
   
   // 直接返回所有 Tab 文本，跳过 Tab 点击
@@ -266,6 +259,12 @@ const crawler = new BlockCrawler({
     return page.locator(`[data-category="${tabText}"]`);
   },
 });
+
+await crawler
+  .blocks(".block")
+  .each(async ({ block }) => {
+    // 处理逻辑
+  });
 ```
 
 ## 📋 Context 对象
