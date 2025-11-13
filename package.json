@@ -1,6 +1,6 @@
 {
   "name": "block-crawler",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "基于 Playwright 的通用 Block 爬虫框架，支持受限并发、进度恢复、单页面或单 Block 处理模式",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -45,7 +45,7 @@
     "@types/cli-progress": "^3.11.6",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^24.10.0",
-    "block-crawler": "^0.5.2",
+    "block-crawler": "^0.6.0",
     "cli-progress": "^3.12.0",
     "ora": "^9.0.0",
     "tsup": "^8.5.0",

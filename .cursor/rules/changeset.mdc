@@ -27,10 +27,9 @@ alwaysApply: false
 ### 后续流程
 
 写好 changeset 的 md 文件后：
-1. lint 检查
-2. 更新 README.md
-3. Git 提交
-4. 执行一键发布脚本：
+1. 更新 README.md
+2. Git 提交
+3. 执行一键发布脚本：
 
 ```bash
 pnpm release-all
