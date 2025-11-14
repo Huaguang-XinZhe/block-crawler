@@ -293,6 +293,11 @@ export class CrawlerOrchestrator {
         );
         const result = await blockProcessor.processBlocksInPage(newPage, relativeLink);
         
+        // 记录 free pages（Block 模式下检测到整个页面为 Free）
+        if (result.isPageFree) {
+          this.metaCollector.addFreePage(relativeLink);
+        }
+        
         // 记录实际组件数和 free blocks
         this.metaCollector.incrementActualCount(result.totalCount);
         result.freeBlocks.forEach(blockName => {

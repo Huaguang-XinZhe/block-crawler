@@ -106,7 +106,7 @@ export class MetaCollector {
     // 更新时间和完成状态
     const endTime = new Date();
     this.meta.isComplete = isComplete;
-    this.meta.startTime = this.formatLocalTime(this.startTime);
+    this.meta.startTime = this.startTime.toLocaleString();
     this.meta.duration = Math.floor((endTime.getTime() - this.startTime.getTime()) / 1000);
     
     // 更新链接总数
@@ -142,21 +142,6 @@ export class MetaCollector {
       console.warn(i18n.t('meta.loadFailed', { error: String(error) }));
     }
     return null;
-  }
-
-  /**
-   * 格式化时间为本地时间字符串
-   * @example "2025/11/14 22:49:49"
-   */
-  private formatLocalTime(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    
-    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
   }
 }
 

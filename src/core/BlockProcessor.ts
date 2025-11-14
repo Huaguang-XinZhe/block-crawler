@@ -30,7 +30,23 @@ export class BlockProcessor {
   async processBlocksInPage(page: Page, pagePath: string): Promise<{
     totalCount: number;
     freeBlocks: string[];
+    isPageFree?: boolean;
   }> {
+    // 先检查整个页面是否为 Free（尽早跳过，提高效率）
+    const isPageFree = await this.isPageFree(page);
+    if (isPageFree) {
+      console.log(this.i18n.t('page.skipFree', { path: pagePath }));
+      // 标记页面为完成（虽然跳过了处理）
+      const normalizedPath = this.normalizePagePath(pagePath);
+      this.taskProgress?.markPageComplete(normalizedPath);
+      // 返回页面为 Free 的标记
+      return {
+        totalCount: 0,
+        freeBlocks: [],
+        isPageFree: true,
+      };
+    }
+
     // 执行前置逻辑（如果配置了）
     if (this.beforeProcessBlocks) {
       await this.beforeProcessBlocks(page);
@@ -39,20 +55,6 @@ export class BlockProcessor {
     // 获取所有 block 节点
     const blocks = await this.getAllBlocks(page);
     console.log(this.i18n.t('block.found', { count: blocks.length }));
-
-    // 检查整个页面是否为 Free（如果是，说明单个 block 没有 Free 标志）
-    const isPageFree = await this.isPageFree(page);
-    if (isPageFree) {
-      console.log(this.i18n.t('page.skipFree', { path: pagePath }));
-      // 标记页面为完成（虽然跳过了处理）
-      const normalizedPath = this.normalizePagePath(pagePath);
-      this.taskProgress?.markPageComplete(normalizedPath);
-      // 返回所有 block 都是 free 的标记
-      return {
-        totalCount: blocks.length,
-        freeBlocks: [], // 整个页面跳过，不记录单个 block 名称
-      };
-    }
 
     let completedCount = 0;
     const freeBlocks: string[] = [];
@@ -81,6 +83,7 @@ export class BlockProcessor {
     return {
       totalCount: blocks.length,
       freeBlocks,
+      isPageFree: false,
     };
   }
 
