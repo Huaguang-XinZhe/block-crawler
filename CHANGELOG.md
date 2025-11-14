@@ -1,5 +1,34 @@
 # block-crawler
 
+## 0.2.0
+
+### Minor Changes
+
+- 新增脚本注入和测试模式功能
+
+  **新功能：**
+
+  1. **脚本注入** - 支持在并发访问的页面中注入自定义 JavaScript 脚本
+
+     - 配置 `scriptInjection.scripts` 指定脚本文件（从 `.crawler/域名/` 目录读取）
+     - 配置 `scriptInjection.timing` 选择注入时机（`beforePageLoad` 或 `afterPageLoad`）
+     - 仅对并发页面注入，startUrl 的初始页面不注入
+     - 新增 `ScriptInjector` 核心模块处理脚本加载和注入
+
+  2. **测试模式** - 快速测试单个组件的提取逻辑
+     - 使用 `.test(url, sectionLocator, blockName?)` 方法
+     - 支持 `.before()` 前置逻辑（页面加载后、获取 section 前执行）
+     - 支持 `.run()` 执行测试逻辑
+     - 跳过链接收集阶段，直接访问指定页面
+     - 应用 `collectionLinkWaitOptions` 和 `scriptInjection` 配置
+     - 新增 `TestContext` 和 `TestHandler` 类型定义
+
+  **改进：**
+
+  - 完善国际化支持，新增脚本注入和测试模式相关的中英文日志
+  - 更新文档，添加详细的使用示例和说明
+  - 优化架构，新增 `ScriptInjector` 模块
+
 ## 1.1.0
 
 ### Minor Changes

@@ -9,9 +9,12 @@ test("untitledui", async ({ page }) => {
     // locale: "en",
     collectionNameLocator: "p:first-of-type",
     collectionCountLocator: "p:last-of-type",
-    // todo 名字改一改
     collectionLinkWaitOptions: {
       waitUntil: "networkidle",
+    },
+    scriptInjection: {
+      scripts: ['custom-script.js'],
+      timing: 'afterPageLoad', // 在页面加载后注入
     },
     // 使用新的 getAllTabSections 模式（跳过 tab 点击）
     getAllTabSections: async (page) => {
@@ -24,7 +27,7 @@ test("untitledui", async ({ page }) => {
     .blocks("[data-preview]")
     .before(async (currentPage) => {
       // 前置逻辑示例：在匹配所有 Block 之前执行
-      await clickIfVisibleNow(currentPage, currentPage.getByRole('tab', { name: 'List view' }));
+      await clickIfVisibleNow(currentPage.getByRole('tab', { name: 'List view' }));
     })
     .each(async ({ block, blockName, blockPath, outputDir, currentPage }) => {
       // 点击 Code
@@ -34,13 +37,13 @@ test("untitledui", async ({ page }) => {
       // 获取内部 pre 的文本
       const text = await pre.textContent() ?? "";
       // 输出到文件
-      await fse.outputFile(`${outputDir}/${blockPath}/App.tsx`, text);
+      await fse.outputFile(`${outputDir}/${blockPath}/index.tsx`, text);
     });
 });
 
 
 // 如果元素存在且可见（立即判断），则点击
-async function clickIfVisibleNow(page: Page, locator: Locator) {
+async function clickIfVisibleNow(locator: Locator) {
   if (await locator.isVisible({ timeout: 0 })) {
     await locator.click();
   }

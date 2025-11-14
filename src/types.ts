@@ -239,6 +239,25 @@ export type BlockHandler = (context: BlockContext) => Promise<void>;
 export type BeforeProcessBlocksHandler = (currentPage: Page) => Promise<void>;
 
 /**
+ * 测试模式上下文
+ */
+export interface TestContext {
+  /** 当前页面 */
+  currentPage: Page;
+  /** 目标 section */
+  section: Locator;
+  /** Block 名称 */
+  blockName: string;
+  /** 输出目录 */
+  outputDir: string;
+}
+
+/**
+ * 测试模式处理函数类型
+ */
+export type TestHandler = (context: TestContext) => Promise<void>;
+
+/**
  * 链接收集结果
  */
 export interface CollectionLink {

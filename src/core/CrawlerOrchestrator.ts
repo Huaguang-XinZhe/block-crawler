@@ -42,9 +42,31 @@ export class CrawlerOrchestrator {
     blockSectionLocator: string | null,
     blockHandler: ((context: any) => Promise<void>) | null,
     pageHandler: ((context: any) => Promise<void>) | null,
-    beforeProcessBlocks: ((page: Page) => Promise<void>) | null
+    beforeProcessBlocks: ((page: Page) => Promise<void>) | null,
+    testMode: {
+      url: string;
+      sectionLocator: string;
+      blockName?: string;
+      handler: ((context: any) => Promise<void>);
+      beforeHandler?: ((page: Page) => Promise<void>);
+    } | null = null
   ): Promise<void> {
     console.log(`\n${this.i18n.t('crawler.taskStart')}`);
+    
+    // 测试模式：跳过链接收集，直接测试单个组件
+    if (testMode) {
+      console.log(this.i18n.t('crawler.modeTest'));
+      console.log(this.i18n.t('crawler.testUrl', { url: testMode.url }));
+      console.log(this.i18n.t('crawler.testSectionLocator', { locator: testMode.sectionLocator }));
+      if (testMode.blockName) {
+        console.log(this.i18n.t('crawler.testBlockName', { name: testMode.blockName }));
+      }
+      console.log(this.i18n.t('crawler.outputDir', { dir: this.config.outputDir }));
+      
+      await this.runTestMode(page, testMode);
+      return;
+    }
+    
     console.log(this.i18n.t('crawler.targetUrl', { url: this.config.startUrl }));
     console.log(this.i18n.t('crawler.maxConcurrency', { count: this.config.maxConcurrency }));
     console.log(this.i18n.t('crawler.outputDir', { dir: this.config.outputDir }));
@@ -298,6 +320,114 @@ export class CrawlerOrchestrator {
    */
   private normalizePagePath(link: string): string {
     return link.startsWith("/") ? link.slice(1) : link;
+  }
+
+  /**
+   * 运行测试模式
+   */
+  private async runTestMode(
+    page: Page,
+    testMode: {
+      url: string;
+      sectionLocator: string;
+      blockName?: string;
+      handler: ((context: any) => Promise<void>);
+      beforeHandler?: ((page: Page) => Promise<void>);
+    }
+  ): Promise<void> {
+    try {
+      console.log(`\n${this.i18n.t('crawler.testVisiting')}`);
+      
+      // 应用脚本注入（在页面加载前）
+      if (this.scriptInjector.isEnabled()) {
+        await this.scriptInjector.inject(page, true);
+      }
+      
+      // 访问目标页面，应用 collectionLinkWaitOptions
+      await page.goto(testMode.url, this.config.collectionLinkWaitOptions);
+      console.log(this.i18n.t('crawler.pageLoaded'));
+      
+      // 应用脚本注入（在页面加载后）
+      if (this.scriptInjector.isEnabled()) {
+        await this.scriptInjector.inject(page, false);
+      }
+      
+      // 执行前置逻辑
+      if (testMode.beforeHandler) {
+        console.log(`\n${this.i18n.t('crawler.testBeforeHandler')}`);
+        await testMode.beforeHandler(page);
+      }
+      
+      // 获取所有匹配的 sections
+      console.log(`\n${this.i18n.t('crawler.testGettingSection')}`);
+      const sections = await page.locator(testMode.sectionLocator).all();
+      console.log(this.i18n.t('crawler.testFoundSections', { count: sections.length }));
+      
+      if (sections.length === 0) {
+        throw new Error(`❌ 未找到匹配的 section: ${testMode.sectionLocator}`);
+      }
+      
+      // 确定目标 section
+      let targetSection;
+      let blockName = "";
+      
+      if (testMode.blockName) {
+        // 指定了 blockName，查找匹配的 section
+        console.log(`\n${this.i18n.t('crawler.testFindingByName', { name: testMode.blockName })}`);
+        
+        for (const section of sections) {
+          const name = await this.extractBlockName(section);
+          if (name === testMode.blockName) {
+            targetSection = section;
+            blockName = name;
+            break;
+          }
+        }
+        
+        if (!targetSection) {
+          throw new Error(`❌ 未找到名为 "${testMode.blockName}" 的组件`);
+        }
+      } else {
+        // 未指定 blockName，使用第一个 section
+        targetSection = sections[0];
+        blockName = await this.extractBlockName(targetSection);
+        console.log(`\n${this.i18n.t('crawler.testUsingFirst', { name: blockName })}`);
+      }
+      
+      // 执行测试逻辑
+      console.log(`\n${this.i18n.t('crawler.testRunning')}`);
+      await testMode.handler({
+        currentPage: page,
+        section: targetSection,
+        blockName,
+        outputDir: this.config.outputDir,
+      });
+      
+      console.log(`\n${this.i18n.t('crawler.testComplete')}`);
+    } catch (error) {
+      console.error(`\n${this.i18n.t('crawler.testFailed')}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 提取 block 名称（用于测试模式）
+   */
+  private async extractBlockName(section: any): Promise<string> {
+    try {
+      // 优先使用自定义 getBlockName
+      if (this.config.getBlockName) {
+        const name = await this.config.getBlockName(section);
+        return name || "Unknown";
+      }
+      
+      // 使用 blockNameLocator
+      const nameElement = section.locator(this.config.blockNameLocator).first();
+      const name = await nameElement.textContent();
+      return name?.trim() || "Unknown";
+    } catch (error) {
+      return "Unknown";
+    }
   }
 }
 

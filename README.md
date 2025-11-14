@@ -4,7 +4,7 @@
 
 ## ✨ 特性
 
-🎯 **双模式支持** - Block 模式和页面模式自由切换  
+🎯 **三种模式** - Block 模式、页面模式、测试模式自由切换  
 🚀 **受限并发** - 可配置并发数，避免封禁  
 💾 **进度恢复** - 支持中断后继续爬取，自动跳过已完成任务  
 ⚙️ **完全配置化** - 所有参数可配置，支持函数覆盖  
@@ -12,6 +12,7 @@
 📦 **自动化管理** - 自动生成进度文件和输出目录  
 🔧 **灵活扩展** - 支持配置函数覆盖，无需继承子类  
 💉 **脚本注入** - 支持在并发页面中注入自定义 JavaScript 脚本  
+🧪 **快速测试** - 测试模式快速验证单个组件的提取逻辑  
 🌍 **国际化支持** - 完整的中英文日志输出，可通过 locale 配置切换
 
 ## 📦 安装
@@ -131,6 +132,78 @@ test("爬取页面", async ({ page }) => {
     });
 });
 ```
+
+### 测试模式
+
+**专为快速测试单个组件的提取逻辑设计**，无需运行完整的爬虫流程。
+
+**特点：**
+- 跳过链接收集阶段，直接访问指定页面
+- 支持指定 blockName 或使用第一个匹配的 section
+- 应用 `collectionLinkWaitOptions` 和 `scriptInjection` 配置
+- 完全独立，不与 Block/Page 模式并行
+
+```typescript
+import { test } from "@playwright/test";
+import { BlockCrawler } from "block-crawler";
+import fse from "fs-extra";
+
+test("测试组件提取", async ({ page }) => {
+  const crawler = new BlockCrawler(page, {
+    startUrl: "https://example.com/components", // 仍需提供（用于输出目录）
+    collectionLinkWaitOptions: {
+      waitUntil: "networkidle",
+    },
+    scriptInjection: {
+      scripts: ['custom.js'],
+      timing: 'afterPageLoad'
+    }
+  });
+
+  // 基础用法：测试第一个匹配的组件
+  await crawler
+    .test(
+      "https://example.com/components/buttons",  // 页面 URL（必填）
+      "[data-preview]"                            // 所有 blockSection 的定位符（必填）
+    )
+    .run(async ({ section, blockName, currentPage, outputDir }) => {
+      console.log(`测试组件: ${blockName}`);
+      const code = await section.locator('pre').textContent();
+      await fse.outputFile(`${outputDir}/test-${blockName}.tsx`, code ?? '');
+    });
+});
+
+test("测试指定组件", async ({ page }) => {
+  const crawler = new BlockCrawler(page, {
+    startUrl: "https://example.com/components",
+  });
+
+  // 指定 blockName
+  await crawler
+    .test(
+      "https://example.com/components/buttons",
+      "[data-preview]",
+      "Primary Button"  // 指定组件名称（可选）
+    )
+    .before(async (currentPage) => {
+      // 可选：在提取前执行操作
+      await currentPage.getByRole('tab', { name: 'Code' }).click();
+      await currentPage.waitForTimeout(500);
+    })
+    .run(async ({ section, blockName, currentPage, outputDir }) => {
+      console.log(`测试组件: ${blockName}`);
+      // 执行测试逻辑
+    });
+});
+```
+
+**使用场景：**
+- 🔍 快速验证组件提取逻辑是否正确
+- 🐛 调试特定组件的代码提取问题
+- 🧪 开发新的提取规则前进行实验
+- ⚡ 无需等待完整爬虫流程即可测试
+
+**注意：** 测试模式与 Block/Page 模式互斥，同一时间只能使用一种模式。
 
 ## ⚙️ 配置选项
 

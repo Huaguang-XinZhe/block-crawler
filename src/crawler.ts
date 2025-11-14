@@ -5,6 +5,7 @@ import type {
   PageHandler,
   BlockHandler,
   BeforeProcessBlocksHandler,
+  TestHandler,
 } from "./types";
 import { ConfigManager, type InternalConfig } from "./core/ConfigManager";
 import { CrawlerOrchestrator } from "./core/CrawlerOrchestrator";
@@ -78,11 +79,63 @@ class PageChain {
 }
 
 /**
+ * Test Chain - 用于链式调用测试模式
+ */
+class TestChain {
+  private beforeHandler?: BeforeProcessBlocksHandler;
+
+  constructor(
+    private crawler: BlockCrawler,
+    private url: string,
+    private sectionLocator: string,
+    private blockName?: string
+  ) {}
+
+  /**
+   * 设置前置处理函数（在页面加载之后、获取 section 之前执行）
+   * 
+   * @param handler 前置处理函数
+   * @returns this 支持链式调用
+   * 
+   * @example
+   * .before(async (currentPage) => {
+   *   await currentPage.getByRole('tab', { name: 'Code' }).click();
+   * })
+   */
+  before(handler: BeforeProcessBlocksHandler): this {
+    this.beforeHandler = handler;
+    return this;
+  }
+
+  /**
+   * 执行测试逻辑
+   * 
+   * @param handler 测试处理函数
+   * 
+   * @example
+   * .run(async ({ section, blockName, currentPage }) => {
+   *   const code = await section.locator('pre').textContent();
+   *   console.log('提取的代码:', code);
+   * })
+   */
+  async run(handler: TestHandler): Promise<void> {
+    await this.crawler.runTestMode(
+      this.url,
+      this.sectionLocator,
+      this.blockName,
+      handler,
+      this.beforeHandler
+    );
+  }
+}
+
+/**
  * Block 爬虫核心类
  * 
- * 支持两种模式：
+ * 支持三种模式：
  * 1. Block 处理模式（使用 blocks()）
  * 2. Page 处理模式（使用 pages()）
+ * 3. 测试模式（使用 test()）
  * 
  * @example
  * // Block 模式
@@ -98,6 +151,14 @@ class PageChain {
  * await crawler
  *   .pages()
  *   .each(async ({ currentPage, currentPath }) => { ... });
+ * 
+ * @example
+ * // 测试模式
+ * const crawler = new BlockCrawler(page, { startUrl: "...", ... });
+ * await crawler
+ *   .test("https://example.com/page", "[data-preview]")
+ *   .before(async (currentPage) => { ... })
+ *   .run(async ({ section, blockName }) => { ... });
  */
 export class BlockCrawler {
   private config: InternalConfig;
@@ -161,6 +222,38 @@ export class BlockCrawler {
   }
 
   /**
+   * 测试模式
+   * 用于快速测试单个组件的提取逻辑
+   * 
+   * @param url 目标页面 URL
+   * @param sectionLocator 整个页面所有 blockSection 的定位符
+   * @param blockName 可选的 Block 名称，不传则使用第一个匹配的 section
+   * @returns TestChain 支持链式调用
+   * 
+   * @example
+   * await crawler
+   *   .test("https://example.com/page", "[data-preview]")
+   *   .before(async (currentPage) => {
+   *     await currentPage.getByRole('tab', { name: 'Code' }).click();
+   *   })
+   *   .run(async ({ section, blockName, currentPage }) => {
+   *     const code = await section.locator('pre').textContent();
+   *     console.log('提取的代码:', code);
+   *   });
+   * 
+   * @example
+   * // 指定 blockName
+   * await crawler
+   *   .test("https://example.com/page", "[data-preview]", "Button")
+   *   .run(async ({ section }) => {
+   *     // 处理名为 "Button" 的组件
+   *   });
+   */
+  test(url: string, sectionLocator: string, blockName?: string): TestChain {
+    return new TestChain(this, url, sectionLocator, blockName);
+  }
+
+  /**
    * 运行 Block 模式（内部方法）
    */
   async runBlockMode(
@@ -168,14 +261,33 @@ export class BlockCrawler {
     handler: BlockHandler,
     beforeHandler?: BeforeProcessBlocksHandler
   ): Promise<void> {
-    await this.run(sectionLocator, handler, null, beforeHandler);
+    await this.run(sectionLocator, handler, null, beforeHandler, null);
   }
 
   /**
    * 运行 Page 模式（内部方法）
    */
   async runPageMode(handler: PageHandler): Promise<void> {
-    await this.run(null, null, handler, undefined);
+    await this.run(null, null, handler, undefined, null);
+  }
+
+  /**
+   * 运行测试模式（内部方法）
+   */
+  async runTestMode(
+    url: string,
+    sectionLocator: string,
+    blockName: string | undefined,
+    handler: TestHandler,
+    beforeHandler?: BeforeProcessBlocksHandler
+  ): Promise<void> {
+    await this.run(null, null, null, undefined, {
+      url,
+      sectionLocator,
+      blockName,
+      handler,
+      beforeHandler,
+    });
   }
 
   /**
@@ -185,7 +297,14 @@ export class BlockCrawler {
     blockSectionLocator: string | null,
     blockHandler: BlockHandler | null,
     pageHandler: PageHandler | null,
-    beforeProcessBlocks: BeforeProcessBlocksHandler | undefined
+    beforeProcessBlocks: BeforeProcessBlocksHandler | undefined,
+    testMode: {
+      url: string;
+      sectionLocator: string;
+      blockName?: string;
+      handler: TestHandler;
+      beforeHandler?: BeforeProcessBlocksHandler;
+    } | null
   ): Promise<void> {
     this.orchestrator = new CrawlerOrchestrator(this.config, this.taskProgress);
     
@@ -198,7 +317,8 @@ export class BlockCrawler {
         blockSectionLocator,
         blockHandler,
         pageHandler,
-        beforeProcessBlocks || null
+        beforeProcessBlocks || null,
+        testMode
       );
     } finally {
       // 清理信号处理器
