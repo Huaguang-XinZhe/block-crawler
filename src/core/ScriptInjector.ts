@@ -4,20 +4,25 @@ import { join } from "path";
 import type { InternalConfig } from "./ConfigManager";
 import { createI18n, type I18n } from "../utils/i18n";
 
+interface ScriptInfo {
+  content: string;
+  timing: 'beforePageLoad' | 'afterPageLoad';
+}
+
 /**
  * 脚本注入器
  * 职责：处理脚本文件的读取和注入，支持油猴脚本格式
  */
 export class ScriptInjector {
   private i18n: I18n;
-  private scriptContents: Map<string, string> = new Map();
+  private scripts: Map<string, ScriptInfo> = new Map();
   private enabled: boolean;
-  private timing: 'beforePageLoad' | 'afterPageLoad';
+  private globalTiming?: 'beforePageLoad' | 'afterPageLoad';
 
   constructor(private config: InternalConfig) {
     this.i18n = createI18n(config.locale);
     this.enabled = !!config.scriptInjection;
-    this.timing = config.scriptInjection?.timing || 'afterPageLoad';
+    this.globalTiming = config.scriptInjection?.timing;
 
     // 预加载所有脚本内容
     if (this.enabled && config.scriptInjection) {
@@ -41,13 +46,48 @@ export class ScriptInjector {
 
       try {
         const rawContent = readFileSync(scriptPath, 'utf-8');
+        
+        // 解析 @run-at 元数据
+        const runAt = this.extractRunAt(rawContent);
+        
+        // 决定执行时机：配置 > 元数据 > 默认值
+        const timing = this.globalTiming || this.mapRunAtToTiming(runAt);
+        
         // 处理油猴脚本格式，提取实际执行代码
         const processedContent = this.processUserScript(rawContent);
-        this.scriptContents.set(scriptName, processedContent);
+        
+        this.scripts.set(scriptName, {
+          content: processedContent,
+          timing
+        });
+        
         console.log(this.i18n.t('script.loaded', { name: scriptName }));
       } catch (error) {
         console.error(this.i18n.t('script.loadError', { name: scriptName, error: String(error) }));
       }
+    }
+  }
+
+  /**
+   * 从油猴脚本中提取 @run-at 元数据
+   */
+  private extractRunAt(content: string): string | null {
+    const runAtMatch = content.match(/@run-at\s+([\w-]+)/);
+    return runAtMatch ? runAtMatch[1] : null;
+  }
+
+  /**
+   * 将油猴的 @run-at 映射到框架的 timing
+   */
+  private mapRunAtToTiming(runAt: string | null): 'beforePageLoad' | 'afterPageLoad' {
+    switch (runAt) {
+      case 'document-start':
+        return 'beforePageLoad';
+      case 'document-end':
+      case 'document-idle':
+        return 'afterPageLoad';
+      default:
+        return 'afterPageLoad'; // 默认值
     }
   }
 
@@ -215,14 +255,19 @@ export class ScriptInjector {
    * 检查是否启用了脚本注入
    */
   isEnabled(): boolean {
-    return this.enabled && this.scriptContents.size > 0;
+    return this.enabled && this.scripts.size > 0;
   }
 
   /**
-   * 获取注入时机
+   * 检查是否有需要在指定时机注入的脚本
    */
-  getTiming(): 'beforePageLoad' | 'afterPageLoad' {
-    return this.timing;
+  private hasScriptsForTiming(timing: 'beforePageLoad' | 'afterPageLoad'): boolean {
+    for (const script of this.scripts.values()) {
+      if (script.timing === timing) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -230,13 +275,17 @@ export class ScriptInjector {
    * 适用于需要在页面加载前执行的脚本
    */
   async injectBeforePageLoad(page: Page): Promise<void> {
-    if (!this.isEnabled() || this.timing !== 'beforePageLoad') {
+    if (!this.isEnabled() || !this.hasScriptsForTiming('beforePageLoad')) {
       return;
     }
 
-    for (const [scriptName, content] of this.scriptContents) {
+    for (const [scriptName, scriptInfo] of this.scripts) {
+      if (scriptInfo.timing !== 'beforePageLoad') {
+        continue;
+      }
+
       try {
-        await page.addInitScript(content);
+        await page.addInitScript(scriptInfo.content);
         console.log(this.i18n.t('script.injectedBefore', { name: scriptName }));
       } catch (error) {
         console.error(this.i18n.t('script.injectError', { name: scriptName, error: String(error) }));
@@ -249,13 +298,17 @@ export class ScriptInjector {
    * 适用于需要在页面加载完成后执行的脚本
    */
   async injectAfterPageLoad(page: Page): Promise<void> {
-    if (!this.isEnabled() || this.timing !== 'afterPageLoad') {
+    if (!this.isEnabled() || !this.hasScriptsForTiming('afterPageLoad')) {
       return;
     }
 
-    for (const [scriptName, content] of this.scriptContents) {
+    for (const [scriptName, scriptInfo] of this.scripts) {
+      if (scriptInfo.timing !== 'afterPageLoad') {
+        continue;
+      }
+
       try {
-        await page.evaluate(content);
+        await page.evaluate(scriptInfo.content);
         console.log(this.i18n.t('script.injectedAfter', { name: scriptName }));
       } catch (error) {
         console.error(this.i18n.t('script.injectError', { name: scriptName, error: String(error) }));

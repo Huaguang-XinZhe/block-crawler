@@ -313,7 +313,18 @@ window.customUtils = {
 - `GM_log(message)` - 日志输出
 - `unsafeWindow` - 原始window对象
 
-**油猴脚本示例（`.crawler/example.com/change-link-color.js`）：**
+**支持的油猴元数据：**
+- `@run-at` - 指定脚本执行时机
+  - `document-start` → 页面加载前执行（`beforePageLoad`）
+  - `document-end` → 页面加载后执行（`afterPageLoad`）
+  - `document-idle` → 页面加载后执行（`afterPageLoad`）
+
+**执行时机优先级：**
+1. 配置的 `timing` 参数（如果指定）
+2. 油猴脚本的 `@run-at` 元数据
+3. 默认值 `afterPageLoad`
+
+**油猴脚本示例 1：修改链接颜色（`.crawler/example.com/change-link-color.js`）**
 
 ```javascript
 // ==UserScript==
@@ -324,6 +335,7 @@ window.customUtils = {
 // @author       你
 // @match        *://*/*
 // @grant        GM_addStyle
+// @run-at       document-start
 // ==/UserScript==
 
 (function() {
@@ -338,13 +350,16 @@ window.customUtils = {
 })();
 ```
 
-**存储示例：**
+**说明：** 此脚本指定了 `@run-at document-start`，会在页面加载前执行。如果配置中设置了 `timing` 参数，则以配置为准。
+
+**油猴脚本示例 2：访问计数器**
 
 ```javascript
 // ==UserScript==
 // @name         计数器
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @run-at       document-end
 // ==/UserScript==
 
 (function() {
@@ -358,6 +373,8 @@ window.customUtils = {
     GM_setValue('visitCount', count + 1);
 })();
 ```
+
+**说明：** 此脚本指定了 `@run-at document-end`，会在 DOM 加载完成后执行。
 
 **注意：**
 - 油猴脚本的 `// ==UserScript==` 元数据会被自动识别和处理
