@@ -356,8 +356,8 @@ export class CrawlerOrchestrator {
     testMode: {
       url: string;
       sectionLocator: string;
-      blockName?: string;
       sectionIndex?: number;
+      blockName?: string;
       handler: ((context: any) => Promise<void>);
       beforeHandler?: ((page: Page) => Promise<void>);
     }

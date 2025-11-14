@@ -88,8 +88,8 @@ class TestChain {
     private crawler: BlockCrawler,
     private url: string,
     private sectionLocator: string,
-    private blockName?: string,
-    private sectionIndex?: number
+    private sectionIndex?: number,
+    private blockName?: string
   ) {}
 
   /**
@@ -123,8 +123,8 @@ class TestChain {
     await this.crawler.runTestMode(
       this.url,
       this.sectionLocator,
-      this.blockName,
       this.sectionIndex,
+      this.blockName,
       handler,
       this.beforeHandler
     );
@@ -229,8 +229,8 @@ export class BlockCrawler {
    * 
    * @param url 目标页面 URL
    * @param sectionLocator 整个页面所有 blockSection 的定位符（用于匹配所有 section）
+   * @param sectionIndex 可选的 section 索引（nth 值，从 0 开始，优先级高于 blockName，性能更好）
    * @param blockName 可选的 Block 名称（会逐个 section 比对 blockName，找到匹配的）
-   * @param sectionIndex 可选的 section 索引（nth 值，从 0 开始，优先级高于 blockName）
    * @returns TestChain 支持链式调用
    * 
    * @example
@@ -246,23 +246,23 @@ export class BlockCrawler {
    *   });
    * 
    * @example
-   * // 使用 blockName 查找（会逐个比对）
+   * // 使用 sectionIndex 指定第几个 section（索引从 0 开始，性能更好）
    * await crawler
-   *   .test("https://example.com/page", "[data-preview]", "Button")
-   *   .run(async ({ section }) => {
-   *     // 处理名为 "Button" 的组件
-   *   });
-   * 
-   * @example
-   * // 使用 sectionIndex 指定第几个 section（索引从 0 开始）
-   * await crawler
-   *   .test("https://example.com/page", "[data-preview]", undefined, 1)
+   *   .test("https://example.com/page", "[data-preview]", 1)
    *   .run(async ({ section, blockName }) => {
    *     // 处理第 2 个 section（索引 1）
    *   });
+   * 
+   * @example
+   * // 使用 blockName 查找（会逐个比对）
+   * await crawler
+   *   .test("https://example.com/page", "[data-preview]", undefined, "Button")
+   *   .run(async ({ section }) => {
+   *     // 处理名为 "Button" 的组件
+   *   });
    */
-  test(url: string, sectionLocator: string, blockName?: string, sectionIndex?: number): TestChain {
-    return new TestChain(this, url, sectionLocator, blockName, sectionIndex);
+  test(url: string, sectionLocator: string, sectionIndex?: number, blockName?: string): TestChain {
+    return new TestChain(this, url, sectionLocator, sectionIndex, blockName);
   }
 
   /**
@@ -289,16 +289,16 @@ export class BlockCrawler {
   async runTestMode(
     url: string,
     sectionLocator: string,
-    blockName: string | undefined,
     sectionIndex: number | undefined,
+    blockName: string | undefined,
     handler: TestHandler,
     beforeHandler?: BeforeProcessBlocksHandler
   ): Promise<void> {
     await this.run(null, null, null, undefined, {
       url,
       sectionLocator,
-      blockName,
       sectionIndex,
+      blockName,
       handler,
       beforeHandler,
     });
@@ -315,8 +315,8 @@ export class BlockCrawler {
     testMode: {
       url: string;
       sectionLocator: string;
-      blockName?: string;
       sectionIndex?: number;
+      blockName?: string;
       handler: TestHandler;
       beforeHandler?: BeforeProcessBlocksHandler;
     } | null
