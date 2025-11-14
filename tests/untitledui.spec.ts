@@ -47,8 +47,14 @@ test("untitledui", async ({ page }) => {
     )
     .run(async ({ section, blockName, currentPage, outputDir }) => {
       console.log(`测试组件: ${blockName}`);
-      const code = (await section.locator('pre').last().textContent()) ?? "";
-      await fse.outputFile(`${outputDir}/test-${blockName}.tsx`, code);
+      // 点击 Code
+      await currentPage.getByRole('tab', { name: 'Code' }).click();
+      // 获取内部 pre
+      const pre = section.locator('pre').last();
+      // 获取内部 pre 的文本
+      const text = await pre.textContent() ?? "";
+      // 输出到文件
+      await fse.outputFile(`${outputDir}/test-${blockName}.tsx`, text);
     });
 });
 

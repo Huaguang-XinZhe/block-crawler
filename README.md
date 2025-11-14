@@ -253,6 +253,12 @@ test("测试指定组件", async ({ page }) => {
 
 支持在并发访问的页面中注入自定义 JavaScript 脚本，可用于修改页面行为、注入工具函数等。
 
+**特性：**
+- ✅ 支持普通 JavaScript 脚本
+- ✅ 支持油猴（Tampermonkey）脚本格式
+- ✅ 自动识别并处理油猴脚本元数据
+- ✅ 提供完整的油猴API polyfill
+
 **注意：** `startUrl` 的初始页面不会注入脚本，只有并发访问的链接页面会注入。
 
 | 配置项 | 类型 | 说明 |
@@ -276,7 +282,9 @@ const crawler = new BlockCrawler(page, {
 - `beforePageLoad`：在页面加载前注入（使用 `addInitScript`），适合需要在页面初始化前执行的脚本
 - `afterPageLoad`：在页面加载完成后注入（在 `goto` 之后执行），适合操作已加载的 DOM
 
-**示例脚本文件（`.crawler/example.com/custom-script.js`）：**
+#### 普通脚本示例
+
+`.crawler/example.com/custom-script.js`：
 ```javascript
 // 在控制台输出信息
 console.log('🎨 Custom script injected!');
@@ -289,6 +297,73 @@ window.customUtils = {
   log: (msg) => console.log(`[Custom] ${msg}`)
 };
 ```
+
+#### 油猴脚本支持
+
+框架完全支持油猴脚本格式，自动处理元数据并提供以下API的polyfill：
+
+**支持的油猴API：**
+- `GM_addStyle(css)` - 添加CSS样式
+- `GM_getValue(key, defaultValue)` - 获取存储值
+- `GM_setValue(key, value)` - 设置存储值
+- `GM_deleteValue(key)` - 删除存储值
+- `GM_listValues()` - 列出所有存储键
+- `GM_xmlhttpRequest(details)` - 发起网络请求
+- `GM_info` - 脚本信息对象
+- `GM_log(message)` - 日志输出
+- `unsafeWindow` - 原始window对象
+
+**油猴脚本示例（`.crawler/example.com/change-link-color.js`）：**
+
+```javascript
+// ==UserScript==
+// @name         修改链接颜色
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  修改所有链接的颜色为红色
+// @author       你
+// @match        *://*/*
+// @grant        GM_addStyle
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // 使用 GM_addStyle 插入自定义 CSS
+    GM_addStyle(`
+        a {
+            color: red !important;
+        }
+    `);
+})();
+```
+
+**存储示例：**
+
+```javascript
+// ==UserScript==
+// @name         计数器
+// @grant        GM_getValue
+// @grant        GM_setValue
+// ==/UserScript==
+
+(function() {
+    'use strict';
+    
+    // 读取计数
+    const count = GM_getValue('visitCount', 0);
+    console.log('访问次数:', count);
+    
+    // 更新计数
+    GM_setValue('visitCount', count + 1);
+})();
+```
+
+**注意：**
+- 油猴脚本的 `// ==UserScript==` 元数据会被自动识别和处理
+- 不需要修改现有的油猴脚本，直接使用即可
+- 存储API使用 `sessionStorage` 模拟，数据在浏览器会话期间保持
+- `GM_xmlhttpRequest` 使用原生 `fetch` 实现，可能不支持所有油猴的高级特性
 
 ### 高级配置（函数覆盖）
 
