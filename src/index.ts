@@ -20,4 +20,5 @@ export type {
   FreeItem,
 } from "./types";
 export type { Locale } from "./utils/i18n";
+export type { SafeOutput } from "./utils/safe-output";
 

@@ -4,6 +4,7 @@ import type { InternalConfig } from "./ConfigManager";
 import type { TaskProgress } from "../utils/task-progress";
 import { createI18n, type I18n } from "../utils/i18n";
 import { BlockNameExtractor } from "./BlockNameExtractor";
+import { createSafeOutput } from "../utils/safe-output";
 
 /**
  * Block 处理器
@@ -138,6 +139,7 @@ export class BlockProcessor {
       blockPath,
       blockName,
       outputDir: this.config.outputDir,
+      safeOutput: createSafeOutput('block', this.config.outputDir, blockPath),
     };
 
     try {

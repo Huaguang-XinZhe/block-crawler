@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import type { PageHandler, PageContext } from "../types";
 import type { InternalConfig } from "./ConfigManager";
 import { createI18n, type I18n } from "../utils/i18n";
+import { createSafeOutput } from "../utils/safe-output";
 
 /**
  * Page 处理器
@@ -54,6 +55,7 @@ export class PageProcessor {
       currentPage: page,
       currentPath,
       outputDir: this.config.outputDir,
+      safeOutput: createSafeOutput('page', this.config.outputDir),
     };
 
     try {

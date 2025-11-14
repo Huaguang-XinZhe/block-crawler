@@ -1,5 +1,6 @@
 import type { Page, Locator } from "@playwright/test";
 import type { Locale } from "./utils/i18n";
+import type { SafeOutput } from "./utils/safe-output";
 
 /**
  * 爬虫配置接口
@@ -199,6 +200,8 @@ export interface PageContext {
   currentPath: string;
   /** 输出目录 */
   outputDir: string;
+  /** 安全输出函数（自动处理文件名 sanitize） */
+  safeOutput: SafeOutput;
 }
 
 /**
@@ -215,6 +218,8 @@ export interface BlockContext {
   blockName: string;
   /** 输出目录 */
   outputDir: string;
+  /** 安全输出函数（自动处理文件名 sanitize，默认路径：${outputDir}/${blockPath}.tsx） */
+  safeOutput: SafeOutput;
 }
 
 /**
@@ -253,6 +258,8 @@ export interface TestContext {
   blockName: string;
   /** 输出目录 */
   outputDir: string;
+  /** 安全输出函数（自动处理文件名 sanitize，默认路径：${outputDir}/test-${blockName}.tsx） */
+  safeOutput: SafeOutput;
 }
 
 /**

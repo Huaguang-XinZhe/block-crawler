@@ -10,6 +10,7 @@ import { MetaCollector } from "./MetaCollector";
 import { ScriptInjector } from "./ScriptInjector";
 import { BlockNameExtractor } from "./BlockNameExtractor";
 import { createI18n, type I18n } from "../utils/i18n";
+import { createSafeOutput } from "../utils/safe-output";
 
 /**
  * 爬虫协调器
@@ -441,6 +442,7 @@ export class CrawlerOrchestrator {
         section: targetSection,
         blockName,
         outputDir: this.config.outputDir,
+        safeOutput: createSafeOutput('test', this.config.outputDir, undefined, blockName),
       });
       
       console.log(`\n${this.i18n.t('crawler.testComplete')}`);
