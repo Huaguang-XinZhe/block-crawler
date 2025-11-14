@@ -208,9 +208,9 @@ export class CrawlerOrchestrator {
     let completed = 0;
     let failed = 0;
 
-    // 如果 skipFree 开启且进度恢复关闭，从 meta.json 中加载已知的 Free 页面
+    // 如果 skipFree 开启，从 meta.json 中加载已知的 Free 页面
     let knownFreePages: Set<string> = new Set();
-    if (this.config.skipFree && !this.config.enableProgressResume) {
+    if (this.config.skipFree) {
       const freePagesList = await MetaCollector.loadFreePages(this.config.metaFile);
       if (freePagesList.length > 0) {
         knownFreePages = new Set(freePagesList);

@@ -3,10 +3,12 @@ import { BlockCrawler } from "@huaguang/block-crawler";
 import fse from "fs-extra";
 
 test("untitledui", async ({ page }) => {
+  test.setTimeout(2 * 60 * 1000); // 2 分钟
+
   const crawler = new BlockCrawler(page, {
     startUrl: "https://www.untitledui.com/react/components",
     skipFree: "FREE",
-    enableProgressResume: false,
+    // enableProgressResume: false,
     locale: "en",
     collectionNameLocator: "p:first-of-type",
     collectionCountLocator: "p:last-of-type",

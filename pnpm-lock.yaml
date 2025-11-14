@@ -19,8 +19,8 @@ importers:
         specifier: ^2.29.7
         version: 2.29.7(@types/node@24.10.0)
       '@huaguang/block-crawler':
-        specifier: ^0.6.0
-        version: 0.6.0(@playwright/test@1.56.1)
+        specifier: ^0.6.1
+        version: 0.6.1(@playwright/test@1.56.1)
       '@playwright/test':
         specifier: ^1.56.1
         version: 1.56.1
@@ -263,8 +263,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@huaguang/block-crawler@0.6.0':
-    resolution: {integrity: sha512-Hd5YTTq/rVU1dDj9J342zp88sD/SA5kUO9dA8yNxk/3yhjbs2Ya2bxnF1HkPUpbP4wgIzFiZojf7POua2YZgiA==}
+  '@huaguang/block-crawler@0.6.1':
+    resolution: {integrity: sha512-q9ctQbl8hR2urrwU0IHpIkUEWYt/IzPiBgyg8fbFtmVsJ1ksZBSZzUuHkXD8TYcxqhHK1BKv8vom4VT6ISgxIA==}
     peerDependencies:
       '@playwright/test': ^1.0.0
 
@@ -1343,7 +1343,7 @@ snapshots:
   '@esbuild/win32-x64@0.25.12':
     optional: true
 
-  '@huaguang/block-crawler@0.6.0(@playwright/test@1.56.1)':
+  '@huaguang/block-crawler@0.6.1(@playwright/test@1.56.1)':
     dependencies:
       '@playwright/test': 1.56.1
       fs-extra: 11.3.2

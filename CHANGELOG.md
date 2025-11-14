@@ -1,5 +1,11 @@
 # block-crawler
 
+## 0.6.1
+
+### Patch Changes
+
+- 只要设置了 skipFree 就从 meta.json 中加载已知的 Free 页面
+
 ## 0.6.0
 
 ### Minor Changes
