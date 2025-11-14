@@ -18,44 +18,38 @@ export class PageProcessor {
   }
 
   /**
-   * 检查页面是否为 Free
+   * 检查页面是否为 Free（静态方法，供外部调用）
    */
-  private async isPageFree(page: Page): Promise<boolean> {
-    if (!this.config.skipFree) {
+  static async checkPageFree(page: Page, config: InternalConfig): Promise<boolean> {
+    if (!config.skipFree) {
       return false;
     }
 
     // 字符串配置：使用 getByText 精确匹配
-    if (typeof this.config.skipFree === "string") {
-      const count = await page.getByText(this.config.skipFree, { exact: true }).count();
+    if (typeof config.skipFree === "string") {
+      const count = await page.getByText(config.skipFree, { exact: true }).count();
       
       if (count === 0) {
         return false;
       }
       
       if (count !== 1) {
-        throw new Error(this.i18n.t('page.freeError', { count, text: this.config.skipFree }));
+        const i18n = createI18n(config.locale);
+        throw new Error(i18n.t('page.freeError', { count, text: config.skipFree }));
       }
       
       return true;
     }
     
     // 函数配置：使用自定义判断逻辑
-    return await this.config.skipFree(page);
+    return await config.skipFree(page);
   }
 
   /**
    * 处理单个页面
+   * 注意：调用此方法前应该已经在 CrawlerOrchestrator 中检查过 Free 页面
    */
-  async processPage(page: Page, currentPath: string): Promise<{ isFree: boolean }> {
-    // 检查是否为 Free 页面
-    const isFree = await this.isPageFree(page);
-    if (isFree) {
-      console.log(this.i18n.t('page.skipFree', { path: currentPath }));
-      // 如果是 Free 页面，直接跳过处理
-      return { isFree };
-    }
-
+  async processPage(page: Page, currentPath: string): Promise<void> {
     const context: PageContext = {
       currentPage: page,
       currentPath,
@@ -63,9 +57,7 @@ export class PageProcessor {
     };
 
     try {
-      // 只有非 Free 页面才调用 pageHandler
       await this.pageHandler(context);
-      return { isFree: false };
     } catch (error) {
       console.error(this.i18n.t('page.processFailed', { path: currentPath }), error);
       throw error;

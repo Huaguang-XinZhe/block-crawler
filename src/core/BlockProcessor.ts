@@ -26,27 +26,12 @@ export class BlockProcessor {
 
   /**
    * 处理页面中的所有 Blocks
+   * 注意：调用此方法前应该已经在 CrawlerOrchestrator 中检查过页面级 Free
    */
   async processBlocksInPage(page: Page, pagePath: string): Promise<{
     totalCount: number;
     freeBlocks: string[];
-    isPageFree?: boolean;
   }> {
-    // 先检查整个页面是否为 Free（尽早跳过，提高效率）
-    const isPageFree = await this.isPageFree(page);
-    if (isPageFree) {
-      console.log(this.i18n.t('page.skipFree', { path: pagePath }));
-      // 标记页面为完成（虽然跳过了处理）
-      const normalizedPath = this.normalizePagePath(pagePath);
-      this.taskProgress?.markPageComplete(normalizedPath);
-      // 返回页面为 Free 的标记
-      return {
-        totalCount: 0,
-        freeBlocks: [],
-        isPageFree: true,
-      };
-    }
-
     // 执行前置逻辑（如果配置了）
     if (this.beforeProcessBlocks) {
       await this.beforeProcessBlocks(page);
@@ -83,26 +68,7 @@ export class BlockProcessor {
     return {
       totalCount: blocks.length,
       freeBlocks,
-      isPageFree: false,
     };
-  }
-
-  /**
-   * 检查整个页面是否为 Free
-   */
-  private async isPageFree(page: Page): Promise<boolean> {
-    if (!this.config.skipFree) {
-      return false;
-    }
-
-    // 字符串配置：使用 getByText 精确匹配
-    if (typeof this.config.skipFree === "string") {
-      const count = await page.getByText(this.config.skipFree, { exact: true }).count();
-      return count > 0;
-    }
-    
-    // 函数配置：使用自定义判断逻辑
-    return await this.config.skipFree(page);
   }
 
   /**

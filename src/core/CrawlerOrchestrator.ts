@@ -277,6 +277,16 @@ export class CrawlerOrchestrator {
 
       await newPage.goto(url, this.config.collectionLinkWaitOptions);
 
+      // 先检查页面是否为 Free（公共逻辑，提前快速跳过）
+      const isPageFree = await PageProcessor.checkPageFree(newPage, this.config);
+      if (isPageFree) {
+        console.log(this.i18n.t('page.skipFree', { path: relativeLink }));
+        this.metaCollector.addFreePage(relativeLink);
+        // 标记页面为完成
+        this.taskProgress?.markPageComplete(this.normalizePagePath(relativeLink));
+        return; // 直接返回，不注入脚本，不执行处理逻辑
+      }
+
       // 注入脚本（仅对非首页的新页面注入，且在页面加载后注入）
       if (!isFirst && this.scriptInjector.isEnabled()) {
         await this.scriptInjector.inject(newPage, false);
@@ -293,11 +303,6 @@ export class CrawlerOrchestrator {
         );
         const result = await blockProcessor.processBlocksInPage(newPage, relativeLink);
         
-        // 记录 free pages（Block 模式下检测到整个页面为 Free）
-        if (result.isPageFree) {
-          this.metaCollector.addFreePage(relativeLink);
-        }
-        
         // 记录实际组件数和 free blocks
         this.metaCollector.incrementActualCount(result.totalCount);
         result.freeBlocks.forEach(blockName => {
@@ -305,14 +310,9 @@ export class CrawlerOrchestrator {
         });
       } else if (pageHandler) {
         const pageProcessor = new PageProcessor(this.config, pageHandler);
-        const result = await pageProcessor.processPage(newPage, relativeLink);
+        await pageProcessor.processPage(newPage, relativeLink);
         
-        // 记录 free pages
-        if (result.isFree) {
-          this.metaCollector.addFreePage(relativeLink);
-        }
-        
-        // 标记页面为完成（无论是否为 free）
+        // 标记页面为完成
         this.taskProgress?.markPageComplete(this.normalizePagePath(relativeLink));
       }
     } finally {
