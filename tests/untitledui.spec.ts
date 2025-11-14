@@ -25,35 +25,36 @@ test("untitledui", async ({ page }) => {
     },
   });
 
-  await crawler
-    .blocks("[data-preview]")
-    .before(async (currentPage) => {
-      // 前置逻辑示例：在匹配所有 Block 之前执行
-      await clickIfVisibleNow(currentPage.getByRole('tab', { name: 'List view' }));
-    })
-    .each(async ({ block, blockPath, outputDir }) => {
-      // 点击 Code
-      await block.getByRole('tab', { name: 'Code' }).click();
-      // 获取内部 pre
-      const code = await extractCodeFromDOM(block);
-      // 输出到文件
-      await fse.outputFile(`${outputDir}/${blockPath}.tsx`, code);
-    });
-
   // await crawler
-  //   .test(
-  //     "https://www.untitledui.com/react/marketing/landing-pages",
-  //     "[data-preview]"
-  //   )
-  //   .run(async ({ section, blockName, currentPage, outputDir }) => {
-  //     console.log(`测试组件: ${blockName}`);
+  //   .blocks("[data-preview]")
+  //   .before(async (currentPage) => {
+  //     // 前置逻辑示例：在匹配所有 Block 之前执行
+  //     await clickIfVisibleNow(currentPage.getByRole('tab', { name: 'List view' }));
+  //   })
+  //   .each(async ({ block, blockPath, outputDir }) => {
   //     // 点击 Code
-  //     await currentPage.getByRole('tab', { name: 'Code' }).click();
+  //     await block.getByRole('tab', { name: 'Code' }).click();
   //     // 获取内部 pre
-  //     const code = await extractCodeFromDOM(section);
+  //     const code = await extractCodeFromDOM(block);
   //     // 输出到文件
-  //     await fse.outputFile(`${outputDir}/test-${blockName}.tsx`, code);
+  //     await fse.outputFile(`${outputDir}/${blockPath}.tsx`, code);
   //   });
+
+  await crawler
+    .test(
+      "https://www.untitledui.com/react/components/forgot-password-pages",
+      "[data-preview]",
+      "Step 1: Forgot password"
+    )
+    .run(async ({ section, blockName, currentPage, outputDir }) => {
+      console.log(`测试组件: ${blockName}`);
+      // 点击 Code
+      await currentPage.getByRole('tab', { name: 'Code' }).click();
+      // 获取内部 pre
+      const code = await extractCodeFromDOM(section);
+      // 输出到文件
+      await fse.outputFile(`${outputDir}/test-${blockName}.tsx`, code);
+    });
 });
 
 // 从 DOM 中提取 Code

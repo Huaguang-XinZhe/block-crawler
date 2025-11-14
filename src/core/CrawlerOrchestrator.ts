@@ -357,6 +357,7 @@ export class CrawlerOrchestrator {
       url: string;
       sectionLocator: string;
       blockName?: string;
+      sectionIndex?: number;
       handler: ((context: any) => Promise<void>);
       beforeHandler?: ((page: Page) => Promise<void>);
     }
@@ -394,16 +395,29 @@ export class CrawlerOrchestrator {
       }
       
       // 确定目标 section
+      // 优先级：sectionIndex > blockName > 第一个
       let targetSection;
       let blockName = "";
       
-      if (testMode.blockName) {
-        // 指定了 blockName，查找匹配的 section
+      if (testMode.sectionIndex !== undefined) {
+        // 优先级 1：使用 sectionIndex
+        if (testMode.sectionIndex < 0 || testMode.sectionIndex >= sections.length) {
+          throw new Error(
+            `❌ sectionIndex ${testMode.sectionIndex} 超出范围（共 ${sections.length} 个 section，索引范围：0-${sections.length - 1}）`
+          );
+        }
+        targetSection = sections[testMode.sectionIndex];
+        blockName = await this.extractBlockName(targetSection);
+        console.log(
+          `\n${this.i18n.t('crawler.testUsingIndex', { index: testMode.sectionIndex, name: blockName })}`
+        );
+      } else if (testMode.blockName) {
+        // 优先级 2：使用 blockName，逐个比对
         console.log(`\n${this.i18n.t('crawler.testFindingByName', { name: testMode.blockName })}`);
         
         for (const section of sections) {
           const name = await this.extractBlockName(section);
-          if (name === testMode.blockName) {
+          if (name && name.trim() === testMode.blockName.trim()) {
             targetSection = section;
             blockName = name;
             break;
@@ -414,7 +428,7 @@ export class CrawlerOrchestrator {
           throw new Error(`❌ 未找到名为 "${testMode.blockName}" 的组件`);
         }
       } else {
-        // 未指定 blockName，使用第一个 section
+        // 优先级 3：使用第一个 section
         targetSection = sections[0];
         blockName = await this.extractBlockName(targetSection);
         console.log(`\n${this.i18n.t('crawler.testUsingFirst', { name: blockName })}`);

@@ -88,7 +88,8 @@ class TestChain {
     private crawler: BlockCrawler,
     private url: string,
     private sectionLocator: string,
-    private blockName?: string
+    private blockName?: string,
+    private sectionIndex?: number
   ) {}
 
   /**
@@ -123,6 +124,7 @@ class TestChain {
       this.url,
       this.sectionLocator,
       this.blockName,
+      this.sectionIndex,
       handler,
       this.beforeHandler
     );
@@ -249,8 +251,8 @@ export class BlockCrawler {
    *     // 处理名为 "Button" 的组件
    *   });
    */
-  test(url: string, sectionLocator: string, blockName?: string): TestChain {
-    return new TestChain(this, url, sectionLocator, blockName);
+  test(url: string, sectionLocator: string, blockName?: string, sectionIndex?: number): TestChain {
+    return new TestChain(this, url, sectionLocator, blockName, sectionIndex);
   }
 
   /**
@@ -278,6 +280,7 @@ export class BlockCrawler {
     url: string,
     sectionLocator: string,
     blockName: string | undefined,
+    sectionIndex: number | undefined,
     handler: TestHandler,
     beforeHandler?: BeforeProcessBlocksHandler
   ): Promise<void> {
@@ -285,6 +288,7 @@ export class BlockCrawler {
       url,
       sectionLocator,
       blockName,
+      sectionIndex,
       handler,
       beforeHandler,
     });
@@ -302,6 +306,7 @@ export class BlockCrawler {
       url: string;
       sectionLocator: string;
       blockName?: string;
+      sectionIndex?: number;
       handler: TestHandler;
       beforeHandler?: BeforeProcessBlocksHandler;
     } | null
