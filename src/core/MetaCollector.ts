@@ -143,5 +143,14 @@ export class MetaCollector {
     }
     return null;
   }
+
+  /**
+   * 从已有的 meta.json 中加载 Free 页面列表
+   * 用于在不恢复进度的情况下，跳过已知的 Free 页面
+   */
+  static async loadFreePages(metaFile: string): Promise<string[]> {
+    const meta = await this.load(metaFile);
+    return meta?.freePages?.links || [];
+  }
 }
 

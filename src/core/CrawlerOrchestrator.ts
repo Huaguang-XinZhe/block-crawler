@@ -208,6 +208,16 @@ export class CrawlerOrchestrator {
     let completed = 0;
     let failed = 0;
 
+    // 如果 skipFree 开启且进度恢复关闭，从 meta.json 中加载已知的 Free 页面
+    let knownFreePages: Set<string> = new Set();
+    if (this.config.skipFree && !this.config.enableProgressResume) {
+      const freePagesList = await MetaCollector.loadFreePages(this.config.metaFile);
+      if (freePagesList.length > 0) {
+        knownFreePages = new Set(freePagesList);
+        console.log(this.i18n.t('crawler.loadedFreePages', { count: knownFreePages.size }));
+      }
+    }
+
     console.log(`\n${this.i18n.t('crawler.startConcurrent', { concurrency: this.config.maxConcurrency })}`);
     console.log(`\n${this.i18n.t('crawler.startProcessing', { total })}`);
 
@@ -221,6 +231,14 @@ export class CrawlerOrchestrator {
 
           if (this.taskProgress?.isPageComplete(normalizedPath)) {
             console.log(this.i18n.t('crawler.skipCompleted', { name: linkObj.name || normalizedPath }));
+            completed++;
+            return;
+          }
+
+          // 跳过已知的 Free 页面（从 meta.json 中加载）
+          if (knownFreePages.has(linkObj.link)) {
+            console.log(this.i18n.t('crawler.skipKnownFree', { name: linkObj.name || linkObj.link }));
+            this.metaCollector.addFreePage(linkObj.link); // 重新记录到新的 meta.json
             completed++;
             return;
           }

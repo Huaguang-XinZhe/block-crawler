@@ -6,8 +6,8 @@ test("untitledui", async ({ page }) => {
   const crawler = new BlockCrawler(page, {
     startUrl: "https://www.untitledui.com/react/components",
     skipFree: "FREE",
-    locale: "en",
     enableProgressResume: false,
+    locale: "en",
     collectionNameLocator: "p:first-of-type",
     collectionCountLocator: "p:last-of-type",
     collectionLinkWaitOptions: {
