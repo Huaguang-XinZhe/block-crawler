@@ -42,9 +42,6 @@ export async function atomicWriteJson<T extends object>(
     verify = true,
   } = options;
 
-  // 确保目标文件目录存在
-  await fse.ensureDir(path.dirname(filePath));
-
   // 在系统临时目录创建临时文件，使用 UUID 确保唯一性
   const tempFileName = `block-crawler-${randomUUID()}.tmp`;
   const tempFile = path.join(os.tmpdir(), tempFileName);

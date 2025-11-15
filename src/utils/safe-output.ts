@@ -33,7 +33,8 @@ export function createSafeOutput(
     if (filePath) {
       // 用户提供了路径，需要 sanitize
       const result = sanitizePathWithMapping(filePath, mappingManager);
-      finalPath = result.sanitizedPath;
+      // 用户提供的路径是相对于 outputDir 的
+      finalPath = path.join(outputDir, result.sanitizedPath);
       originalFilename = result.originalFilename;
       sanitizedFilename = result.sanitizedFilename;
     } else {
@@ -44,6 +45,7 @@ export function createSafeOutput(
             throw new Error('Block 模式下必须提供 blockPath 或显式传入 filePath');
           }
           // blockPath 可能包含路径分隔符，需要 sanitize 整个路径
+          // sanitizePathWithMapping 会自动记录映射
           const originalBlockPath = `${blockPath}.tsx`;
           const result = sanitizePathWithMapping(originalBlockPath, mappingManager);
           finalPath = path.join(outputDir, result.sanitizedPath);
@@ -98,17 +100,16 @@ function sanitizePathWithMapping(
   const dir = path.dirname(normalized);
   const originalFilename = path.basename(normalized);
   
-  // 清理文件名并记录映射
+  // 清理文件名
   const filenameResult = sanitizeFilenameWithOriginal(originalFilename);
   const sanitizedFilename = filenameResult.sanitized;
   
-  // 如果文件名发生变化，记录映射
-  if (mappingManager && filenameResult.changed) {
-    mappingManager.record(originalFilename, sanitizedFilename);
-  }
-  
   // 如果目录是根目录或当前目录，直接返回清理后的文件名
   if (dir === '.' || dir === path.sep) {
+    // 记录文件名映射（如果发生变化）
+    if (mappingManager && filenameResult.changed) {
+      mappingManager.record(originalFilename, sanitizedFilename);
+    }
     return {
       sanitizedPath: sanitizedFilename,
       originalFilename,
@@ -128,6 +129,12 @@ function sanitizePathWithMapping(
   } else {
     // 相对路径
     sanitizedPath = path.join(...sanitizedDirParts, sanitizedFilename);
+  }
+  
+  // 记录完整路径的映射（如果发生变化）
+  // 注意：这里记录的是完整路径的映射，而不仅仅是文件名
+  if (mappingManager && normalized !== sanitizedPath) {
+    mappingManager.record(normalized, sanitizedPath);
   }
   
   return {
