@@ -226,7 +226,9 @@ crawler.blocks(sectionLocator: string, options?: BlockModeOptions)
 当开启时（默认），框架会在关闭页面前验证Block 采集完整性：
 - 记录定位到的 block 总数（预期数量）
 - 记录实际处理的 block 数量
-- 如果不一致，调用 `page.pause()` 暂停并打印详细信息
+- 如果不一致：
+  - **Debug 模式**：调用 `page.pause()` 暂停并打印详细信息
+  - **非 Debug 模式**：只打印详细信息，提示使用 `--debug` 进行调试
 
 **使用示例：**
 
@@ -295,7 +297,9 @@ const crawler = new BlockCrawler(page, {
 
 **功能说明：**
 
-当开启时（默认），在处理过程中遇到错误（如 timeout、selector 错误等）会自动调用 `page.pause()`，方便开发者检查问题，而不是直接跳过继续执行。
+当开启时（默认），在处理过程中遇到错误（如 timeout、selector 错误等）时：
+- **Debug 模式**（`--debug` 运行）：自动调用 `page.pause()` 暂停页面，方便检查
+- **非 Debug 模式**：输出错误信息但不暂停，提示使用 `--debug` 进行调试
 
 **使用场景：**
 - 在 `--debug` 模式下运行时开启（默认）
@@ -304,10 +308,10 @@ const crawler = new BlockCrawler(page, {
 **使用示例：**
 
 ```typescript
-// 调试时使用（默认）
+// 开启错误暂停（默认）
 const crawler = new BlockCrawler(page, {
   startUrl: "https://example.com/components",
-  pauseOnError: true,  // 默认开启，遇到错误自动暂停
+  pauseOnError: true,  // 开启错误暂停
   // ... 其他配置
 });
 
@@ -319,15 +323,38 @@ const crawler = new BlockCrawler(page, {
 });
 ```
 
+**运行方式：**
+
+```bash
+# Debug 模式运行（遇到错误会自动暂停）
+pnpm test:debug tests/example.spec.ts
+
+# 非 Debug 模式运行（遇到错误只输出提示）
+pnpm test tests/example.spec.ts
+```
+
 **错误暂停示例：**
 
+Debug 模式（`--debug`）：
 ```
 🛑 检测到错误，页面已暂停方便检查
    类型: Block
    位置: Button Component
-   错误: locator.waitFor: Timeout 10000ms exceeded.
+   错误: Timeout 10000ms exceeded.
 
    💡 提示: 检查完成后，可以在全局配置中关闭 pauseOnError 以继续运行
+```
+
+非 Debug 模式：
+```
+❌ 检测到错误
+   类型: Block
+   位置: Button Component
+   错误: Timeout 10000ms exceeded.
+
+   💡 提示:
+   - 使用 --debug 模式运行可以自动暂停页面进行检查
+   - 或在全局配置中关闭 pauseOnError 以跳过错误继续运行
 ```
 
 ### 链接收集配置
@@ -811,53 +838,7 @@ const crawler = new BlockCrawler(page, {
 });
 ```
 
-### 方案 2：增强点击操作稳定性
-
-```typescript
-/**
- * 稳定的点击操作
- * 自动处理：可见性检查、重试、超时
- */
-async function stableClick(locator: Locator, options?: {
-  timeout?: number;
-  retries?: number;
-}): Promise<void> {
-  const timeout = options?.timeout ?? 5000;
-  const retries = options?.retries ?? 3;
-  
-  for (let i = 0; i < retries; i++) {
-    try {
-      await locator.waitFor({ state: 'visible', timeout });
-      await locator.scrollIntoViewIfNeeded({ timeout });
-      await locator.click({ timeout, force: false });
-      await locator.page().waitForTimeout(300); // 点击后等待
-      return;
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await locator.page().waitForTimeout(500);
-    }
-  }
-}
-```
-
-### 方案 3：条件点击
-
-```typescript
-/**
- * 条件点击：只在元素可见时点击
- */
-async function clickIfVisible(locator: Locator, timeout = 3000): Promise<boolean> {
-  try {
-    await locator.waitFor({ state: 'visible', timeout });
-    await locator.click({ timeout });
-    return true;
-  } catch {
-    return false; // 元素不可见，跳过
-  }
-}
-```
-
-### 方案 4：验证点击效果
+### 方案 2：验证点击效果
 
 ```typescript
 /**

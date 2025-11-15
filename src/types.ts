@@ -221,6 +221,7 @@ export interface CrawlerConfig {
    * 使用独立的浏览器上下文（BrowserContext）
    * 
    * 当开启时，每个并发页面会创建独立的 BrowserContext，避免共享状态导致的并发问题。
+   * debug 模式下会看到多个浏览器窗口（多个 renderer 进程）和调试器窗口，但只有一个浏览器（进程）❗
    * 
    * **优点：**
    * - 完全隔离，避免状态污染

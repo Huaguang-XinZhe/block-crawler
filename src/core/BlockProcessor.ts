@@ -173,12 +173,20 @@ export class BlockProcessor {
     } catch (error) {
       // 如果开启了 pauseOnError，暂停页面方便检查
       if (this.config.pauseOnError) {
-        console.error(this.i18n.t('error.pauseOnError', { 
+        const debugMode = isDebugMode();
+        const messageKey = debugMode ? 'error.pauseOnErrorDebug' : 'error.pauseOnErrorNonDebug';
+        
+        console.error(this.i18n.t(messageKey, { 
           type: 'Block',
           name: blockName,
+          path: '',
           error: error instanceof Error ? error.message : String(error)
         }));
-        await page.pause();
+        
+        // 只在 debug 模式下暂停
+        if (debugMode) {
+          await page.pause();
+        }
       }
       
       return { success: false, isFree: false, blockName };
@@ -221,8 +229,11 @@ export class BlockProcessor {
     processedBlockNames: string[]
   ): Promise<void> {
     if (expectedCount !== processedCount) {
+      const debugMode = isDebugMode();
+      const messageKey = debugMode ? 'block.verifyIncompleteDebug' : 'block.verifyIncompleteNonDebug';
+      
       console.error(
-        this.i18n.t('block.verifyIncomplete', {
+        this.i18n.t(messageKey, {
           pagePath,
           expectedCount,
           processedCount,
@@ -231,8 +242,10 @@ export class BlockProcessor {
         })
       );
       
-      // 暂停页面，方便用户检查
-      await page.pause();
+      // 只在 debug 模式下暂停
+      if (debugMode) {
+        await page.pause();
+      }
     } else {
       console.log(
         this.i18n.t('block.verifyComplete', {

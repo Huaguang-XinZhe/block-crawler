@@ -4,6 +4,7 @@ import type { InternalConfig } from "./ConfigManager";
 import { createI18n, type I18n } from "../utils/i18n";
 import { createSafeOutput } from "../utils/safe-output";
 import type { FilenameMappingManager } from "../utils/filename-mapping";
+import { isDebugMode } from "../utils/debug";
 
 /**
  * Page 处理器
@@ -65,12 +66,20 @@ export class PageProcessor {
     } catch (error) {
       // 如果开启了 pauseOnError，暂停页面方便检查
       if (this.config.pauseOnError) {
-        console.error(this.i18n.t('error.pauseOnError', { 
+        const debugMode = isDebugMode();
+        const messageKey = debugMode ? 'error.pauseOnErrorDebug' : 'error.pauseOnErrorNonDebug';
+        
+        console.error(this.i18n.t(messageKey, { 
           type: 'Page',
+          name: '',
           path: currentPath,
           error: error instanceof Error ? error.message : String(error)
         }));
-        await page.pause();
+        
+        // 只在 debug 模式下暂停
+        if (debugMode) {
+          await page.pause();
+        }
       }
       
       throw error;
