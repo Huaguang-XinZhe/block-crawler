@@ -40,7 +40,7 @@ export class BlockProcessor {
   }> {
     // 执行前置逻辑（如果配置了）
     if (this.beforeProcessBlocks) {
-      const clickAndVerify = createClickAndVerify();
+      const clickAndVerify = createClickAndVerify(this.config.locale);
       const beforeContext: BeforeContext = {
         currentPage: page,
         clickAndVerify,
@@ -163,7 +163,7 @@ export class BlockProcessor {
       return { success: true, isFree: false, blockName };
     }
 
-    const clickAndVerify = createClickAndVerify();
+    const clickAndVerify = createClickAndVerify(this.config.locale);
     const context: BlockContext = {
       currentPage: page,
       block,

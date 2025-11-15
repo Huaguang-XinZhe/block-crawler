@@ -117,6 +117,12 @@ const messages = {
     'error.pauseOnErrorDebug': '\n🛑 检测到错误，页面已暂停方便检查\n   类型: {type}\n   位置: {name}{path}\n   错误: {error}\n\n   💡 提示: 检查完成后，可以在全局配置中关闭 pauseOnError 以继续运行\n',
     'error.pauseOnErrorNonDebug': '\n❌ 检测到错误\n   类型: {type}\n   位置: {name}{path}\n   错误: {error}\n\n   💡 提示:\n   - 使用 --debug 模式运行可以自动暂停页面进行检查\n   - 或在全局配置中关闭 pauseOnError 以跳过错误继续运行\n',
     
+    // 点击操作
+    'click.retrying': '🔄 点击重试 ({current}/{total}): {error}',
+    'click.failed': '❌ 点击失败（已重试 {retries} 次）: {error}',
+    'click.verifyFailed': '❌ 点击后验证失败（已重试 {retries} 次）',
+    'click.paused': '⏸️  调试模式：页面已暂停，请检查点击问题...',
+    
     // 元信息
     'meta.saved': '✅ 元信息已保存到: {path}',
     'meta.stats': '📊 统计信息:',
@@ -252,6 +258,12 @@ const messages = {
     // Error handling
     'error.pauseOnErrorDebug': '\n🛑 Error detected, page paused for inspection\n   Type: {type}\n   Location: {name}{path}\n   Error: {error}\n\n   💡 Tip: After inspection, you can disable pauseOnError in config to continue\n',
     'error.pauseOnErrorNonDebug': '\n❌ Error detected\n   Type: {type}\n   Location: {name}{path}\n   Error: {error}\n\n   💡 Tips:\n   - Run with --debug flag to automatically pause the page for inspection\n   - Or disable pauseOnError in config to skip errors and continue\n',
+    
+    // Click actions
+    'click.retrying': '🔄 Click retry ({current}/{total}): {error}',
+    'click.failed': '❌ Click failed (retried {retries} times): {error}',
+    'click.verifyFailed': '❌ Click verification failed (retried {retries} times)',
+    'click.paused': '⏸️  Debug mode: Page paused, please check click issue...',
     
     // Meta information
     'meta.saved': '✅ Meta information saved to: {path}',

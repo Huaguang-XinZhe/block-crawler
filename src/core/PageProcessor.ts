@@ -55,7 +55,7 @@ export class PageProcessor {
    * 注意：调用此方法前应该已经在 CrawlerOrchestrator 中检查过 Free 页面
    */
   async processPage(page: Page, currentPath: string): Promise<void> {
-    const clickAndVerify = createClickAndVerify();
+    const clickAndVerify = createClickAndVerify(this.config.locale);
     const context: PageContext = {
       currentPage: page,
       currentPath,

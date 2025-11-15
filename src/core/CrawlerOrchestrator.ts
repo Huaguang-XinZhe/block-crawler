@@ -522,7 +522,7 @@ export class CrawlerOrchestrator {
       // 执行前置逻辑
       if (testMode.beforeHandler) {
         console.log(`\n${this.i18n.t("crawler.testBeforeHandler")}`);
-        const clickAndVerify = createClickAndVerify();
+        const clickAndVerify = createClickAndVerify(this.config.locale);
         const beforeContext: BeforeContext = {
           currentPage: page,
           clickAndVerify,
@@ -600,7 +600,7 @@ export class CrawlerOrchestrator {
 
       // 执行测试逻辑
       console.log(`\n${this.i18n.t("crawler.testRunning")}`);
-      const clickAndVerify = createClickAndVerify();
+      const clickAndVerify = createClickAndVerify(this.config.locale);
       await testMode.handler({
         currentPage: page,
         section: targetSection,

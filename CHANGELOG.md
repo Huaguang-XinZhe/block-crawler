@@ -1,5 +1,68 @@
 # block-crawler
 
+## 0.15.0
+
+### Minor Changes
+
+- 添加 `clickAndVerify` 和 `clickCode` 辅助函数到上下文中
+
+  **新增功能：**
+
+  1. **clickAndVerify 函数**：点击并验证的辅助函数，支持重试机制
+
+     - 参数：locator（要点击的元素）、verifyFn（验证函数，**可选**）、options（timeout 和 retries）
+     - **智能验证**：如果不提供 verifyFn，将自动根据元素的 role 选择验证方式
+       - `role="tab"` → 验证 `aria-selected="true"`
+       - 其他 role → 验证元素可见性
+     - 自动重试直到验证通过或达到最大重试次数
+     - 可用于 `each`、`run` 和 `before` 的所有上下文
+
+  2. **clickCode 函数**：专门用于点击 Code 按钮的便捷函数
+
+     - 内部使用 `clickAndVerify` 的自动验证功能
+     - 默认定位器：`getByRole('tab', { name: 'Code' })`
+     - 自动验证 tab 的 `aria-selected="true"`
+     - 可用于 `each` 和 `run` 上下文（不在 `before` 中）
+
+  3. **BeforeContext 接口**：新增 before 函数的专用上下文类型
+     - 包含 `currentPage` 和 `clickAndVerify`
+     - 不包含 `clickCode` 和 `safeOutput`（避免混淆）
+
+  **使用示例：**
+
+  ```typescript
+  await crawler
+    .blocks("[data-preview]")
+    .before(async ({ currentPage, clickAndVerify }) => {
+      // 示例 1: tab 元素自动验证（无需手动写验证函数）
+      await clickAndVerify(currentPage.getByRole("tab", { name: "List view" }));
+
+      // 示例 2: 自定义验证逻辑
+      await clickAndVerify(
+        currentPage.getByRole("button", { name: "Show All" }),
+        async () => {
+          const isExpanded = await currentPage.getByText("Content").isVisible();
+          return isExpanded;
+        }
+      );
+    })
+    .each(async ({ block, clickCode, clickAndVerify, safeOutput }) => {
+      // 使用 clickCode 点击 Code 按钮（推荐）
+      await clickCode();
+
+      // 或直接使用 clickAndVerify（tab 会自动验证）
+      await clickAndVerify(block.getByRole("tab", { name: "Preview" }));
+
+      const code = await block.locator("pre").textContent();
+      await safeOutput(code ?? "");
+    });
+  ```
+
+  **破坏性变更：**
+
+  - `BeforeProcessBlocksHandler` 类型签名从 `(currentPage: Page) => Promise<void>` 改为 `(context: BeforeContext) => Promise<void>`
+  - 需要更新现有的 `before` 回调函数以使用新的上下文结构
+
 ## 0.14.0
 
 ### Minor Changes
