@@ -8,7 +8,7 @@ test("untitledui", async ({ page }) => {
     startUrl: "https://www.untitledui.com/react/components",
     skipFree: "FREE",
     enableProgressResume: false,
-    useIndependentContext: true,
+    // useIndependentContext: true,
     locale: "en",
     collectionNameLocator: "p:first-of-type",
     collectionCountLocator: "p:last-of-type",

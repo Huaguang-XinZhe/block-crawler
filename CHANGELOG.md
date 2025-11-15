@@ -1,5 +1,125 @@
 # block-crawler
 
+## 0.14.0
+
+### Minor Changes
+
+- 添加 `clickAndVerify` 和 `clickCode` 辅助函数到上下文中
+
+  **新增功能：**
+
+  1. **clickAndVerify 函数**：点击并验证的辅助函数，支持重试机制
+
+     - 参数：locator（要点击的元素）、verifyFn（验证函数，**可选**）、options（timeout 和 retries）
+     - **智能验证**：如果不提供 verifyFn，将自动根据元素的 role 选择验证方式
+       - `role="tab"` → 验证 `aria-selected="true"`
+       - 其他 role → 验证元素可见性
+     - 自动重试直到验证通过或达到最大重试次数
+     - 可用于 `each`、`run` 和 `before` 的所有上下文
+
+  2. **clickCode 函数**：专门用于点击 Code 按钮的便捷函数
+
+     - 内部使用 `clickAndVerify` 的自动验证功能
+     - 默认定位器：`getByRole('tab', { name: 'Code' })`
+     - 自动验证 tab 的 `aria-selected="true"`
+     - 可用于 `each` 和 `run` 上下文（不在 `before` 中）
+
+  3. **BeforeContext 接口**：新增 before 函数的专用上下文类型
+     - 包含 `currentPage` 和 `clickAndVerify`
+     - 不包含 `clickCode` 和 `safeOutput`（避免混淆）
+
+  **使用示例：**
+
+  ```typescript
+  await crawler
+    .blocks("[data-preview]")
+    .before(async ({ currentPage, clickAndVerify }) => {
+      // 示例 1: tab 元素自动验证（无需手动写验证函数）
+      await clickAndVerify(currentPage.getByRole("tab", { name: "List view" }));
+
+      // 示例 2: 自定义验证逻辑
+      await clickAndVerify(
+        currentPage.getByRole("button", { name: "Show All" }),
+        async () => {
+          const isExpanded = await currentPage.getByText("Content").isVisible();
+          return isExpanded;
+        }
+      );
+    })
+    .each(async ({ block, clickCode, clickAndVerify, safeOutput }) => {
+      // 使用 clickCode 点击 Code 按钮（推荐）
+      await clickCode();
+
+      // 或直接使用 clickAndVerify（tab 会自动验证）
+      await clickAndVerify(block.getByRole("tab", { name: "Preview" }));
+
+      const code = await block.locator("pre").textContent();
+      await safeOutput(code ?? "");
+    });
+  ```
+
+  **破坏性变更：**
+
+  - `BeforeProcessBlocksHandler` 类型签名从 `(currentPage: Page) => Promise<void>` 改为 `(context: BeforeContext) => Promise<void>`
+  - 需要更新现有的 `before` 回调函数以使用新的上下文结构
+
+## 0.13.1
+
+### Patch Changes
+
+- 9b53825: 优化 Debug 模式下的暂停行为和日志输出
+
+  **主要改进：**
+
+  1. **智能 Debug 模式检测**
+
+     - 新增 `isDebugMode()` 工具函数
+     - 自动检测 PWDEBUG、PW_TEST_DEBUG、PLAYWRIGHT_INSPECTOR 环境变量
+     - 根据运行模式智能调整行为
+
+  2. **差异化日志输出**
+
+     - **Debug 模式**：输出"页面已暂停方便检查"，真正调用 `page.pause()`
+     - **非 Debug 模式**：输出"使用 --debug 模式可以暂停页面"，不调用 `page.pause()`
+     - 避免非 Debug 模式下的误导性日志
+
+  3. **影响范围**
+     - `pauseOnError` 功能：只在 Debug 模式下暂停
+     - `verifyBlockCompletion` 功能：只在 Debug 模式下暂停
+     - 保持功能逻辑不变，仅优化用户体验
+
+  **使用体验：**
+
+  ```bash
+  # Debug 模式（会真正暂停）
+  pnpm test:debug tests/example.spec.ts
+
+  # 非 Debug 模式（不会暂停，只提示）
+  pnpm test tests/example.spec.ts
+  ```
+
+  **日志对比：**
+
+  Debug 模式：
+
+  ```
+  🛑 检测到错误，页面已暂停方便检查
+     类型: Block
+     位置: Button Component
+     错误: Timeout 10000ms exceeded.
+  ```
+
+  非 Debug 模式：
+
+  ```
+  ❌ 检测到错误
+     类型: Block
+     位置: Button Component
+     错误: Timeout 10000ms exceeded.
+
+     💡 提示: 使用 --debug 模式运行可以自动暂停页面进行检查
+  ```
+
 ## 0.13.0
 
 ### Minor Changes
