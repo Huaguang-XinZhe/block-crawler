@@ -11,11 +11,13 @@ export class MetaCollector {
   private metaFile: string;
   private i18n: I18n;
   private startTime: Date;
+  private progressEnabled: boolean;
 
-  constructor(startUrl: string, metaFile: string, locale?: Locale) {
+  constructor(startUrl: string, metaFile: string, locale?: Locale, progressEnabled: boolean = true) {
     this.metaFile = metaFile;
     this.i18n = createI18n(locale);
     this.startTime = new Date();
+    this.progressEnabled = progressEnabled;
     this.meta = {
       startUrl,
       collectionLinks: [],
@@ -67,9 +69,17 @@ export class MetaCollector {
 
   /**
    * 增加实际组件数
+   * 
+   * 如果开启了进度恢复，则覆盖（避免重复累加）；否则累加
    */
   incrementActualCount(count: number = 1): void {
-    this.meta.actualTotalCount += count;
+    if (this.progressEnabled) {
+      // 进度恢复开启时覆盖（不累加），因为恢复的页面不会被重新处理
+      this.meta.actualTotalCount = count;
+    } else {
+      // 进度恢复关闭时累加
+      this.meta.actualTotalCount += count;
+    }
   }
 
   /**

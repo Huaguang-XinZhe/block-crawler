@@ -53,6 +53,64 @@ export type ClickCode = (
 ) => Promise<void>;
 
 /**
+ * 进度重建配置
+ */
+export interface ProgressRebuildConfig {
+  /**
+   * Block 类型
+   * - 'file': block 是文件（如 untitledui）
+   * - 'directory': block 是目录（如 heroui）
+   * 
+   * @default 'file'
+   */
+  blockType?: 'file' | 'directory';
+  /**
+   * 是否保存重建结果到 progress.json
+   * 
+   * @default true
+   */
+  saveToProgress?: boolean;
+  /**
+   * 自定义检查 block 是否完成的函数
+   * 
+   * 如果不提供，将使用默认逻辑：
+   * - blockType='file': 检查文件是否存在
+   * - blockType='directory': 检查目录是否存在
+   * 
+   * @param blockPath block 的路径（相对于 page 目录）
+   * @param outputDir 输出目录的绝对路径
+   * @returns 是否完成
+   * 
+   * @example
+   * async (blockPath, outputDir) => {
+   *   const dir = path.join(outputDir, blockPath);
+   *   const files = await fse.readdir(dir);
+   *   return files.some(f => f.endsWith('.tsx') && f.includes('index'));
+   * }
+   */
+  checkBlockComplete?: (blockPath: string, outputDir: string) => Promise<boolean>;
+}
+
+/**
+ * 进度恢复配置
+ */
+export interface ProgressConfig {
+  /**
+   * 是否启用进度恢复功能
+   * 
+   * - 开启：先检查 progress.json，没有则重建
+   * - 关闭：从头开始（仍会跳过 Free，如果设置了 skipFree）
+   * 
+   * @default true
+   */
+  enable?: boolean;
+  /**
+   * 进度重建配置（从 outputDir 扫描已有文件）
+   */
+  rebuild?: ProgressRebuildConfig;
+}
+
+/**
  * 爬虫配置接口
  */
 export interface CrawlerConfig {
@@ -149,8 +207,19 @@ export interface CrawlerConfig {
    * @default 'role=heading[level=1] >> role=link'
    */
   blockNameLocator?: string;
-  /** 是否启用进度恢复功能 */
-  enableProgressResume?: boolean;
+  /**
+   * 进度恢复配置
+   * 
+   * @example
+   * {
+   *   enable: true,
+   *   rebuild: {
+   *     blockType: 'file',
+   *     saveToProgress: true
+   *   }
+   * }
+   */
+  progress?: ProgressConfig;
 
   // ========== 等待配置 ==========
   /**
@@ -296,44 +365,6 @@ export interface CrawlerConfig {
    * });
    */
   useIndependentContext?: boolean;
-}
-
-/**
- * 进度重建配置
- * 用于链式调用 rebuild() 方法
- */
-export interface RebuildOptions {
-  /**
-   * Block 的存储类型
-   * - 'file': block 是文件，存在即完成（如 untitledui）
-   * - 'directory': block 是目录，存在即完成（如 heroui）
-   * @default 'file'
-   */
-  blockType?: 'file' | 'directory';
-  /**
-   * 是否将扫描结果保存到 progress.json
-   * - false（默认）：只在内存中标记，不保存文件
-   * - true：保存到 progress.json，下次启动可直接使用
-   * @default false
-   */
-  saveToProgress?: boolean;
-  /**
-   * 自定义检查 block 是否完成的函数
-   * 如果提供，将覆盖默认的"存在即完成"逻辑
-   * 
-   * @param blockPath block 的相对路径（相对于 outputDir）
-   * @param outputDir 输出目录的完整路径
-   * @returns 是否完成
-   * 
-   * @example
-   * // 检查目录下是否有特定文件
-   * async (blockPath, outputDir) => {
-   *   const dir = path.join(outputDir, blockPath);
-   *   const files = await fse.readdir(dir);
-   *   return files.includes('index.tsx');
-   * }
-   */
-  checkBlockComplete?: (blockPath: string, outputDir: string) => Promise<boolean>;
 }
 
 /**

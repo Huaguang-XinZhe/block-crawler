@@ -3,7 +3,7 @@ import path from "path";
 import { createI18n, type I18n, type Locale } from "./i18n";
 import { atomicWriteJson } from "./atomic-write";
 import { FilenameMappingManager } from "./filename-mapping";
-import type { RebuildOptions } from "../types";
+import type { ProgressConfig } from "../types";
 
 /**
  * 任务进度管理器
@@ -18,14 +18,14 @@ export class TaskProgress {
   private completedPages: Set<string>;
   private isDirty: boolean = false;
   private i18n: I18n;
-  private rebuildConfig?: RebuildOptions;
+  private progressConfig: Required<ProgressConfig>;
 
   constructor(
     progressFile: string = "progress.json",
     outputDir: string = "output",
     stateDir: string = ".crawler",
     locale?: Locale,
-    rebuildConfig?: RebuildOptions
+    progressConfig?: ProgressConfig
   ) {
     this.progressFile = progressFile;
     this.outputDir = outputDir;
@@ -33,13 +33,27 @@ export class TaskProgress {
     this.completedBlocks = new Set();
     this.completedPages = new Set();
     this.i18n = createI18n(locale);
-    this.rebuildConfig = rebuildConfig;
+    this.progressConfig = {
+      enable: progressConfig?.enable ?? true,
+      rebuild: {
+        blockType: progressConfig?.rebuild?.blockType ?? 'file',
+        saveToProgress: progressConfig?.rebuild?.saveToProgress ?? true,
+        checkBlockComplete: progressConfig?.rebuild?.checkBlockComplete,
+      },
+    };
   }
 
   /**
    * 初始化：加载或重建进度
    */
   async initialize(): Promise<void> {
+    // 如果未开启进度恢复，直接返回
+    if (!this.progressConfig.enable) {
+      console.log(this.i18n.t('progress.disabled'));
+      return;
+    }
+
+    // 先检查 progress.json
     if (await fse.pathExists(this.progressFile)) {
       console.log(this.i18n.t('progress.found'));
       await this.loadProgress();
@@ -47,6 +61,7 @@ export class TaskProgress {
         this.i18n.t('progress.loaded', { blocks: this.completedBlocks.size, pages: this.completedPages.size })
       );
     } else {
+      // progress.json 不存在，重建进度
       console.log(this.i18n.t('progress.scanning'));
       await this.rebuildProgress();
       console.log(
@@ -77,10 +92,9 @@ export class TaskProgress {
    * 2. 对于每个页面，扫描其下的 block（文件或目录，根据 blockType 配置）
    * 3. 使用自定义或默认的检查函数判断 block 是否完成
    * 4. 在内存中标记已完成的 blocks 和 pages
-   * 
-   * @param saveToFile 是否保存到 progress.json（默认 true，兼容旧逻辑）
+   * 5. 根据 saveToProgress 配置决定是否保存到 progress.json
    */
-  private async rebuildProgress(saveToFile: boolean = true): Promise<void> {
+  private async rebuildProgress(): Promise<void> {
     if (!(await fse.pathExists(this.outputDir))) {
       return;
     }
@@ -93,71 +107,38 @@ export class TaskProgress {
     
     this.completedBlocks = new Set(completedBlocks);
     
-    // 检查哪些页面已完全完成
+    // 检查哪些页面已完全完成（默认假设页面完整）
     const completedPages: string[] = [];
     
-    // 默认假设页面完整（适用于链式 rebuild()）
-    const assumePageComplete = true;
-    
     for (const [pagePath, stats] of pageBlocksMap.entries()) {
-      if (assumePageComplete) {
-        // 只要页面有 block 就标记为已完成
-        if (stats.total > 0) {
-          completedPages.push(pagePath);
-        }
-      } else {
-        // 必须所有 block 都完整才标记为已完成
-        if (stats.total > 0 && stats.completed === stats.total) {
-          completedPages.push(pagePath);
-        }
+      // 只要页面有 block 就标记为已完成（快速恢复）
+      if (stats.total > 0) {
+        completedPages.push(pagePath);
       }
     }
     this.completedPages = new Set(completedPages);
     
-    // 根据参数决定是否保存到文件
+    // 根据配置决定是否保存到文件
+    const saveToFile = this.progressConfig.rebuild.saveToProgress;
     if (saveToFile && (completedBlocks.length > 0 || completedPages.length > 0)) {
       await this.saveProgress();
     }
   }
 
   /**
-   * 手动触发重建进度（用于链式 rebuild() 调用）
-   * 
-   * @param options 重建配置
+   * 检查文件是否是常见的组件文件
    */
-  async manualRebuild(options?: RebuildOptions): Promise<void> {
-    // 如果 progress.json 已存在，不执行重建
-    if (await fse.pathExists(this.progressFile)) {
-      console.log(this.i18n.t('progress.found'));
-      return;
-    }
-
-    // 临时使用传入的配置
-    const originalConfig = this.rebuildConfig;
-    if (options) {
-      this.rebuildConfig = options;
-    }
-
-    const saveToFile = options?.saveToProgress ?? false;
-    console.log(this.i18n.t('progress.scanning'));
-    await this.rebuildProgress(saveToFile);
-    console.log(
-      this.i18n.t('progress.rebuilt', { 
-        blocks: this.completedBlocks.size, 
-        pages: this.completedPages.size 
-      })
-    );
-
-    // 恢复原配置
-    this.rebuildConfig = originalConfig;
+  private isComponentFile(filename: string): boolean {
+    const componentExtensions = ['.tsx', '.ts', '.jsx', '.js', '.vue', '.svelte'];
+    return componentExtensions.some(ext => filename.endsWith(ext));
   }
 
   /**
    * 扫描输出目录，识别页面和 block
    * 
    * 策略：
-   * - 如果目录下直接有 .tsx 文件，说明这是"页面目录"，文件就是 block（blockType='file'）
-   * - 如果目录下有子目录且子目录内有 .tsx 文件，说明这是"页面目录"，子目录就是 block（blockType='directory'）
+   * - 如果目录下直接有组件文件，说明这是"页面目录"，文件就是 block（blockType='file'）
+   * - 如果目录下有子目录且子目录内有组件文件，说明这是"页面目录"，子目录就是 block（blockType='directory'）
    * - 否则继续向下递归
    */
   private async scanOutputDir(
@@ -177,19 +158,19 @@ export class TaskProgress {
     // 检查当前目录的内容
     const files = entries.filter(e => e.isFile());
     const dirs = entries.filter(e => e.isDirectory());
-    const tsxFiles = files.filter(f => f.name.endsWith('.tsx'));
+    const componentFiles = files.filter(f => this.isComponentFile(f.name));
     
-    const blockType = this.rebuildConfig?.blockType || 'file';
+    const blockType = this.progressConfig.rebuild.blockType;
     
     // 判断是否是"页面目录"
     let isPageDir = false;
     
     if (blockType === 'file') {
-      // 如果有 .tsx 文件，这就是页面目录
-      isPageDir = tsxFiles.length > 0;
+      // 如果有组件文件，这就是页面目录
+      isPageDir = componentFiles.length > 0;
     } else {
       // blockType === 'directory'
-      // 如果有子目录，并且至少一个子目录内有 .tsx 文件，这就是页面目录
+      // 如果有子目录，并且至少一个子目录内有组件文件，这就是页面目录
       for (const dir of dirs) {
         const subDirPath = path.join(fullPath, dir.name);
         const hasContent = await this.hasContentInDirectory(subDirPath);
@@ -208,7 +189,7 @@ export class TaskProgress {
       
       if (blockType === 'file') {
         // block 是文件
-        for (const file of tsxFiles) {
+        for (const file of componentFiles) {
           const blockPath = path.join(relativePath, file.name).replace(/\\/g, '/');
           pageStats.total++;
           
@@ -241,7 +222,7 @@ export class TaskProgress {
   }
 
   /**
-   * 检查目录下是否有内容（递归查找 .tsx 文件）
+   * 检查目录下是否有内容（递归查找组件文件）
    */
   private async hasContentInDirectory(dirPath: string): Promise<boolean> {
     try {
@@ -249,7 +230,7 @@ export class TaskProgress {
       
       // 检查当前层级
       for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.tsx')) {
+        if (entry.isFile() && this.isComponentFile(entry.name)) {
           return true;
         }
       }
@@ -275,23 +256,23 @@ export class TaskProgress {
    * 
    * 使用自定义检查函数（如果提供），否则使用默认逻辑：
    * - blockType='file': 检查文件是否存在
-   * - blockType='directory': 检查目录下是否有 .tsx 文件
+   * - blockType='directory': 检查目录下是否有组件文件
    */
   private async checkBlockComplete(blockPath: string): Promise<boolean> {
     // 如果提供了自定义检查函数，使用它
-    if (this.rebuildConfig?.checkBlockComplete) {
-      return await this.rebuildConfig.checkBlockComplete(blockPath, this.outputDir);
+    if (this.progressConfig.rebuild.checkBlockComplete) {
+      return await this.progressConfig.rebuild.checkBlockComplete(blockPath, this.outputDir);
     }
     
     // 否则使用默认逻辑
     const blockFullPath = path.join(this.outputDir, blockPath);
-    const blockType = this.rebuildConfig?.blockType || 'file';
+    const blockType = this.progressConfig.rebuild.blockType;
     
     if (blockType === 'file') {
       // block 是文件，检查文件是否存在
       return await fse.pathExists(blockFullPath);
     } else {
-      // block 是目录，检查目录下是否有 .tsx 文件
+      // block 是目录，检查目录下是否有组件文件
       if (!(await fse.pathExists(blockFullPath))) {
         return false;
       }

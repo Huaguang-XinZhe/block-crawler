@@ -9,10 +9,11 @@ export interface InternalConfig extends Required<Omit<CrawlerConfig,
   'tabListAriaLabel' | 'tabSectionLocator' | 'getTabSection' | 'getAllTabSections' | 'extractTabTextFromSection' |
   'getAllBlocks' | 'getBlockName' | 'extractBlockCount' | 'outputDir' | 'stateDir' | 'blockNameLocator' | 
   'startUrlWaitOptions' | 'collectionLinkWaitOptions' | 'collectionNameLocator' | 'collectionCountLocator' |
-  'skipFree' | 'locale' | 'scriptInjection' | 'pauseOnError' | 'useIndependentContext'>> {
+  'skipFree' | 'locale' | 'scriptInjection' | 'pauseOnError' | 'useIndependentContext' | 'progress'>> {
   locale: Locale;
   pauseOnError: boolean;
   useIndependentContext: boolean;
+  progress: Required<CrawlerConfig['progress']>;
   tabListAriaLabel?: string;
   tabSectionLocator?: string;
   getTabSection?: CrawlerConfig['getTabSection'];
@@ -171,6 +172,14 @@ export class ConfigManager {
       locale: config.locale ?? 'zh',
       pauseOnError: config.pauseOnError ?? true,
       useIndependentContext: config.useIndependentContext ?? false,
+      progress: {
+        enable: config.progress?.enable ?? true,
+        rebuild: {
+          blockType: config.progress?.rebuild?.blockType ?? 'file',
+          saveToProgress: config.progress?.rebuild?.saveToProgress ?? true,
+          checkBlockComplete: config.progress?.rebuild?.checkBlockComplete,
+        },
+      },
       tabListAriaLabel: config.tabListAriaLabel,
       tabSectionLocator: config.tabSectionLocator,
       getTabSection: config.getTabSection,
@@ -187,7 +196,6 @@ export class ConfigManager {
       progressFile,
       metaFile,
       blockNameLocator: config.blockNameLocator ?? "role=heading[level=1] >> role=link",
-      enableProgressResume: config.enableProgressResume ?? true,
       startUrlWaitOptions: config.startUrlWaitOptions,
       collectionLinkWaitOptions: config.collectionLinkWaitOptions,
       collectionNameLocator: config.collectionNameLocator,

@@ -38,7 +38,8 @@ export class CrawlerOrchestrator {
     this.metaCollector = new MetaCollector(
       config.startUrl,
       config.metaFile,
-      config.locale
+      config.locale,
+      config.progress.enable
     );
     this.scriptInjector = new ScriptInjector(config);
     this.blockNameExtractor = new BlockNameExtractor(config);
@@ -411,6 +412,7 @@ export class CrawlerOrchestrator {
         await this.scriptInjector.inject(newPage, true);
       }
 
+      console.log(this.i18n.t('crawler.visitingPage', { url }));
       await newPage.goto(url, this.config.collectionLinkWaitOptions);
 
       // 先检查页面是否为 Free（公共逻辑，提前快速跳过）

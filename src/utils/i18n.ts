@@ -26,6 +26,7 @@ const messages = {
     'crawler.modeTest': '🧪 测试模式',
     'crawler.initProgress': '📊 初始化任务进度...',
     'crawler.visiting': '📡 正在访问目标链接...',
+    'crawler.visitingPage': '📡 正在访问: {url}',
     'crawler.pageLoaded': '✅ 页面加载完成',
     'crawler.allComplete': '🎉 ===== 所有任务已完成 =====',
     'crawler.processingCategory': '🔍 正在处理分类: {category}',
@@ -56,6 +57,7 @@ const messages = {
     'crawler.testFailed': '❌ 测试失败',
     
     // 进度相关
+    'progress.disabled': '⚪ 进度恢复已关闭，从头开始',
     'progress.found': '📁 发现进度文件，加载中...',
     'progress.loaded': '✅ 进度已加载: Block {blocks} 个, Page {pages} 个',
     'progress.notFound': '📝 未找到进度文件，开始全新爬取',
@@ -168,6 +170,7 @@ const messages = {
     'crawler.modeTest': '🧪 Test Mode',
     'crawler.initProgress': '📊 Initializing task progress...',
     'crawler.visiting': '📡 Visiting target link...',
+    'crawler.visitingPage': '📡 Visiting: {url}',
     'crawler.pageLoaded': '✅ Page loaded successfully',
     'crawler.allComplete': '🎉 ===== All Tasks Completed =====',
     'crawler.processingCategory': '🔍 Processing category: {category}',
@@ -198,6 +201,7 @@ const messages = {
     'crawler.testFailed': '❌ Test failed',
     
     // Progress
+    'progress.disabled': '⚪ Progress resume disabled, starting from scratch',
     'progress.found': '📁 Progress file found, loading...',
     'progress.loaded': '✅ Progress loaded: {blocks} blocks, {pages} pages',
     'progress.notFound': '📝 No progress file found, starting fresh crawl',

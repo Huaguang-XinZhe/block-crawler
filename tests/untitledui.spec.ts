@@ -7,7 +7,6 @@ test("untitledui", async ({ page }) => {
   const crawler = new BlockCrawler(page, {
     startUrl: "https://www.untitledui.com/react/components",
     skipFree: "FREE",
-    // enableProgressResume: false,
     // useIndependentContext: true, // 开了这个模式也解决不了点击失效的问题❗
     locale: "zh",
     collectionNameLocator: "p:first-of-type",
@@ -22,6 +21,14 @@ test("untitledui", async ({ page }) => {
     getAllTabSections: async (page) => {
       // 返回所有包含内容的 sections
       return page.locator("xpath=//section[3]/div/div").all();
+    },
+    // 进度恢复配置
+    progress: {
+      enable: true,
+      rebuild: {
+        blockType: "file", // untitledui 的 block 是文件
+        saveToProgress: true,
+      },
     },
   });
 
