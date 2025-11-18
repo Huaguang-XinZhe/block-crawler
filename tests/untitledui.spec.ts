@@ -23,13 +23,13 @@ test("untitledui", async ({ page }) => {
       return page.locator("xpath=//section[3]/div/div").all();
     },
     // 进度恢复配置
-    progress: {
-      enable: true,
-      rebuild: {
-        blockType: "file", // untitledui 的 block 是文件
-        saveToProgress: true,
-      },
-    },
+    // progress: {
+    //   enable: true,
+    //   rebuild: {
+    //     blockType: "file", // untitledui 的 block 是文件
+    //     saveToProgress: true,
+    //   },
+    // },
   });
 
   await crawler
