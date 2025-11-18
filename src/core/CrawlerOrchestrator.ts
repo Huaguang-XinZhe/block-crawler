@@ -43,7 +43,7 @@ export class CrawlerOrchestrator {
     );
     this.scriptInjector = new ScriptInjector(config);
     this.blockNameExtractor = new BlockNameExtractor(config);
-    this.filenameMappingManager = new FilenameMappingManager(config.stateDir);
+    this.filenameMappingManager = new FilenameMappingManager(config.stateDir, config.locale);
     this.limit = pLimit(config.maxConcurrency);
     this.i18n = createI18n(config.locale);
   }

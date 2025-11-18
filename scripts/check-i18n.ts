@@ -55,6 +55,23 @@ function scanDirectory(dir: string): void {
 }
 
 /**
+ * 检测行是否在注释中
+ */
+function isInComment(line: string, trimmedLine: string): boolean {
+  // 单行注释
+  if (trimmedLine.startsWith('//')) {
+    return true;
+  }
+  
+  // 多行注释开始
+  if (trimmedLine.startsWith('/*') || trimmedLine.startsWith('*')) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * 扫描单个文件
  */
 function scanFile(filePath: string): void {
@@ -64,7 +81,25 @@ function scanFile(filePath: string): void {
   // 匹配 console.log/error/warn
   const consoleRegex = /console\.(log|error|warn)\((.*)\)/;
   
+  let inMultiLineComment = false;
+  
   lines.forEach((line, index) => {
+    const trimmedLine = line.trim();
+    
+    // 检查多行注释状态
+    if (trimmedLine.includes('/*')) {
+      inMultiLineComment = true;
+    }
+    if (trimmedLine.includes('*/')) {
+      inMultiLineComment = false;
+      return; // 跳过多行注释的结束行
+    }
+    
+    // 跳过注释行
+    if (inMultiLineComment || isInComment(line, trimmedLine)) {
+      return;
+    }
+    
     const match = line.match(consoleRegex);
     if (match) {
       const type = match[1] as 'log' | 'error' | 'warn';

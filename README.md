@@ -90,18 +90,39 @@ test("爬取组件", async ({ page }) => {
       return page.locator("section")
         .filter({ has: page.getByRole("heading", { name: tabText }) });
     },
+    
+    // 配置进度恢复（可选）
+    progress: {
+      enable: true,  // 启用进度恢复，默认 true
+      rebuild: {
+        blockType: 'file',  // 'file' | 'directory'，默认 'file'
+        saveToProgress: true,  // 是否保存重建的进度，默认 true
+        // 可选：自定义 block 完整性检查
+        checkBlockComplete: async (blockPath, outputDir) => {
+          // 自定义逻辑...
+          return true;
+        }
+      }
+    },
   });
 
   // 链式调用 Block 处理模式
   await crawler
     .blocks("xpath=//main/div/div/div")  // Block 定位符
     // 可选：{ verifyBlockCompletion: false } (默认true，生产环境可关闭)
-    .before(async (currentPage) => {
+    .before(async ({ currentPage, clickAndVerify }) => {
       // 可选：前置逻辑，在匹配页面所有 Block 之前执行
-      await currentPage.getByRole('button', { name: 'Show All' }).click();
+      
+      // 使用 clickAndVerify 确保点击生效（自动重试）
+      await clickAndVerify(
+        currentPage.getByRole('button', { name: 'Show All' })
+      );
       await currentPage.waitForTimeout(1000); // 等待动画完成
     })
-    .each(async ({ block, blockName, blockPath, safeOutput, currentPage }) => {
+    .each(async ({ block, blockName, blockPath, safeOutput, currentPage, clickCode }) => {
+      // 使用 clickCode 点击 Code 标签（自动验证和重试）
+      await clickCode();
+      
       // 处理每个 Block
       const code = await block.textContent();
       // 使用 safeOutput 安全输出（自动处理文件名 sanitize）
@@ -250,7 +271,7 @@ await crawler.blocks("[data-preview]", { verifyBlockCompletion: false }).each(..
 | `maxConcurrency` | `number` | 5 | 最大并发页面数 |
 | `outputDir` | `string` | "output" | 输出目录（会自动在此目录下创建域名子目录） |
 | `stateDir` | `string` | ".crawler" | 状态目录（存放进度文件和网站元信息，会自动创建域名子目录） |
-| `enableProgressResume` | `boolean` | true | 是否启用进度恢复 |
+| `progress` | `ProgressConfig` | `{ enable: true }` | 进度恢复配置（见进度恢复配置部分） |
 | `blockNameLocator` | `string` | `role=heading[level=1] >> role=link` | Block 名称定位符 |
 
 ### 并发配置
@@ -355,6 +376,67 @@ Debug 模式（`--debug`）：
    💡 提示:
    - 使用 --debug 模式运行可以自动暂停页面进行检查
    - 或在全局配置中关闭 pauseOnError 以跳过错误继续运行
+```
+
+### 进度恢复配置
+
+进度恢复功能支持中断后继续爬取，避免重复处理已完成的任务。
+
+| 配置项 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `progress.enable` | `boolean` | `true` | 是否启用进度恢复 |
+| `progress.rebuild` | `ProgressRebuildConfig` | - | 进度重建配置（可选） |
+| `progress.rebuild.blockType` | `'file' \| 'directory'` | `'file'` | Block 类型（文件或目录） |
+| `progress.rebuild.saveToProgress` | `boolean` | `true` | 是否保存重建的进度到 progress.json |
+| `progress.rebuild.checkBlockComplete` | `Function` | - | 自定义 Block 完整性检查函数 |
+
+**功能说明：**
+
+当 `progress.enable` 为 `true` 时：
+1. 优先从 `progress.json` 加载已完成的任务
+2. 如果 `progress.json` 不存在，则从输出目录重建进度
+3. 重建时根据 `blockType` 智能识别已完成的 Block（支持 `.tsx`、`.ts`、`.jsx`、`.js`、`.vue`、`.svelte` 等组件文件）
+4. 根据 `saveToProgress` 决定是否将重建的进度保存到 `progress.json`
+
+当 `progress.enable` 为 `false` 时：
+- 从头开始爬取（但仍会跳过 `skipFree` 配置的免费项目）
+
+**使用示例：**
+
+```typescript
+// 基础配置（使用默认值）
+const crawler = new BlockCrawler(page, {
+  startUrl: "https://example.com/components",
+  progress: {
+    enable: true  // 启用进度恢复，默认配置
+  }
+});
+
+// 完整配置（针对目录类型的 Block）
+const crawler = new BlockCrawler(page, {
+  startUrl: "https://example.com/components",
+  progress: {
+    enable: true,
+    rebuild: {
+      blockType: 'directory',  // Block 是目录而非文件
+      saveToProgress: true,
+      // 自定义完整性检查（可选）
+      checkBlockComplete: async (blockPath, outputDir) => {
+        const fullPath = path.join(outputDir, blockPath);
+        // 检查目录中是否有特定文件
+        return fs.existsSync(path.join(fullPath, 'index.tsx'));
+      }
+    }
+  }
+});
+
+// 禁用进度恢复（从头开始）
+const crawler = new BlockCrawler(page, {
+  startUrl: "https://example.com/components",
+  progress: {
+    enable: false
+  }
+});
 ```
 
 ### 链接收集配置
@@ -556,11 +638,13 @@ window.customUtils = {
 
 **函数签名：**
 ```typescript
-.before(handler: (currentPage: Page) => Promise<void>)
+.before(handler: (context: BeforeContext) => Promise<void>)
 ```
 
-**参数说明：**
+**参数说明（BeforeContext）：**
 - `currentPage`：当前正在处理的页面（可能是新创建的页面，而不是原始测试 page）
+- `clickAndVerify`：智能点击函数，自动验证点击效果并重试
+- `clickCode`：专用于点击 Code 标签的函数（内部使用 `clickAndVerify`）
 
 **使用场景：**
 - 点击按钮展开隐藏的内容
@@ -568,14 +652,39 @@ window.customUtils = {
 - 滚动页面触发懒加载
 - 等待动画或过渡完成
 
-**示例：**
+**示例 1：基础使用**
 ```typescript
 await crawler
   .blocks("[data-preview]")
-  .before(async (currentPage) => {
+  .before(async ({ currentPage }) => {
     // 前置逻辑：点击"显示全部"按钮
     await currentPage.getByRole('button', { name: 'Show All' }).click();
     await currentPage.waitForTimeout(500); // 等待动画
+  })
+  .each(async ({ block, blockName }) => {
+    // 处理 Block
+  });
+```
+
+**示例 2：使用 clickAndVerify（推荐）**
+```typescript
+await crawler
+  .blocks("[data-preview]")
+  .before(async ({ currentPage, clickAndVerify }) => {
+    // 使用 clickAndVerify 确保点击生效（自动验证 tab 的 aria-selected）
+    await clickAndVerify(
+      currentPage.getByRole('tab', { name: 'React' })
+    );
+    
+    // 或自定义验证逻辑
+    await clickAndVerify(
+      currentPage.getByRole('button', { name: 'Show All' }),
+      async () => {
+        // 验证按钮是否已展开
+        return await currentPage.locator('.expanded').isVisible();
+      },
+      { timeout: 5000, retries: 3 }  // 可选配置
+    );
   })
   .each(async ({ block, blockName }) => {
     // 处理 Block
@@ -639,6 +748,8 @@ interface BlockContext {
   blockName: string;    // Block 名称
   outputDir: string;    // 输出目录
   safeOutput: SafeOutput; // 安全输出函数（自动处理文件名 sanitize，默认路径：${outputDir}/${blockPath}.tsx）
+  clickAndVerify: ClickAndVerify; // 智能点击函数（自动验证和重试）
+  clickCode: ClickCode; // 点击 Code 标签的专用函数
 }
 ```
 
@@ -651,6 +762,8 @@ interface TestContext {
   blockName: string;    // Block 名称
   outputDir: string;    // 输出目录
   safeOutput: SafeOutput; // 安全输出函数（自动处理文件名 sanitize，默认路径：${outputDir}/test-${blockName}.tsx）
+  clickAndVerify: ClickAndVerify; // 智能点击函数（自动验证和重试）
+  clickCode: ClickCode; // 点击 Code 标签的专用函数
 }
 ```
 
@@ -662,7 +775,75 @@ interface PageContext {
   currentPath: string;  // 当前 URL 路径
   outputDir: string;    // 输出目录
   safeOutput: SafeOutput; // 安全输出函数（自动处理文件名 sanitize，需要显式传入 filePath）
+  clickAndVerify: ClickAndVerify; // 智能点击函数（自动验证和重试）
+  clickCode: ClickCode; // 点击 Code 标签的专用函数
 }
+```
+
+### BeforeContext
+
+```typescript
+interface BeforeContext {
+  currentPage: Page;    // 当前页面实例
+  clickAndVerify: ClickAndVerify; // 智能点击函数（自动验证和重试）
+}
+```
+
+### ClickAndVerify 类型
+
+```typescript
+type ClickAndVerify = (
+  locator: Locator,
+  verifyFn?: () => Promise<boolean>,
+  options?: { timeout?: number; retries?: number }
+) => Promise<void>;
+```
+
+**功能说明：**
+- 自动验证点击效果并重试（默认 3 次）
+- 如果未提供 `verifyFn`，会根据元素 `role` 智能选择验证逻辑：
+  - `role="tab"`：检查 `aria-selected="true"`
+  - 其他元素：检查 `isVisible()`
+- 在调试模式下，失败时会自动暂停页面供用户检查
+- 支持国际化日志输出
+
+**使用示例：**
+```typescript
+// 自动验证（tab 自动检查 aria-selected）
+await clickAndVerify(page.getByRole('tab', { name: 'Code' }));
+
+// 自定义验证
+await clickAndVerify(
+  page.getByRole('button', { name: 'Expand' }),
+  async () => await page.locator('.content').isVisible(),
+  { timeout: 5000, retries: 3 }
+);
+```
+
+### ClickCode 类型
+
+```typescript
+type ClickCode = (
+  locator?: Locator,
+  options?: { timeout?: number; retries?: number }
+) => Promise<void>;
+```
+
+**功能说明：**
+- 专用于点击 "Code" 标签的便捷函数
+- 默认定位符：`getByRole('tab', { name: 'Code' })`
+- 内部使用 `clickAndVerify` 实现，自动验证和重试
+
+**使用示例：**
+```typescript
+// 使用默认定位符
+await clickCode();
+
+// 使用自定义定位符
+await clickCode(page.getByRole('tab', { name: 'React' }));
+
+// 配置超时和重试
+await clickCode(undefined, { timeout: 5000, retries: 5 });
 ```
 
 ## 📝 安全文件输出
@@ -826,9 +1007,39 @@ const crawlerB = new BlockCrawler({
 
 ## 💡 点击稳定性最佳实践
 
-在并发环境下，点击操作可能会因为各种原因失效。以下是一些建议：
+在并发环境下，点击操作可能会因为各种原因失效。框架提供了多种方案确保点击稳定性。
 
-### 方案 1：使用独立 Context（推荐）
+### 方案 1：使用 clickAndVerify / clickCode（推荐）
+
+框架内置了 `clickAndVerify` 和 `clickCode` 函数，自动处理点击验证和重试：
+
+```typescript
+await crawler
+  .blocks("[data-preview]")
+  .before(async ({ currentPage, clickAndVerify }) => {
+    // 使用 clickAndVerify 确保点击生效（自动验证和重试）
+    await clickAndVerify(
+      currentPage.getByRole('tab', { name: 'React' })
+      // tab 元素会自动验证 aria-selected="true"
+    );
+  })
+  .each(async ({ block, clickCode, safeOutput }) => {
+    // 使用 clickCode 点击 Code 标签（内置验证和重试）
+    await clickCode();
+    
+    const code = await extractCodeFromDOM(block);
+    await safeOutput(code);
+  });
+```
+
+**特性：**
+- ✅ 自动验证点击效果（tab 自动检查 `aria-selected`）
+- ✅ 失败自动重试（默认 3 次）
+- ✅ 调试模式自动暂停供检查
+- ✅ 国际化日志输出
+- ✅ 捕获点击超时并重试
+
+### 方案 2：使用独立 Context
 
 ```typescript
 const crawler = new BlockCrawler(page, {
@@ -838,50 +1049,30 @@ const crawler = new BlockCrawler(page, {
 });
 ```
 
-### 方案 2：验证点击效果
-
-```typescript
-/**
- * 验证点击效果
- */
-async function clickAndVerify(
-  locator: Locator,
-  verifyFn: () => Promise<boolean>,
-  options?: { timeout?: number; retries?: number }
-): Promise<void> {
-  const timeout = options?.timeout ?? 5000;
-  const retries = options?.retries ?? 3;
-  
-  for (let i = 0; i < retries; i++) {
-    await locator.click({ timeout });
-    if (await verifyFn()) return; // 验证通过
-  }
-  
-  throw new Error('点击后验证失败');
-}
-```
-
 ### 总结
 
 | 方案 | 优点 | 适用场景 |
 |------|------|----------|
-| 独立 Context | 完全隔离，根本解决问题 | 并发场景（推荐） |
-| 稳定点击 | 自动重试，容错性强 | 所有场景 |
-| 条件点击 | 跳过不可见元素，避免错误 | 可选元素 |
-| 验证点击 | 确保点击生效 | 关键操作 |
+| clickAndVerify / clickCode | 自动验证和重试，容错性强 | 所有点击场景（推荐） |
+| 独立 Context | 完全隔离，避免状态污染 | 高并发场景 |
+| pauseOnError | 错误时暂停调试 | 开发调试阶段 |
 
 **建议组合使用：**
 ```typescript
 const crawler = new BlockCrawler(page, {
-  useIndependentContext: true,  // 方案1：独立 context
+  useIndependentContext: true,  // 独立 context，避免状态污染
   pauseOnError: true,           // 遇到错误暂停检查
 });
 
-await crawler.blocks("[data-preview]").each(async ({ block, safeOutput }) => {
-  await stableClick(block.getByRole('tab', { name: 'Code' }));
-  const code = await extractCodeFromDOM(block);
-  await safeOutput(code);
-});
+await crawler
+  .blocks("[data-preview]")
+  .each(async ({ block, clickCode, safeOutput }) => {
+    // 使用内置的 clickCode，自动验证和重试
+    await clickCode();
+    
+    const code = await extractCodeFromDOM(block);
+    await safeOutput(code);
+  });
 ```
 
 ## 🛠️ 开发命令

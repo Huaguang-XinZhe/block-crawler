@@ -152,6 +152,10 @@ const messages = {
     'script.injectedBefore': '💉 脚本已在页面加载前注入: {name}',
     'script.injectedAfter': '💉 脚本已在页面加载后注入: {name}',
     'script.injectError': '❌ 注入脚本失败 [{name}]: {error}',
+    
+    // 文件名映射
+    'filename.loadFailed': '⚠️ 加载文件名映射失败: {path}',
+    'filename.saveFailed': '❌ 保存文件名映射失败: {path}',
   },
   en: {
     // Common
@@ -296,6 +300,10 @@ const messages = {
     'script.injectedBefore': '💉 Script injected before page load: {name}',
     'script.injectedAfter': '💉 Script injected after page load: {name}',
     'script.injectError': '❌ Failed to inject script [{name}]: {error}',
+    
+    // Filename mapping
+    'filename.loadFailed': '⚠️ Failed to load filename mapping: {path}',
+    'filename.saveFailed': '❌ Failed to save filename mapping: {path}',
   }
 };
 

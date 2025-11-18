@@ -1,6 +1,7 @@
 import fse from "fs-extra";
 import path from "path";
 import { atomicWriteJson } from "./atomic-write";
+import { createI18n, type Locale } from "./i18n";
 
 /**
  * 文件名映射接口
@@ -18,9 +19,11 @@ export class FilenameMappingManager {
   private mapping: FilenameMapping = {};
   private mappingFile: string;
   private isDirty: boolean = false;
+  private i18n: ReturnType<typeof createI18n>;
 
-  constructor(stateDir: string) {
+  constructor(stateDir: string, locale?: Locale) {
     this.mappingFile = path.join(stateDir, "filename-mapping.json");
+    this.i18n = createI18n(locale);
   }
 
   /**
@@ -31,7 +34,7 @@ export class FilenameMappingManager {
       try {
         this.mapping = await fse.readJson(this.mappingFile);
       } catch (error) {
-        console.warn(`⚠️ 加载文件名映射失败: ${this.mappingFile}`, error);
+        console.warn(this.i18n.t('filename.loadFailed', { path: this.mappingFile }), error);
         this.mapping = {};
       }
     }
@@ -81,7 +84,7 @@ export class FilenameMappingManager {
       await atomicWriteJson(this.mappingFile, this.mapping);
       this.isDirty = false;
     } catch (error) {
-      console.error(`❌ 保存文件名映射失败: ${this.mappingFile}`, error);
+      console.error(this.i18n.t('filename.saveFailed', { path: this.mappingFile }), error);
       throw error;
     }
   }
@@ -90,16 +93,18 @@ export class FilenameMappingManager {
    * 从文件加载映射（静态方法，用于外部读取）
    * 
    * @param stateDir 状态目录（包含域名子目录）
+   * @param locale 语言配置（可选）
    * @returns 文件名映射，如果文件不存在则返回空对象
    */
-  static async load(stateDir: string): Promise<FilenameMapping> {
+  static async load(stateDir: string, locale?: Locale): Promise<FilenameMapping> {
     const mappingFile = path.join(stateDir, "filename-mapping.json");
+    const i18n = createI18n(locale);
     
     if (await fse.pathExists(mappingFile)) {
       try {
         return await fse.readJson(mappingFile);
       } catch (error) {
-        console.warn(`⚠️ 加载文件名映射失败: ${mappingFile}`, error);
+        console.warn(i18n.t('filename.loadFailed', { path: mappingFile }), error);
         return {};
       }
     }
@@ -112,10 +117,11 @@ export class FilenameMappingManager {
    * 
    * @param stateDir 状态目录（包含域名子目录）
    * @param sanitized sanitize 后的文件名
+   * @param locale 语言配置（可选）
    * @returns 原始文件名，如果未找到则返回 sanitized
    */
-  static async getOriginal(stateDir: string, sanitized: string): Promise<string> {
-    const mapping = await this.load(stateDir);
+  static async getOriginal(stateDir: string, sanitized: string, locale?: Locale): Promise<string> {
+    const mapping = await this.load(stateDir, locale);
     return mapping[sanitized] || sanitized;
   }
 }
