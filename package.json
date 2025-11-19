@@ -1,62 +1,63 @@
 {
-  "name": "@huaguang/block-crawler",
-  "version": "0.18.0",
-  "description": "基于 Playwright 的通用 Block 爬虫框架，支持受限并发、进度恢复、单页面或单 Block 处理模式",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
-  },
-  "files": [
-    "dist",
-    "src"
-  ],
-  "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:debug": "playwright test --debug",
-    "test:headed": "playwright test --headed",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "pnpm build && changeset publish",
-    "release-all": "node scripts/release-all.js",
-    "i18n": "bun scripts/check-i18n.ts"
-  },
-  "keywords": [
-    "playwright",
-    "crawler",
-    "scraper",
-    "framework",
-    "concurrent",
-    "resume"
-  ],
-  "author": "mufeng",
-  "license": "ISC",
-  "packageManager": "pnpm@10.21.0",
-  "devDependencies": {
-    "@changesets/cli": "^2.29.7",
-    "@playwright/test": "^1.56.1",
-    "@types/cli-progress": "^3.11.6",
-    "@types/fs-extra": "^11.0.4",
-    "@types/node": "^24.10.0",
-    "@huaguang/block-crawler": "link:./",
-    "cli-progress": "^3.12.0",
-    "ora": "^9.0.0",
-    "tsup": "^8.5.0",
-    "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "fs-extra": "^11.3.2",
-    "p-limit": "^7.2.0"
-  },
-  "peerDependencies": {
-    "@playwright/test": "^1.0.0"
-  }
+	"name": "@huaguang/block-crawler",
+	"version": "0.18.0",
+	"description": "基于 Playwright 的通用 Block 爬虫框架，支持受限并发、进度恢复、单页面或单 Block 处理模式",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		}
+	},
+	"files": [
+		"dist",
+		"src"
+	],
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup --watch",
+		"test": "playwright test",
+		"test:ui": "playwright test --ui",
+		"test:debug": "playwright test --debug",
+		"test:headed": "playwright test --headed",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "pnpm build && changeset publish",
+		"release-all": "node scripts/release-all.js",
+		"i18n": "bun scripts/check-i18n.ts"
+	},
+	"keywords": [
+		"playwright",
+		"crawler",
+		"scraper",
+		"framework",
+		"concurrent",
+		"resume"
+	],
+	"author": "mufeng",
+	"license": "ISC",
+	"packageManager": "pnpm@10.21.0",
+	"devDependencies": {
+		"@biomejs/biome": "2.3.6",
+		"@changesets/cli": "^2.29.7",
+		"@huaguang/block-crawler": "link:./",
+		"@playwright/test": "^1.56.1",
+		"@types/cli-progress": "^3.11.6",
+		"@types/fs-extra": "^11.0.4",
+		"@types/node": "^24.10.0",
+		"cli-progress": "^3.12.0",
+		"ora": "^9.0.0",
+		"tsup": "^8.5.0",
+		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"fs-extra": "^11.3.2",
+		"p-limit": "^7.2.0"
+	},
+	"peerDependencies": {
+		"@playwright/test": "^1.0.0"
+	}
 }

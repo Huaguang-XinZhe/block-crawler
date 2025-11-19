@@ -4,28 +4,44 @@
  * 支持受限并发、进度恢复、单页面或单 Block 处理模式
  */
 
-export { BlockCrawler } from "./crawler";
-export { TaskProgress } from "./utils/task-progress";
+// Main exports
+export { BlockCrawler } from "./BlockCrawler";
+// Type exports - Phase/Mode
+export type { BlockModeOptions } from "./phases/BlockMode";
+// Type exports - Actions
 export type {
-  CrawlerConfig,
-  PageContext,
-  BlockContext,
-  TestContext,
-  BeforeContext,
-  PageHandler,
-  BlockHandler,
-  BeforeProcessBlocksHandler,
-  TestHandler,
-  CollectionLink,
-  SiteMeta,
-  FreeItem,
-  ClickAndVerify,
-  ClickCode,
-  ProgressConfig,
-  ProgressRebuildConfig,
-} from "./types";
+	ClickAndVerify,
+	ClickCode,
+} from "./types/actions";
+// Type exports - Collect
+export type {
+	CollectResult,
+	ExtractFunction,
+	LocatorOrCustom,
+} from "./types/collect";
+// Type exports - Config
+export type { CrawlerConfig } from "./types/config";
+// Type exports - Handlers
+export type {
+	BeforeContext,
+	BeforeProcessBlocksHandler,
+	BlockContext,
+	BlockHandler,
+	PageContext,
+	PageHandler,
+	TestContext,
+	TestHandler,
+} from "./types/handlers";
+// Type exports - Meta
+export type {
+	CollectionLink,
+	FreeItem,
+	SiteMeta,
+} from "./types/meta";
+// Type exports - Progress
+export type { ProgressConfig, ProgressRebuildConfig } from "./types/progress";
+export type { FilenameMapping } from "./utils/filename-mapping";
+export { FilenameMappingManager } from "./utils/filename-mapping";
 export type { Locale } from "./utils/i18n";
 export type { SafeOutput } from "./utils/safe-output";
-export { FilenameMappingManager } from "./utils/filename-mapping";
-export type { FilenameMapping } from "./utils/filename-mapping";
-
+export { TaskProgress } from "./utils/task-progress";
