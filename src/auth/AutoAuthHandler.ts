@@ -30,9 +30,45 @@ export class AutoAuthHandler {
 	}
 
 	/**
-	 * 从 URL 提取域名前缀用于环境变量命名
-	 * 例如：https://www.flyonui.com/login → FLYONUI
+	 * 解析 .env 文件内容
+	 * @param content .env 文件内容
 	 */
+	private parseEnvFile(content: string): Record<string, string> {
+		const result: Record<string, string> = {};
+
+		for (const line of content.split("\n")) {
+			// 去除首尾空白
+			const trimmed = line.trim();
+
+			// 跳过空行和注释
+			if (!trimmed || trimmed.startsWith("#")) {
+				continue;
+			}
+
+			// 查找第一个 = 号
+			const equalIndex = trimmed.indexOf("=");
+			if (equalIndex === -1) {
+				continue;
+			}
+
+			// 提取 key 和 value
+			const key = trimmed.slice(0, equalIndex).trim();
+			let value = trimmed.slice(equalIndex + 1).trim();
+
+			// 去除引号（单引号或双引号）
+			if (
+				(value.startsWith('"') && value.endsWith('"')) ||
+				(value.startsWith("'") && value.endsWith("'"))
+			) {
+				value = value.slice(1, -1);
+			}
+
+			result[key] = value;
+		}
+
+		return result;
+	}
+
 	/**
 	 * 从 .env 文件读取登录凭据
 	 * @param envDir .env 文件所在目录（.crawler/域名/ 目录）
@@ -41,29 +77,39 @@ export class AutoAuthHandler {
 		email: string;
 		password: string;
 	}> {
-		// 从指定目录的 .env 文件读取
+		const path = await import("node:path");
+		const fs = await import("node:fs/promises");
+		const envPath = path.resolve(envDir, ".env");
+
 		try {
-			const path = await import("node:path");
-			const { config } = await import("dotenv");
-			const envPath = path.resolve(envDir, ".env");
-			config({ path: envPath });
+			// 读取 .env 文件
+			const content = await fs.readFile(envPath, "utf-8");
+
+			// 解析文件内容
+			const env = this.parseEnvFile(content);
+
+			const email = env.EMAIL;
+			const password = env.PASSWORD;
+
+			if (!email || !password) {
+				throw new Error(
+					`${this.i18n.t("auth.errors.noCredentials")}\n位置: ${envPath}`,
+				);
+			}
+
+			return { email, password };
 		} catch (error) {
-			// 加载失败，抛出错误
+			// 文件不存在或读取失败
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				throw new Error(
+					`${this.i18n.t("auth.errors.envFileNotFound")}\n位置: ${envPath}`,
+				);
+			}
+
 			throw new Error(
-				`${this.i18n.t("auth.errors.loadEnvFailed")}\n位置: ${envDir}/.env\n错误: ${error}`,
+				`${this.i18n.t("auth.errors.loadEnvFailed")}\n位置: ${envPath}\n错误: ${error}`,
 			);
 		}
-
-		const email = process.env.EMAIL;
-		const password = process.env.PASSWORD;
-
-		if (!email || !password) {
-			throw new Error(
-				`${this.i18n.t("auth.errors.noCredentials")}\n位置: ${envDir}/.env`,
-			);
-		}
-
-		return { email, password };
 	}
 
 	/**
