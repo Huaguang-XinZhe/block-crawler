@@ -35,9 +35,14 @@ export class ProcessingMode {
 	async execute(
 		collectResult: CollectResult,
 		processingConfig: ProcessingConfig,
+		authHandler?: (page: Page) => Promise<void>,
 	): Promise<void> {
 		// 初始化执行器
-		await this.initializeOrchestrator(collectResult, processingConfig);
+		await this.initializeOrchestrator(
+			collectResult,
+			processingConfig,
+			authHandler,
+		);
 
 		this.setupSignalHandlers();
 
@@ -69,9 +74,23 @@ export class ProcessingMode {
 	private async initializeOrchestrator(
 		collectResult: CollectResult,
 		processingConfig: ProcessingConfig,
+		authHandler?: (page: Page) => Promise<void>,
 	): Promise<void> {
 		const startUrl = collectResult.startUrl;
 		const paths = generatePathsForUrl(this.config, startUrl);
+
+		// 处理认证
+		let storageState: string | undefined;
+		if (authHandler) {
+			const { AuthManager } = await import("../../auth/AuthManager");
+			const authManager = new AuthManager(
+				this.page,
+				paths.stateDir,
+				authHandler,
+				this.config.locale,
+			);
+			storageState = await authManager.ensureAuth();
+		}
 
 		this.taskProgress = new TaskProgress(
 			paths.progressFile,
@@ -101,6 +120,7 @@ export class ProcessingMode {
 			paths.freeFile,
 			this.taskProgress,
 			extendedConfig,
+			storageState,
 		);
 	}
 

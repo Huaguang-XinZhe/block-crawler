@@ -5,8 +5,8 @@ test("untitledui", async ({ page }) => {
 	test.setTimeout(2 * 60 * 1000); // 2 分钟
 
 	const crawler = new BlockCrawler(page, {
+		startUrl: "https://www.untitledui.com/react/components",
 		skipFree: "FREE",
-		// useIndependentContext: true, // 开了这个模式也解决不了点击失效的问题❗
 		locale: "zh",
 		collectionLinkWaitOptions: {
 			// 得加这个，不加这个，Live view 的点击可能会失效❗
@@ -25,9 +25,19 @@ test("untitledui", async ({ page }) => {
 		// },
 	});
 
+	// 如果需要登录，可以使用 auth() 方法
+	// await crawler
+	//   .auth(async (page) => {
+	//     await page.goto("https://www.untitledui.com/login");
+	//     await page.fill("#username", "user");
+	//     await page.fill("#password", "pass");
+	//     await page.click("button[type=submit]");
+	//     await page.waitForURL("**/dashboard");
+	//   })
+
 	// 独立的收集阶段
 	await crawler
-		.collect("https://www.untitledui.com/react/components")
+		.collect()
 		.tabSections(async (page) => {
 			// 返回所有包含内容的 sections
 			return page.locator("xpath=//section[3]/div/div").all();

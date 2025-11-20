@@ -35,6 +35,7 @@ export class ExecutionOrchestrator {
 		freeFile: string,
 		taskProgress: TaskProgress | undefined,
 		extendedConfig: ExtendedExecutionConfig = {},
+		storageState?: string,
 	) {
 		const i18n = createI18n(config.locale);
 
@@ -47,6 +48,7 @@ export class ExecutionOrchestrator {
 			taskProgress,
 			i18n,
 			extendedConfig,
+			storageState,
 		);
 
 		this.executor = new ConcurrentExecutor(this.context);

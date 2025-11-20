@@ -73,6 +73,11 @@ const messages = {
 		// 配置相关
 		"config.parseUrlFailed": "⚠️ 解析 startUrl 失败，使用默认域名",
 
+		// 认证相关
+		"auth.reuseExisting": "检测到认证文件，自动复用",
+		"auth.performLogin": "未检测到认证文件，开始执行登录",
+		"auth.saved": "认证状态已保存",
+
 		// Tab 处理
 		"tab.gettingSections": "📑 正在获取所有 Tab Sections（跳过 tab 点击）...",
 		"tab.foundSections": "✅ 找到 {count} 个 Tab Section",
@@ -251,6 +256,11 @@ const messages = {
 
 		// Configuration
 		"config.parseUrlFailed": "⚠️ Failed to parse startUrl, using default domain",
+
+		// Authentication
+		"auth.reuseExisting": "Auth file detected, reusing automatically",
+		"auth.performLogin": "No auth file detected, performing login",
+		"auth.saved": "Authentication state saved",
 
 		// Tab processing
 		"tab.gettingSections": "📑 Getting all Tab Sections (skip tab clicking)...",

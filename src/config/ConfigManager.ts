@@ -16,7 +16,6 @@ export interface InternalConfig {
 	stateBaseDir: string;
 	maxConcurrency: number;
 	pauseOnError: boolean;
-	useIndependentContext: boolean;
 	progress: {
 		enable: boolean;
 		rebuild?: import("../types/progress").ProgressRebuildConfig;
@@ -50,6 +49,7 @@ export function generatePathsForUrl(
 	progressFile: string;
 	freeFile: string;
 	collectFile: string;
+	authFile: string;
 } {
 	const hostname = extractHostname(url, baseConfig.locale);
 	const outputDir = path.join(baseConfig.outputBaseDir, hostname);
@@ -57,6 +57,7 @@ export function generatePathsForUrl(
 	const progressFile = path.join(stateDir, "progress.json");
 	const freeFile = path.join(stateDir, "free.json");
 	const collectFile = path.join(stateDir, "collect.json");
+	const authFile = path.join(stateDir, "auth.json");
 
 	return {
 		hostname,
@@ -65,6 +66,7 @@ export function generatePathsForUrl(
 		progressFile,
 		freeFile,
 		collectFile,
+		authFile,
 	};
 }
 
@@ -78,7 +80,6 @@ export function createInternalConfig(config: CrawlerConfig): InternalConfig {
 		stateBaseDir: config.stateDir || ".crawler",
 		maxConcurrency: config.maxConcurrency || 5,
 		pauseOnError: config.pauseOnError ?? true,
-		useIndependentContext: config.useIndependentContext ?? false,
 		progress: {
 			enable: config.progress?.enable ?? true,
 			rebuild: config.progress?.rebuild,

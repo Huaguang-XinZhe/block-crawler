@@ -2,6 +2,8 @@ import { BlockCrawler } from "@huaguang/block-crawler";
 import { Page, test } from "@playwright/test";
 
 test("flyonui", async ({ page }) => {
+	test.setTimeout(60 * 1000); // 1 分钟
+
 	const crawler = new BlockCrawler(page, {
 		startUrl: "https://flyonui.com/blocks",
 	});

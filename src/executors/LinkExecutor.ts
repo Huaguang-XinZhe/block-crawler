@@ -35,8 +35,11 @@ export class LinkExecutor {
 		const domain = new URL(this.context.baseUrl).hostname;
 		const url = `https://${domain}${relativeLink}`;
 
-		// 根据配置决定是否使用独立 context
-		const newPage = await this.createPage(page, isFirst);
+		// 创建页面（如果配置了 storageState 会创建新 context）
+		const { page: newPage, shouldCloseContext } = await this.createPage(
+			page,
+			isFirst,
+		);
 
 		try {
 			// 注入 beforeOpen 脚本
@@ -99,8 +102,8 @@ export class LinkExecutor {
 			);
 			await newPage.close();
 
-			// 如果使用了独立 context，也需要关闭
-			if (!isFirst && this.context.config.useIndependentContext) {
+			// 如果创建了新 context，也需要关闭
+			if (shouldCloseContext) {
 				await newPage.context().close();
 			}
 		}
@@ -109,23 +112,30 @@ export class LinkExecutor {
 	/**
 	 * 创建页面实例
 	 */
-	private async createPage(page: Page, isFirst: boolean): Promise<Page> {
+	private async createPage(
+		page: Page,
+		isFirst: boolean,
+	): Promise<{ page: Page; shouldCloseContext: boolean }> {
 		if (isFirst) {
-			return page;
+			return { page, shouldCloseContext: false };
 		}
 
-		if (this.context.config.useIndependentContext) {
-			// 创建独立的 context
+		// 如果配置了 storageState，使用带认证状态的新 context
+		if (this.context.storageState) {
 			const browser = page.context().browser();
 			if (!browser) {
 				throw new Error("无法获取浏览器实例");
 			}
-			const context = await browser.newContext();
-			return await context.newPage();
+			const context = await browser.newContext({
+				storageState: this.context.storageState,
+			});
+			const newPage = await context.newPage();
+			return { page: newPage, shouldCloseContext: true };
 		}
 
 		// 共享 context
-		return await page.context().newPage();
+		const newPage = await page.context().newPage();
+		return { page: newPage, shouldCloseContext: false };
 	}
 
 	/**

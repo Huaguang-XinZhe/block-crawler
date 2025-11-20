@@ -186,35 +186,4 @@ export interface CrawlerConfig {
 	 * });
 	 */
 	pauseOnError?: boolean;
-
-	// ========== 并发配置 ==========
-	/**
-	 * 使用独立的浏览器上下文（BrowserContext）
-	 *
-	 * 当开启时，每个并发页面会创建独立的 BrowserContext，避免共享状态导致的并发问题。
-	 * debug 模式下会看到多个浏览器窗口（多个 renderer 进程）和调试器窗口，但只有一个浏览器（进程）❗
-	 *
-	 * **优点：**
-	 * - 完全隔离，避免状态污染
-	 * - 点击、输入等操作更稳定
-	 * - 适合高并发场景
-	 *
-	 * **缺点：**
-	 * - 内存占用略高
-	 * - 无法共享 cookies/storage
-	 *
-	 * **使用场景：**
-	 * - 并发爬取多个页面时遇到点击失效、状态混乱
-	 * - 需要完全隔离的页面环境
-	 *
-	 * @default false
-	 * @example
-	 * // 并发场景开启（推荐）
-	 * const crawler = new BlockCrawler(page, {
-	 *   useIndependentContext: true,
-	 *   maxConcurrency: 5,
-	 *   // ... 其他配置
-	 * });
-	 */
-	useIndependentContext?: boolean;
 }

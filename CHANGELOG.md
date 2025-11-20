@@ -1,5 +1,55 @@
 # block-crawler
 
+## 0.20.0
+
+### Minor Changes
+
+- 添加链式 auth() API 实现自动化认证管理
+
+  **新增功能:**
+
+  - 新增 `.auth(loginHandler)` 链式方法，自动管理认证状态
+  - 认证状态文件自动保存到 `.crawler/域名/auth.json`
+  - 自动检测和复用已有的认证文件
+  - 注释掉 `.auth()` 即可跳过认证（即使文件存在）
+
+  **实现细节:**
+
+  - 如果 `auth.json` 不存在：执行登录并保存认证状态
+  - 如果 `auth.json` 存在：自动复用，跳过登录流程
+  - 如果不调用 `.auth()`：不使用认证（即使文件存在）
+
+  **使用示例:**
+
+  ```typescript
+  const crawler = new BlockCrawler(page, {
+    startUrl: "https://example.com",
+  });
+
+  await crawler
+    .auth(async (page) => {
+      // 登录逻辑
+      await page.goto("https://example.com/login");
+      await page.fill("#username", "user");
+      await page.fill("#password", "pass");
+      await page.click("button[type=submit]");
+      await page.waitForURL("**/dashboard");
+    })
+    .collect()
+    .tabSections("section")
+    .open()
+    .page(async ({ currentPage }) => {
+      // 所有页面自动带认证状态
+    })
+    .run();
+  ```
+
+  **适用场景:**
+
+  - 需要登录才能访问的页面
+  - 需要保持会话状态的爬取任务
+  - 跨多个页面共享认证信息
+
 ## 0.19.0
 
 ### Minor Changes

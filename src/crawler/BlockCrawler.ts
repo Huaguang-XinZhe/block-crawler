@@ -85,6 +85,9 @@ export class BlockCrawler {
 	// 测试配置
 	private testConfig?: TestConfig;
 
+	// 认证配置
+	private authHandler?: (page: Page) => Promise<void>;
+
 	// 标记
 	private isOpenCalled = false;
 
@@ -106,6 +109,29 @@ export class BlockCrawler {
 	}
 
 	// ==================== 配置阶段 API ====================
+
+	/**
+	 * 配置认证处理器（自动管理登录状态）
+	 *
+	 * 如果 `.crawler/域名/auth.json` 不存在，会执行登录并保存状态；
+	 * 如果存在，会自动复用已有的认证状态。
+	 *
+	 * @param handler 登录处理函数
+	 * @example
+	 * ```typescript
+	 * .auth(async (page) => {
+	 *   await page.goto('https://example.com/login');
+	 *   await page.fill('#username', 'user');
+	 *   await page.fill('#password', 'pass');
+	 *   await page.click('button[type=submit]');
+	 *   await page.waitForURL('**' + '/dashboard');
+	 * })
+	 * ```
+	 */
+	auth(handler: (page: Page) => Promise<void>): this {
+		this.authHandler = handler;
+		return this;
+	}
 
 	/**
 	 * 开始收集阶段配置，设置等待选项
@@ -290,6 +316,7 @@ export class BlockCrawler {
 			await this.getProcessingMode().execute(
 				collectResult,
 				this.processingConfig,
+				this.authHandler,
 			);
 		}
 	}

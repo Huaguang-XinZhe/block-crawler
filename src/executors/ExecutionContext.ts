@@ -43,6 +43,7 @@ export class ExecutionContext {
 		public readonly taskProgress: TaskProgress | undefined,
 		public readonly i18n: I18n,
 		extendedConfig: ExtendedExecutionConfig = {},
+		public readonly storageState?: string,
 	) {
 		this.extendedConfig = extendedConfig;
 		this.freeRecorder = new FreeRecorder(freeFile);
