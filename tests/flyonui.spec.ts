@@ -18,7 +18,7 @@ test("flyonui", async ({ page }) => {
 		.page(async ({ currentPage }) => {
 			await autoScroll(currentPage);
 		})
-		// .skipFree("FREE") // 跳过 free 页面
+		.skipFree("FREE") // 跳过 free 页面
 		.block(
 			'//main/div/div[3]/div/div/div[contains(@class, "flex")]',
 			async ({ blockName }) => {
@@ -30,21 +30,25 @@ test("flyonui", async ({ page }) => {
 });
 
 async function autoScroll(page: Page, step = 1000, interval = 500) {
-	await page.evaluate(async () => {
-		await new Promise<void>((resolve) => {
-			let totalHeight = 0;
-			const distance = step;
+	// page.evaluate 在浏览器上下文中执行，需要传递参数
+	await page.evaluate(
+		async ({ step, interval }) => {
+			await new Promise<void>((resolve) => {
+				let totalHeight = 0;
+				const distance = step;
 
-			const timer = setInterval(() => {
-				const scrollHeight = document.body.scrollHeight;
-				window.scrollBy(0, distance);
-				totalHeight += distance;
+				const timer = setInterval(() => {
+					const scrollHeight = document.body.scrollHeight;
+					window.scrollBy(0, distance);
+					totalHeight += distance;
 
-				if (totalHeight >= scrollHeight) {
-					clearInterval(timer);
-					resolve();
-				}
-			}, interval);
-		});
-	});
+					if (totalHeight >= scrollHeight) {
+						clearInterval(timer);
+						resolve();
+					}
+				}, interval);
+			});
+		},
+		{ step, interval },
+	);
 }
