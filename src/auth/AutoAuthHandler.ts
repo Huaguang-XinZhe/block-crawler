@@ -1,9 +1,5 @@
 import type { Page } from "@playwright/test";
-import { config } from "dotenv";
 import { createI18n, type Locale } from "../utils/i18n";
-
-// 加载 .env 文件
-config();
 
 /**
  * 自动登录配置
@@ -81,6 +77,14 @@ export class AutoAuthHandler {
 	createHandler(options: AutoAuthOptions): (page: Page) => Promise<void> {
 		return async (page: Page) => {
 			const { loginUrl, redirectUrl } = options;
+
+			// 动态加载 dotenv（避免顶层静态 import 导致的打包问题）
+			try {
+				const { config } = await import("dotenv");
+				config();
+			} catch (error) {
+				// dotenv 可能不存在或加载失败，继续执行（可能已经有环境变量）
+			}
 
 			// 提取域名并获取凭据
 			const domainPrefix = this.extractDomainPrefix(loginUrl);
