@@ -9,6 +9,8 @@ export interface AutoAuthOptions {
 	loginUrl: string;
 	/** 登录后跳转的 URL 模式（可选） */
 	redirectUrl?: string;
+	/** .env 文件所在目录（可选，默认为 .crawler/域名/ 目录） */
+	envDir?: string;
 }
 
 /**
@@ -50,12 +52,29 @@ export class AutoAuthHandler {
 	}
 
 	/**
-	 * 从环境变量读取登录凭据
+	 * 从 .env 文件读取登录凭据
+	 * @param domain 域名前缀
+	 * @param envDir .env 文件所在目录
 	 */
-	private getCredentials(domain: string): {
+	private async getCredentials(
+		domain: string,
+		envDir?: string,
+	): Promise<{
 		email: string;
 		password: string;
-	} {
+	}> {
+		// 如果指定了 envDir，从该目录的 .env 文件读取
+		if (envDir) {
+			try {
+				const path = await import("node:path");
+				const { config } = await import("dotenv");
+				const envPath = path.resolve(envDir, ".env");
+				config({ path: envPath });
+			} catch (error) {
+				// 加载失败，继续尝试从环境变量读取
+			}
+		}
+
 		const emailKey = `${domain}_EMAIL`;
 		const passwordKey = `${domain}_PASSWORD`;
 
@@ -63,7 +82,12 @@ export class AutoAuthHandler {
 		const password = process.env[passwordKey];
 
 		if (!email || !password) {
-			throw new Error(this.i18n.t("auth.errors.noCredentials", { domain }));
+			const envLocation = envDir
+				? `${envDir}/.env`
+				: ".env 文件或环境变量";
+			throw new Error(
+				`${this.i18n.t("auth.errors.noCredentials", { domain })}\n位置: ${envLocation}`,
+			);
 		}
 
 		return { email, password };
@@ -74,43 +98,14 @@ export class AutoAuthHandler {
 	 */
 	createHandler(options: AutoAuthOptions): (page: Page) => Promise<void> {
 		return async (page: Page) => {
-			const { loginUrl, redirectUrl } = options;
+			const { loginUrl, redirectUrl, envDir } = options;
 
-			// 动态加载 dotenv（避免顶层静态 import 导致的打包问题）
-			try {
-				const path = await import("node:path");
-				const fs = await import("node:fs");
-				const { config } = await import("dotenv");
-
-				// 从当前工作目录向上查找 .env 文件
-				let currentDir = process.cwd();
-				let envPath: string | null = null;
-
-				// 最多向上查找 5 级目录
-				for (let i = 0; i < 5; i++) {
-					const testPath = path.resolve(currentDir, ".env");
-					if (fs.existsSync(testPath)) {
-						envPath = testPath;
-						break;
-					}
-					const parentDir = path.dirname(currentDir);
-					if (parentDir === currentDir) break; // 已到根目录
-					currentDir = parentDir;
-				}
-
-				if (envPath) {
-					config({ path: envPath });
-				} else {
-					// 尝试默认路径
-					config();
-				}
-			} catch (error) {
-				// dotenv 可能不存在或加载失败，继续执行（可能已经有环境变量）
-			}
-
-			// 提取域名并获取凭据
+			// 提取域名并获取凭据（从 envDir/.env 或环境变量）
 			const domainPrefix = this.extractDomainPrefix(loginUrl);
-			const { email, password } = this.getCredentials(domainPrefix);
+			const { email, password } = await this.getCredentials(
+				domainPrefix,
+				envDir,
+			);
 
 			console.log(`\n${this.i18n.t("auth.autoDetecting")}`);
 

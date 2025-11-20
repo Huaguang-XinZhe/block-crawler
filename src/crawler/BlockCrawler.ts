@@ -151,6 +151,13 @@ export class BlockCrawler {
 	 * })
 	 * ```
 	 */
+	// 存储 auth 配置（延迟创建 handler，因为需要 stateDir）
+	private authConfig:
+		| string
+		| { loginUrl: string; redirectUrl?: string }
+		| ((page: Page) => Promise<void>)
+		| null = null;
+
 	auth(loginUrl: string): this;
 	auth(options: { loginUrl: string; redirectUrl?: string }): this;
 	auth(handler: (page: Page) => Promise<void>): this;
@@ -160,25 +167,8 @@ export class BlockCrawler {
 			| { loginUrl: string; redirectUrl?: string }
 			| ((page: Page) => Promise<void>),
 	): this {
-		// 判断参数类型
-		if (typeof handlerOrUrlOrOptions === "function") {
-			// 用法 3: 自定义处理函数
-			this.authHandler = handlerOrUrlOrOptions;
-		} else if (typeof handlerOrUrlOrOptions === "string") {
-			// 用法 1: 只传登录 URL
-			const { createAutoAuthHandler } = require("../auth/AutoAuthHandler");
-			this.authHandler = createAutoAuthHandler(
-				{ loginUrl: handlerOrUrlOrOptions },
-				this.config.locale,
-			);
-		} else {
-			// 用法 2: 配置对象
-			const { createAutoAuthHandler } = require("../auth/AutoAuthHandler");
-			this.authHandler = createAutoAuthHandler(
-				handlerOrUrlOrOptions,
-				this.config.locale,
-			);
-		}
+		// 保存配置，延迟到 run 时创建 handler（需要 stateDir）
+		this.authConfig = handlerOrUrlOrOptions;
 		return this;
 	}
 
@@ -340,19 +330,38 @@ export class BlockCrawler {
 			throw new Error("处理模式必须调用 open() 方法");
 		}
 
-		// 步骤 0: 处理认证（如果配置了 authHandler）
-		if (this.authHandler && this.collectionConfig.startUrl) {
+		// 步骤 0: 处理认证（如果配置了 authConfig）
+		if (this.authConfig && this.collectionConfig.startUrl) {
 			const { generatePathsForUrl } = await import("../config/ConfigManager");
 			const paths = generatePathsForUrl(
 				this.config,
 				this.collectionConfig.startUrl,
 			);
 
+			// 根据 authConfig 创建最终的 authHandler
+			let finalAuthHandler: ((page: Page) => Promise<void>) | undefined;
+
+			if (typeof this.authConfig === "function") {
+				// 用法 3: 自定义处理函数
+				finalAuthHandler = this.authConfig;
+			} else {
+				// 用法 1 & 2: 自动登录
+				const { createAutoAuthHandler } = await import(
+					"../auth/AutoAuthHandler"
+				);
+				const options =
+					typeof this.authConfig === "string"
+						? { loginUrl: this.authConfig, envDir: paths.stateDir }
+						: { ...this.authConfig, envDir: paths.stateDir };
+
+				finalAuthHandler = createAutoAuthHandler(options, this.config.locale);
+			}
+
 			const { AuthManager } = await import("../auth/AuthManager");
 			const authManager = new AuthManager(
 				this._page,
 				paths.stateDir,
-				this.authHandler,
+				finalAuthHandler,
 				this.config.locale,
 			);
 			await authManager.ensureAuth();
