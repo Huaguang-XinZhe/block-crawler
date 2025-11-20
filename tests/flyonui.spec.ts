@@ -16,12 +16,8 @@ test("flyonui", async ({ page }) => {
 		// .count("p")
 		.open()
 		.page({
-			handler: async ({ currentPage }) => {
-				// 自定义页面处理逻辑（可选）
-			},
 			autoScroll: true, // 启用自动滚动（默认 step=1000, interval=500）
 		})
-		.skipFree("FREE") // 跳过 free 页面
 		.block(
 			'//main/div/div[3]/div/div/div[contains(@class, "flex")]',
 			async ({ blockName }) => {

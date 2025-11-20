@@ -132,9 +132,9 @@ export class LinkExecutor {
 		page: Page,
 		config: boolean | { step?: number; interval?: number },
 	): Promise<void> {
-		const step = typeof config === "boolean" ? 1000 : config.step ?? 1000;
+		const step = typeof config === "boolean" ? 1000 : (config.step ?? 1000);
 		const interval =
-			typeof config === "boolean" ? 500 : config.interval ?? 500;
+			typeof config === "boolean" ? 500 : (config.interval ?? 500);
 
 		console.log(`  ${this.context.i18n.t("page.autoScrolling")}`);
 

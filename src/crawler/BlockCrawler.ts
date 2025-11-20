@@ -269,19 +269,21 @@ export class BlockCrawler {
 	 *   // 自定义页面处理逻辑
 	 * })
 	 *
-	 * // 用法 2: 配置对象形式（启用自动滚动）
+	 * // 用法 2: 只启用自动滚动（handler 可选）
 	 * .page({
-	 *   handler: async ({ currentPage }) => {
-	 *     // 自定义页面处理逻辑
-	 *   },
-	 *   autoScroll: true  // 启用自动滚动（默认 step=1000, interval=500）
+	 *   autoScroll: true  // 默认 step=1000, interval=500
 	 * })
 	 *
-	 * // 用法 3: 自定义滚动参数
+	 * // 用法 3: 自动滚动 + 自定义处理
 	 * .page({
 	 *   handler: async ({ currentPage }) => {
 	 *     // 自定义页面处理逻辑
 	 *   },
+	 *   autoScroll: true
+	 * })
+	 *
+	 * // 用法 4: 自定义滚动参数
+	 * .page({
 	 *   autoScroll: { step: 500, interval: 300 }
 	 * })
 	 * ```
