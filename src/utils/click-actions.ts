@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import type { ClickAndVerify, ClickCode } from "../types/actions";
+import type { ClickAndVerify, ClickCode } from "../types";
 import { isDebugMode } from "./debug";
 import type { Locale } from "./i18n";
 import { createI18n } from "./i18n";

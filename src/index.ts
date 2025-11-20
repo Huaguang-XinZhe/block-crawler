@@ -4,44 +4,44 @@
  * 支持受限并发、进度恢复、单页面或单 Block 处理模式
  */
 
-// Main exports
-export { BlockCrawler } from "./BlockCrawler";
-// Type exports - Phase/Mode
-export type { BlockModeOptions } from "./phases/BlockMode";
-// Type exports - Actions
-export type {
-	ClickAndVerify,
-	ClickCode,
-} from "./types/actions";
-// Type exports - Collect
+export { LinkCollector } from "./collectors/LinkCollector";
+// Collector types
 export type {
 	CollectResult,
-	ExtractFunction,
+	ExtractionConfig,
+	LinkCollectorConfig,
 	LocatorOrCustom,
-} from "./types/collect";
-// Type exports - Config
-export type { CrawlerConfig } from "./types/config";
-// Type exports - Handlers
+	LocatorsOrCustom,
+	SectionConfig,
+	WaitOptions,
+} from "./collectors/types";
+// Main exports
+export { BlockCrawler } from "./crawler/BlockCrawler";
+
+// State management
+export type { FilenameMapping } from "./state/FilenameMapping";
+export { FilenameMappingManager } from "./state/FilenameMapping";
+export type { FreeRecord } from "./state/FreeRecorder";
+export { FreeRecorder } from "./state/FreeRecorder";
+export { TaskProgress } from "./state/TaskProgress";
+
+// Type exports
 export type {
 	BeforeContext,
-	BeforeProcessBlocksHandler,
 	BlockContext,
 	BlockHandler,
+	ClickAndVerify,
+	ClickCode,
+	CollectionLink,
+	CrawlerConfig,
+	FreeItem,
 	PageContext,
 	PageHandler,
-	TestContext,
-	TestHandler,
-} from "./types/handlers";
-// Type exports - Meta
-export type {
-	CollectionLink,
-	FreeItem,
+	ProgressConfig,
+	ProgressRebuildConfig,
 	SiteMeta,
-} from "./types/meta";
-// Type exports - Progress
-export type { ProgressConfig, ProgressRebuildConfig } from "./types/progress";
-export type { FilenameMapping } from "./utils/filename-mapping";
-export { FilenameMappingManager } from "./utils/filename-mapping";
+} from "./types";
+
+// Utils
 export type { Locale } from "./utils/i18n";
 export type { SafeOutput } from "./utils/safe-output";
-export { TaskProgress } from "./utils/task-progress";

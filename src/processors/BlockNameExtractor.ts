@@ -1,6 +1,7 @@
 import type { Locator } from "@playwright/test";
+import type { InternalConfig } from "../config/ConfigManager";
+import type { ExtendedExecutionConfig } from "../executors/ExecutionContext";
 import { createI18n, type I18n } from "../utils/i18n";
-import type { InternalConfig } from "./ConfigManager";
 
 /**
  * Block 名称提取器
@@ -9,7 +10,10 @@ import type { InternalConfig } from "./ConfigManager";
 export class BlockNameExtractor {
 	private i18n: I18n;
 
-	constructor(private config: InternalConfig) {
+	constructor(
+		private config: InternalConfig,
+		private extendedConfig: ExtendedExecutionConfig = {},
+	) {
 		this.i18n = createI18n(config.locale);
 	}
 
@@ -25,15 +29,17 @@ export class BlockNameExtractor {
 	 */
 	async extract(block: Locator): Promise<string | null> {
 		// 1. 优先使用配置的函数
-		if (this.config.getBlockName) {
-			return await this.config.getBlockName(block);
+		if (this.extendedConfig.getBlockName) {
+			return await this.extendedConfig.getBlockName(block);
 		}
 
 		// 2. 如果配置了非默认的 blockNameLocator，使用它
 		const defaultLocator = "role=heading[level=1] >> role=link";
-		if (this.config.blockNameLocator !== defaultLocator) {
+		const blockNameLocator =
+			this.extendedConfig.blockNameLocator || defaultLocator;
+		if (blockNameLocator !== defaultLocator) {
 			try {
-				return await block.locator(this.config.blockNameLocator).textContent();
+				return await block.locator(blockNameLocator).textContent();
 			} catch {
 				return null;
 			}

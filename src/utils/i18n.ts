@@ -109,6 +109,8 @@ const messages = {
 		"collect.saved": "✅ 已保存到: {path}",
 		"collect.skipExisting":
 			"⏭️  跳过收集：已存在 {count} 个链接，直接使用 collect.json",
+		"collect.loadedFromFile":
+			"⏭️  已从 collect.json 加载 {count} 个链接，跳过收集阶段",
 
 		// 页面处理
 		"page.processing": "🔄 [{current}/{total}] 正在处理: {path}",
@@ -287,6 +289,8 @@ const messages = {
 		"collect.saved": "✅ Saved to: {path}",
 		"collect.skipExisting":
 			"⏭️  Skip collection: {count} links found, using existing collect.json",
+		"collect.loadedFromFile":
+			"⏭️  Loaded {count} links from collect.json, skipping collection phase",
 
 		// Page processing
 		"page.processing": "🔄 [{current}/{total}] Processing: {path}",

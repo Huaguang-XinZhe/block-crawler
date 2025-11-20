@@ -7,7 +7,7 @@ export interface CollectionLink {
 	/** 链接名称 */
 	name?: string;
 	/** Block 数量 */
-	count?: number;
+	blockCount?: number;
 }
 
 /**

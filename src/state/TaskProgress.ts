@@ -1,8 +1,8 @@
 import path from "node:path";
 import fse from "fs-extra";
-import type { ProgressConfig } from "../types/progress";
-import { atomicWriteJson } from "./atomic-write";
-import { createI18n, type I18n, type Locale } from "./i18n";
+import type { ProgressConfig } from "../types";
+import { atomicWriteJson } from "../utils/atomic-write";
+import { createI18n, type I18n, type Locale } from "../utils/i18n";
 
 /**
  * 任务进度管理器
@@ -27,7 +27,7 @@ export class TaskProgress {
 	) {
 		this.progressFile = progressFile;
 		this.outputDir = outputDir;
-		this.stateDir = stateDir;
+		// stateDir 参数保留用于未来扩展，当前未使用
 		this.completedBlocks = new Set();
 		this.completedPages = new Set();
 		this.i18n = createI18n(locale);

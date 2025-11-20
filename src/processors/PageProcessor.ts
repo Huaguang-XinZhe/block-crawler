@@ -1,11 +1,11 @@
 import type { Page } from "@playwright/test";
-import type { PageContext, PageHandler } from "../types/handlers";
+import type { InternalConfig } from "../config/ConfigManager";
+import type { FilenameMappingManager } from "../state/FilenameMapping";
+import type { PageContext, PageHandler } from "../types";
 import { createClickAndVerify, createClickCode } from "../utils/click-actions";
 import { isDebugMode } from "../utils/debug";
-import type { FilenameMappingManager } from "../utils/filename-mapping";
 import { createI18n, type I18n } from "../utils/i18n";
 import { createSafeOutput } from "../utils/safe-output";
-import type { InternalConfig } from "./ConfigManager";
 
 /**
  * Page 处理器
@@ -29,16 +29,15 @@ export class PageProcessor {
 	static async checkPageFree(
 		page: Page,
 		config: InternalConfig,
+		skipFree?: string | ((page: Page) => Promise<boolean>),
 	): Promise<boolean> {
-		if (!config.skipFree) {
+		if (!skipFree) {
 			return false;
 		}
 
 		// 字符串配置：使用 getByText 精确匹配
-		if (typeof config.skipFree === "string") {
-			const count = await page
-				.getByText(config.skipFree, { exact: true })
-				.count();
+		if (typeof skipFree === "string") {
+			const count = await page.getByText(skipFree, { exact: true }).count();
 
 			if (count === 0) {
 				return false;
@@ -46,16 +45,14 @@ export class PageProcessor {
 
 			if (count !== 1) {
 				const i18n = createI18n(config.locale);
-				throw new Error(
-					i18n.t("page.freeError", { count, text: config.skipFree }),
-				);
+				throw new Error(i18n.t("page.freeError", { count, text: skipFree }));
 			}
 
 			return true;
 		}
 
 		// 函数配置：使用自定义判断逻辑
-		return await config.skipFree(page);
+		return await skipFree(page);
 	}
 
 	/**

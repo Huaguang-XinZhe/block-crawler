@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
+import type { InternalConfig } from "../config/ConfigManager";
 import { createI18n, type I18n } from "../utils/i18n";
-import type { InternalConfig } from "./ConfigManager";
 
 interface ScriptInfo {
 	content: string;
@@ -15,26 +15,17 @@ export class ScriptInjector {
 	private i18n: I18n;
 	private scripts: Map<string, ScriptInfo> = new Map();
 	private enabled: boolean;
+	private stateDir: string;
 
-	constructor(config: InternalConfig, _stateDir: string) {
+	constructor(
+		config: InternalConfig,
+		stateDir: string,
+		scriptInjection?: boolean | { enabled: boolean; scripts?: string[] },
+	) {
 		this.i18n = createI18n(config.locale);
-		this.enabled = !!config.scriptInjection;
-		this.globalTiming = config.scriptInjection?.timing;
-
-		// 预加载所有脚本内容
-		if (this.enabled && config.scriptInjection) {
-			const { script, scripts } = config.scriptInjection;
-
-			// 处理单个脚本（从根目录）
-			if (script) {
-				this.loadScripts([script], false);
-			}
-
-			// 处理多个脚本（从 scripts 子目录）
-			if (scripts && scripts.length > 0) {
-				this.loadScripts(scripts, true);
-			}
-		}
+		this.enabled = !!scriptInjection;
+		this.stateDir = stateDir;
+		// 注意：脚本现在通过 injectScripts() 方法动态注入，不再在构造函数中预加载
 	}
 
 	/**
@@ -124,6 +115,47 @@ export class ScriptInjector {
 			await this.injectBeforePageLoad(page);
 		} else {
 			await this.injectAfterPageLoad(page);
+		}
+	}
+
+	/**
+	 * 动态注入指定脚本列表
+	 * @param page 页面对象
+	 * @param scriptNames 脚本名称列表（从 .crawler/域名/scripts/ 目录加载）
+	 * @param timing 注入时机
+	 */
+	async injectScripts(
+		page: Page,
+		scriptNames: string[],
+		timing: "beforePageLoad" | "afterPageLoad",
+	): Promise<void> {
+		const fs = await import("node:fs/promises");
+		const path = await import("node:path");
+
+		for (const scriptName of scriptNames) {
+			try {
+				const scriptPath = path.join(this.stateDir, "scripts", scriptName);
+				const content = await fs.readFile(scriptPath, "utf-8");
+
+				if (timing === "beforePageLoad") {
+					await page.addInitScript(content);
+					console.log(
+						this.i18n.t("script.injectedBefore", { name: scriptName }),
+					);
+				} else {
+					await page.evaluate(content);
+					console.log(
+						this.i18n.t("script.injectedAfter", { name: scriptName }),
+					);
+				}
+			} catch (error) {
+				console.error(
+					this.i18n.t("script.injectError", {
+						name: scriptName,
+						error: String(error),
+					}),
+				);
+			}
 		}
 	}
 }

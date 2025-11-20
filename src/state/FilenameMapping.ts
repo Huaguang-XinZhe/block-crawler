@@ -1,7 +1,7 @@
 import path from "node:path";
 import fse from "fs-extra";
-import { atomicWriteJson } from "./atomic-write";
-import { createI18n, type Locale } from "./i18n";
+import { atomicWriteJson } from "../utils/atomic-write";
+import { createI18n, type Locale } from "../utils/i18n";
 
 /**
  * 文件名映射接口

@@ -1,6 +1,6 @@
 import path from "node:path";
 import fse from "fs-extra";
-import type { FilenameMappingManager } from "./filename-mapping";
+import type { FilenameMappingManager } from "../state/FilenameMapping";
 import {
 	sanitizeFilename,
 	sanitizeFilenameWithOriginal,

@@ -1,0 +1,87 @@
+import path from "node:path";
+import type { CrawlerConfig } from "../types/config";
+import { createI18n, type Locale } from "../utils/i18n";
+
+/**
+ * 内部配置接口（完全解析后的配置）
+ *
+ * 说明：
+ * - 收集相关配置由 LinkCollector 负责
+ * - 处理相关配置由 ExecutionOrchestrator 负责
+ * - 此接口仅包含全局共享配置
+ */
+export interface InternalConfig {
+	locale: Locale;
+	outputBaseDir: string;
+	stateBaseDir: string;
+	maxConcurrency: number;
+	pauseOnError: boolean;
+	useIndependentContext: boolean;
+	progress: {
+		enable: boolean;
+		rebuild?: import("../types/progress").ProgressRebuildConfig;
+	};
+}
+
+/**
+ * 从 URL 提取域名
+ */
+export function extractHostname(url: string, locale?: Locale): string {
+	try {
+		const urlObj = new URL(url);
+		return urlObj.hostname;
+	} catch {
+		const i18n = createI18n(locale);
+		console.warn(i18n.t("config.parseUrlFailed"));
+		return "default";
+	}
+}
+
+/**
+ * 根据 URL 生成完整路径配置
+ */
+export function generatePathsForUrl(
+	baseConfig: InternalConfig,
+	url: string,
+): {
+	hostname: string;
+	outputDir: string;
+	stateDir: string;
+	progressFile: string;
+	freeFile: string;
+	collectFile: string;
+} {
+	const hostname = extractHostname(url, baseConfig.locale);
+	const outputDir = path.join(baseConfig.outputBaseDir, hostname);
+	const stateDir = path.join(baseConfig.stateBaseDir, hostname);
+	const progressFile = path.join(stateDir, "progress.json");
+	const freeFile = path.join(stateDir, "free.json");
+	const collectFile = path.join(stateDir, "collect.json");
+
+	return {
+		hostname,
+		outputDir,
+		stateDir,
+		progressFile,
+		freeFile,
+		collectFile,
+	};
+}
+
+/**
+ * 创建内部配置（仅全局共享配置）
+ */
+export function createInternalConfig(config: CrawlerConfig): InternalConfig {
+	return {
+		locale: config.locale || "zh",
+		outputBaseDir: config.outputDir || "output",
+		stateBaseDir: config.stateDir || ".crawler",
+		maxConcurrency: config.maxConcurrency || 5,
+		pauseOnError: config.pauseOnError ?? true,
+		useIndependentContext: config.useIndependentContext ?? false,
+		progress: {
+			enable: config.progress?.enable ?? true,
+			rebuild: config.progress?.rebuild,
+		},
+	};
+}

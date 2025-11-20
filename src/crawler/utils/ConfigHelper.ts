@@ -1,0 +1,135 @@
+import type { Locator, Page } from "@playwright/test";
+import type {
+	ExtractFunction,
+	LinkCollectorConfig,
+	LocatorOrCustom,
+	LocatorsOrCustom,
+	NameExtractFunction,
+	SectionConfig,
+} from "../../collectors/types";
+import type { Locale } from "../../utils/i18n";
+
+/**
+ * 收集阶段配置
+ */
+export interface CollectionConfig {
+	startUrl?: string;
+	collectWaitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+	collectWaitTimeout?: number;
+	tabListConfig?: LocatorOrCustom<Page>;
+	tabSectionConfig?: LocatorOrCustom<Page>;
+	tabSectionsConfig?: LocatorsOrCustom<Page>;
+	nameConfig?: {
+		locator: LocatorOrCustom<Locator>;
+		extract?: NameExtractFunction;
+	};
+	countConfig?: {
+		locator: LocatorOrCustom<Locator>;
+		extract?: ExtractFunction;
+	};
+}
+
+/**
+ * 处理阶段配置
+ */
+export interface ProcessingConfig {
+	waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+	beforeOpenScripts: string[];
+	afterOpenScripts: string[];
+	pageHandler?: any;
+	blockLocator?: string;
+	blockHandler?: any;
+	skipFreeText?: string;
+	skipFreeMode?: "page" | "block";
+	// Block 相关配置
+	getBlockName?: (
+		block: import("@playwright/test").Locator,
+	) => Promise<string | null>;
+	blockNameLocator?: string;
+	getAllBlocks?: (
+		page: import("@playwright/test").Page,
+	) => Promise<import("@playwright/test").Locator[]>;
+	// 脚本注入配置
+	scriptInjection?: boolean | { enabled: boolean; scripts?: string[] };
+}
+
+/**
+ * 测试模式配置
+ */
+export interface TestConfig {
+	url: string;
+	locator: string;
+	options?: { index?: number; name?: string };
+}
+
+/**
+ * 配置辅助工具
+ */
+export class ConfigHelper {
+	/**
+	 * 检查是否配置了 section
+	 */
+	static hasSection(config: CollectionConfig): boolean {
+		return !!config.tabSectionsConfig || !!config.tabSectionConfig;
+	}
+
+	/**
+	 * 构建 SectionConfig
+	 */
+	static buildSectionConfig(config: CollectionConfig): SectionConfig {
+		const hasTabSections = !!config.tabSectionsConfig;
+		const hasTabSection = !!config.tabSectionConfig;
+
+		// 检查互斥性
+		if (hasTabSections && hasTabSection) {
+			throw new Error(
+				"不能同时配置 tabSections 和 tabSection。请选择其中一种模式：\n" +
+					"- 静态模式：使用 .tabSections()\n" +
+					"- Tabs 模式：使用 .tabSection()（tabList 可选）",
+			);
+		}
+
+		// 静态模式
+		if (hasTabSections) {
+			return {
+				mode: "static",
+				tabSections: config.tabSectionsConfig!,
+			};
+		}
+
+		// Tabs 模式
+		return {
+			mode: "tabs",
+			tabList: config.tabListConfig,
+			tabSection: config.tabSectionConfig!,
+		};
+	}
+
+	/**
+	 * 构建 LinkCollectorConfig
+	 */
+	static buildCollectorConfig(
+		config: CollectionConfig,
+		page: Page,
+		locale: Locale,
+		stateBaseDir: string,
+	): LinkCollectorConfig {
+		const section = ConfigHelper.buildSectionConfig(config);
+
+		return {
+			startUrl: config.startUrl!,
+			page,
+			section,
+			extraction: {
+				name: config.nameConfig,
+				count: config.countConfig,
+			},
+			wait: {
+				waitUntil: config.collectWaitUntil,
+				timeout: config.collectWaitTimeout,
+			},
+			locale,
+			stateDir: stateBaseDir,
+		};
+	}
+}
