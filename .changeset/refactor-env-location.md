@@ -40,9 +40,14 @@ project/
 **文件格式（.crawler/flyonui.com/.env）：**
 ```env
 # FlyonUI 登录凭据
-FLYONUI_EMAIL=your-email@example.com
-FLYONUI_PASSWORD=your-password
+EMAIL=your-email@example.com
+PASSWORD=your-password
 ```
+
+**重要变更：变量名简化**
+- ❌ 旧格式：`FLYONUI_EMAIL` / `FLYONUI_PASSWORD`（需要域名前缀）
+- ✅ 新格式：`EMAIL` / `PASSWORD`（统一变量名）
+- 因为 .env 文件已在域名目录下，无需前缀区分
 
 **代码无需修改：**
 ```typescript
