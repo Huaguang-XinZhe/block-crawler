@@ -63,9 +63,7 @@ export class AutoAuthHandler {
 		const password = process.env[passwordKey];
 
 		if (!email || !password) {
-			throw new Error(
-				this.i18n.t("auth.errors.noCredentials", { domain }),
-			);
+			throw new Error(this.i18n.t("auth.errors.noCredentials", { domain }));
 		}
 
 		return { email, password };
@@ -110,24 +108,21 @@ export class AutoAuthHandler {
 			}
 
 			// 2. 识别 email 和 password 输入框
-			let emailInput: typeof textboxes[0] | null = null;
-			let passwordInput: typeof textboxes[0] | null = null;
+			let emailInput: (typeof textboxes)[0] | null = null;
+			let passwordInput: (typeof textboxes)[0] | null = null;
 
 			for (const textbox of textboxes) {
 				const name = (await textbox.getAttribute("name")) || "";
 				const type = (await textbox.getAttribute("type")) || "";
-				const placeholder =
-					(await textbox.getAttribute("placeholder")) || "";
+				const placeholder = (await textbox.getAttribute("placeholder")) || "";
 				const ariaLabel = (await textbox.getAttribute("aria-label")) || "";
 
-				const allText = `${name} ${type} ${placeholder} ${ariaLabel}`.toLowerCase();
+				const allText =
+					`${name} ${type} ${placeholder} ${ariaLabel}`.toLowerCase();
 
 				if (allText.includes("email") || allText.includes("mail")) {
 					emailInput = textbox;
-				} else if (
-					allText.includes("password") ||
-					allText.includes("pass")
-				) {
+				} else if (allText.includes("password") || allText.includes("pass")) {
 					passwordInput = textbox;
 				}
 			}
@@ -195,4 +190,3 @@ export function createAutoAuthHandler(
 	const handler = new AutoAuthHandler(locale);
 	return handler.createHandler(options);
 }
-

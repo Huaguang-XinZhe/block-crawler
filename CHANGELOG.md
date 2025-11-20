@@ -1,5 +1,25 @@
 # block-crawler
 
+## 0.22.1
+
+### Patch Changes
+
+- 修复 dotenv 动态 require 导致的打包错误
+
+  **问题：**
+  在使用自动登录功能时，出现 `Dynamic require of "fs" is not supported` 错误。这是因为 `dotenv` 的 `config()` 在模块顶层被调用，导致打包后无法正常工作。
+
+  **修复：**
+
+  - 将 `dotenv.config()` 从模块顶层移动到运行时（在实际需要时才调用）
+  - 使用动态 `import()` 按需加载 `dotenv`
+  - 添加 try-catch 处理，避免在没有 dotenv 或加载失败时报错
+
+  **影响：**
+
+  - 修复后自动登录功能可以正常使用
+  - 不影响现有 API 和功能
+
 ## 0.22.0
 
 ### Minor Changes
