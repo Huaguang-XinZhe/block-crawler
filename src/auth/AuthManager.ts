@@ -27,15 +27,13 @@ export class AuthManager {
 	/**
 	 * 确保认证状态
 	 *
-	 * 如果未配置 authHandler，返回 undefined（不使用认证）
-	 * 如果 auth.json 存在，返回文件路径（自动复用）
+	 * 如果未配置 authHandler，不使用认证
+	 * 如果 auth.json 存在，读取并应用 cookies 到当前 context
 	 * 如果 auth.json 不存在，执行登录并保存
-	 *
-	 * @returns 认证状态文件路径，或 undefined（不使用认证）
 	 */
-	async ensureAuth(): Promise<string | undefined> {
+	async ensureAuth(): Promise<void> {
 		if (!this.authHandler) {
-			return undefined; // 未配置 auth，不使用认证
+			return; // 未配置 auth，不使用认证
 		}
 
 		const authFile = path.join(this.stateDir, "auth.json");
@@ -44,7 +42,17 @@ export class AuthManager {
 		if (await fse.pathExists(authFile)) {
 			console.log(`\n✓ ${this.i18n.t("auth.reuseExisting")}`);
 			console.log(`  ${authFile}`);
-			return authFile;
+
+			// 读取并应用认证状态到当前 context
+			const storageState = await fse.readJSON(authFile);
+			const context = this.page.context();
+
+			// 应用 cookies
+			if (storageState.cookies && storageState.cookies.length > 0) {
+				await context.addCookies(storageState.cookies);
+			}
+
+			return;
 		}
 
 		// 执行登录并保存
@@ -57,6 +65,5 @@ export class AuthManager {
 
 		console.log(`✓ ${this.i18n.t("auth.saved")}`);
 		console.log(`  ${authFile}`);
-		return authFile;
 	}
 }

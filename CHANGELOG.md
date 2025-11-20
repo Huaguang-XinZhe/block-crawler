@@ -1,5 +1,32 @@
 # block-crawler
 
+## 0.21.2
+
+### Patch Changes
+
+- 修复 auth.json 复用时认证状态未应用的问题
+
+  **问题:**
+
+  - 第一次运行（执行登录）：新 tab 有登录状态 ✓
+  - 第二次运行（复用 auth.json）：新 tab 没有登录状态 ✗
+
+  **原因:**
+
+  - 当 auth.json 存在时，只是检测文件存在并返回路径
+  - 没有将文件中的 cookies 应用到当前 browser context
+  - 导致后续新 tab 无法继承认证状态
+
+  **修复:**
+
+  - 当 auth.json 存在时，读取文件内容
+  - 使用 `context.addCookies()` 将 cookies 应用到当前 context
+  - 确保后续新 tab 能够继承认证状态
+
+  **影响:**
+
+  - 现在无论是第一次登录还是复用 auth.json，所有页面都能正确保持登录状态
+
 ## 0.21.1
 
 ### Patch Changes
