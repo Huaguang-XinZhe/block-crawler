@@ -9,8 +9,6 @@ export interface AutoAuthOptions {
 	loginUrl: string;
 	/** 登录后跳转的 URL 模式（可选） */
 	redirectUrl?: string;
-	/** .env 文件所在目录（可选，默认为 .crawler/域名/ 目录） */
-	envDir?: string;
 }
 
 /**
@@ -35,58 +33,33 @@ export class AutoAuthHandler {
 	 * 从 URL 提取域名前缀用于环境变量命名
 	 * 例如：https://www.flyonui.com/login → FLYONUI
 	 */
-	private extractDomainPrefix(url: string): string {
-		try {
-			const urlObj = new URL(url);
-			const hostname = urlObj.hostname;
-			// 提取二级域名（去掉 www. 和顶级域名）
-			const parts = hostname.split(".");
-			const domain =
-				parts.length > 2 && parts[0] === "www" ? parts[1] : parts[0];
-			return domain.toUpperCase();
-		} catch (error) {
-			throw new Error(
-				`${this.i18n.t("auth.errors.invalidUrl")}: ${url}\n${error}`,
-			);
-		}
-	}
-
 	/**
 	 * 从 .env 文件读取登录凭据
-	 * @param domain 域名前缀
-	 * @param envDir .env 文件所在目录
+	 * @param envDir .env 文件所在目录（.crawler/域名/ 目录）
 	 */
-	private async getCredentials(
-		domain: string,
-		envDir?: string,
-	): Promise<{
+	private async getCredentials(envDir: string): Promise<{
 		email: string;
 		password: string;
 	}> {
-		// 如果指定了 envDir，从该目录的 .env 文件读取
-		if (envDir) {
-			try {
-				const path = await import("node:path");
-				const { config } = await import("dotenv");
-				const envPath = path.resolve(envDir, ".env");
-				config({ path: envPath });
-			} catch (error) {
-				// 加载失败，继续尝试从环境变量读取
-			}
+		// 从指定目录的 .env 文件读取
+		try {
+			const path = await import("node:path");
+			const { config } = await import("dotenv");
+			const envPath = path.resolve(envDir, ".env");
+			config({ path: envPath });
+		} catch (error) {
+			// 加载失败，抛出错误
+			throw new Error(
+				`${this.i18n.t("auth.errors.loadEnvFailed")}\n位置: ${envDir}/.env\n错误: ${error}`,
+			);
 		}
 
-		const emailKey = `${domain}_EMAIL`;
-		const passwordKey = `${domain}_PASSWORD`;
-
-		const email = process.env[emailKey];
-		const password = process.env[passwordKey];
+		const email = process.env.EMAIL;
+		const password = process.env.PASSWORD;
 
 		if (!email || !password) {
-			const envLocation = envDir
-				? `${envDir}/.env`
-				: ".env 文件或环境变量";
 			throw new Error(
-				`${this.i18n.t("auth.errors.noCredentials", { domain })}\n位置: ${envLocation}`,
+				`${this.i18n.t("auth.errors.noCredentials")}\n位置: ${envDir}/.env`,
 			);
 		}
 
@@ -95,17 +68,18 @@ export class AutoAuthHandler {
 
 	/**
 	 * 创建自动登录 handler
+	 * @param options 登录配置
+	 * @param envDir .env 文件所在目录（.crawler/域名/ 目录）
 	 */
-	createHandler(options: AutoAuthOptions): (page: Page) => Promise<void> {
+	createHandler(
+		options: AutoAuthOptions,
+		envDir: string,
+	): (page: Page) => Promise<void> {
 		return async (page: Page) => {
-			const { loginUrl, redirectUrl, envDir } = options;
+			const { loginUrl, redirectUrl } = options;
 
-			// 提取域名并获取凭据（从 envDir/.env 或环境变量）
-			const domainPrefix = this.extractDomainPrefix(loginUrl);
-			const { email, password } = await this.getCredentials(
-				domainPrefix,
-				envDir,
-			);
+			// 从 envDir/.env 读取凭据
+			const { email, password } = await this.getCredentials(envDir);
 
 			console.log(`\n${this.i18n.t("auth.autoDetecting")}`);
 
@@ -201,11 +175,15 @@ export class AutoAuthHandler {
 
 /**
  * 创建自动登录 handler
+ * @param options 登录配置
+ * @param envDir .env 文件所在目录（.crawler/域名/ 目录）
+ * @param locale 语言
  */
 export function createAutoAuthHandler(
 	options: AutoAuthOptions,
+	envDir: string,
 	locale: Locale = "zh",
 ): (page: Page) => Promise<void> {
 	const handler = new AutoAuthHandler(locale);
-	return handler.createHandler(options);
+	return handler.createHandler(options, envDir);
 }

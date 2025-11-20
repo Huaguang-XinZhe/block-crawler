@@ -351,10 +351,14 @@ export class BlockCrawler {
 				);
 				const options =
 					typeof this.authConfig === "string"
-						? { loginUrl: this.authConfig, envDir: paths.stateDir }
-						: { ...this.authConfig, envDir: paths.stateDir };
+						? { loginUrl: this.authConfig }
+						: this.authConfig;
 
-				finalAuthHandler = createAutoAuthHandler(options, this.config.locale);
+				finalAuthHandler = createAutoAuthHandler(
+					options,
+					paths.stateDir,
+					this.config.locale,
+				);
 			}
 
 			const { AuthManager } = await import("../auth/AuthManager");
