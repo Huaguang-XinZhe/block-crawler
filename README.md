@@ -158,75 +158,56 @@ test("爬取页面", async ({ page }) => {
 
 ### 测试模式
 
-**专为快速测试单个组件的提取逻辑设计**，无需运行完整的爬虫流程。
+**专为快速测试单个页面的提取逻辑设计**，无需运行完整的爬虫流程。
 
 **特点：**
 - 跳过链接收集阶段，直接访问指定页面
-- 支持指定 blockName 或使用第一个匹配的 section
-- 应用 `collectionLinkWaitOptions` 和 `scriptInjection` 配置
-- 完全独立，不与 Block/Page 模式并行
+- 不进行并发处理，只处理指定的测试页面
+- 支持 page 和 block 处理器
+- 完全独立，不与收集阶段关联
 
 ```typescript
 import { test } from "@playwright/test";
 import { BlockCrawler } from "@huaguang/block-crawler";
 
-test("测试组件提取", async ({ page }) => {
+test("测试页面提取", async ({ page }) => {
   const crawler = new BlockCrawler(page, {
-    startUrl: "https://example.com/components", // 仍需提供（用于输出目录）
-    collectionLinkWaitOptions: {
-      waitUntil: "networkidle",
-    },
-    scriptInjection: {
-      scripts: ['custom.js'],
-      timing: 'afterPageLoad'
-    }
+    startUrl: "https://example.com/components", // 用于生成输出目录
   });
 
-  // 基础用法：测试第一个匹配的组件
+  // 在 open() 中指定 testUrl，即可进入测试模式
   await crawler
-    .test(
-      "https://example.com/components/buttons",  // 页面 URL（必填）
-      "[data-preview]"                            // 所有 blockSection 的定位符（必填）
-    )
-    .run(async ({ section, blockName, safeOutput }) => {
-      console.log(`测试组件: ${blockName}`);
-      const code = await section.locator('pre').textContent();
-      // 使用 safeOutput 安全输出（自动处理文件名 sanitize，默认路径：test-${blockName}.tsx）
-      await safeOutput(code ?? '');
-    });
-});
-
-test("测试指定组件", async ({ page }) => {
-  const crawler = new BlockCrawler(page, {
-    startUrl: "https://example.com/components",
-  });
-
-  // 指定 blockName
-  await crawler
-    .test(
-      "https://example.com/components/buttons",
-      "[data-preview]",
-      "Primary Button"  // 指定组件名称（可选）
-    )
-    .before(async (currentPage) => {
-      // 可选：在提取前执行操作
-      await currentPage.getByRole('tab', { name: 'Code' }).click();
-      await currentPage.waitForTimeout(500);
+    .open("https://example.com/components/buttons", "load")
+    .page({
+      autoScroll: true, // 启用自动滚动
+      handler: async ({ currentPage, safeOutput }) => {
+        console.log("页面处理逻辑");
+        // 执行页面级操作
+      }
     })
-    .run(async ({ section, blockName, currentPage, outputDir }) => {
-      console.log(`测试组件: ${blockName}`);
-      // 执行测试逻辑
-    });
+    .block("[data-preview]", async ({ block, blockName, safeOutput, clickCode }) => {
+      console.log(`测试 block: ${blockName}`);
+      
+      // 使用 clickCode 点击 Code 按钮
+      await clickCode();
+      
+      // 获取代码内容
+      const code = await block.locator('pre').textContent();
+      
+      // 使用 safeOutput 安全输出（自动处理文件名 sanitize）
+      await safeOutput(code ?? '');
+    })
+    .run();
 });
 ```
 
 **使用场景：**
-- 🔍 快速验证组件提取逻辑是否正确
-- 🐛 调试特定组件的代码提取问题
+- 🔍 快速验证单个页面的提取逻辑是否正确
+- 🐛 调试特定页面的代码提取问题
 - 🧪 开发新的提取规则前进行实验
 - ⚡ 无需等待完整爬虫流程即可测试
 
-**注意：** 测试模式与 Block/Page 模式互斥，同一时间只能使用一种模式。
+**注意：** 当在 `open()` 中指定了 testUrl，框架会自动进入测试模式，忽略收集阶段配置。
 
 ## ⚙️ 配置选项
 

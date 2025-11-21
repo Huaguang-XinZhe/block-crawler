@@ -6,7 +6,7 @@ import type {
 	PageHandler,
 } from "../types";
 import type { CollectionLink } from "../types/meta";
-import type { AutoScrollConfig } from "../utils/autoScroll";
+import type { AutoScrollConfig } from "../utils/auto-scroll";
 import { createLogger } from "../utils/logger";
 import type { ExecutionContext } from "./ExecutionContext";
 import { LinkExecutor } from "./LinkExecutor";

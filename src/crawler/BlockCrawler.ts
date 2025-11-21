@@ -23,7 +23,6 @@ import { TestMode } from "./modes/TestMode";
 import type {
 	CollectionConfig,
 	ProcessingConfig,
-	TestConfig,
 } from "./utils/ConfigHelper";
 
 /**
@@ -70,8 +69,8 @@ import type {
  *
  * // 测试模式
  * await crawler
- *   .open('load')
- *   .test('https://example.com/page', 'section', { index: 0 })
+ *   .open('https://example.com/page', 'load')
+ *   .page(async ({ page }) => { ... })
  *   .run();
  */
 export class BlockCrawler {
@@ -87,8 +86,6 @@ export class BlockCrawler {
 		afterOpenScripts: [],
 	};
 
-	// 测试配置
-	private testConfig?: TestConfig;
 
 	// 认证配置
 	private authHandler?: (page: Page) => Promise<void>;
@@ -250,12 +247,37 @@ export class BlockCrawler {
 
 	/**
 	 * 打开页面并等待（必须调用）
+	 * 
+	 * 支持两种用法：
+	 * 1. 正常模式：.open() 或 .open("load")
+	 * 2. 测试模式：.open("https://...") 或 .open("https://...", "load")
 	 */
+	open(waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit"): this;
 	open(
+		testUrl: string,
+		waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit",
+	): this;
+	open(
+		urlOrWaitUntil?: string,
 		waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit",
 	): this {
 		this.isOpenCalled = true;
-		this.processingConfig.waitUntil = waitUntil;
+		
+		// 判断第一个参数是 URL 还是 waitUntil
+		if (urlOrWaitUntil && urlOrWaitUntil.startsWith("http")) {
+			// 测试模式：第一个参数是 testUrl
+			this.processingConfig.testUrl = urlOrWaitUntil;
+			this.processingConfig.waitUntil = waitUntil;
+		} else {
+			// 正常模式：第一个参数是 waitUntil
+			this.processingConfig.waitUntil = urlOrWaitUntil as
+				| "load"
+				| "domcontentloaded"
+				| "networkidle"
+				| "commit"
+				| undefined;
+		}
+		
 		return this;
 	}
 
@@ -322,17 +344,6 @@ export class BlockCrawler {
 		return this;
 	}
 
-	/**
-	 * 测试模式（直接定位到具体组件）
-	 */
-	test(
-		url: string,
-		locator: string,
-		options?: { index?: number; name?: string },
-	): this {
-		this.testConfig = { url, locator, options };
-		return this;
-	}
 
 	// ==================== 执行阶段 ====================
 
@@ -341,12 +352,12 @@ export class BlockCrawler {
 	 */
 	async run(): Promise<void> {
 		// 测试模式：直接执行测试
-		if (this.testConfig) {
+		if (this.processingConfig.testUrl) {
 			// 测试模式必须调用 open()
 			if (!this.isOpenCalled) {
 				throw new Error("测试模式必须调用 open() 方法");
 			}
-			await this.getTestMode().execute(this.testConfig, this.processingConfig);
+			await this.getTestMode().execute(this.processingConfig);
 			return;
 		}
 

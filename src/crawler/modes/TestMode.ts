@@ -1,32 +1,37 @@
 import type { Locator, Page } from "@playwright/test";
 import type { InternalConfig } from "../../config/ConfigManager";
 import type { BlockHandler, PageHandler } from "../../types";
-import type { ProcessingConfig, TestConfig } from "../utils/ConfigHelper";
+import { createI18n, type I18n } from "../../utils/i18n";
+import type { ProcessingConfig } from "../utils/ConfigHelper";
 
 /**
  * 测试模式
  *
  * 职责：
  * - 导航到测试页面
- * - 定位测试目标
- * - 执行 page/block handler
+ * - 执行 page/block handler（不进行并发处理）
  */
 export class TestMode {
+	private i18n: I18n;
+
 	constructor(
 		private config: InternalConfig,
 		private page: Page,
-	) {}
+	) {
+		this.i18n = createI18n(config.locale);
+	}
 
 	/**
 	 * 执行测试模式
 	 */
-	async execute(
-		testConfig: TestConfig,
-		processingConfig: ProcessingConfig,
-	): Promise<void> {
+	async execute(processingConfig: ProcessingConfig): Promise<void> {
+		if (!processingConfig.testUrl) {
+			throw new Error("测试模式需要提供 testUrl");
+		}
+
 		// 导航到测试页面
 		await this.navigateToTestPage(
-			testConfig.url,
+			processingConfig.testUrl,
 			processingConfig.waitUntil || "load",
 		);
 
@@ -35,29 +40,22 @@ export class TestMode {
 			processingConfig.beforeOpenScripts.length > 0 ||
 			processingConfig.afterOpenScripts.length > 0
 		) {
-			console.warn("测试模式暂不支持脚本注入");
+			console.warn(this.i18n.t("crawler.testScriptWarning"));
 		}
-
-		// 获取定位符
-		const locators = await this.getTestLocators(
-			testConfig.locator,
-			testConfig.options,
-		);
-
-		console.log(`\n找到 ${locators.length} 个测试目标`);
 
 		// 执行 page handler
 		if (processingConfig.pageHandler) {
 			await this.executePageHandler(
-				testConfig.url,
+				processingConfig.testUrl,
 				processingConfig.pageHandler,
+				processingConfig.autoScroll,
 			);
 		}
 
 		// 执行 block handler
-		if (processingConfig.blockHandler) {
+		if (processingConfig.blockHandler && processingConfig.blockLocator) {
 			await this.executeBlockHandler(
-				locators,
+				processingConfig.blockLocator,
 				processingConfig.blockHandler,
 			);
 		}
@@ -70,30 +68,9 @@ export class TestMode {
 		url: string,
 		waitUntil: "load" | "domcontentloaded" | "networkidle" | "commit",
 	): Promise<void> {
+		console.log(`\n${this.i18n.t("crawler.testVisitingUrl", { url })}`);
 		await this.page.goto(url, { waitUntil });
-	}
-
-	/**
-	 * 获取测试定位符
-	 */
-	private async getTestLocators(
-		locator: string,
-		options?: { index?: number; name?: string },
-	): Promise<Locator[]> {
-		let locators = await this.page.locator(locator).all();
-
-		// 如果指定了 index，只取指定索引
-		if (options?.index !== undefined) {
-			locators = [locators[options.index]];
-		}
-
-		// 如果指定了 name，根据名称过滤
-		if (options?.name) {
-			// TODO: 实现名称过滤逻辑
-			console.warn("测试模式的 name 过滤尚未实现");
-		}
-
-		return locators;
+		console.log(this.i18n.t("crawler.pageLoaded"));
 	}
 
 	/**
@@ -102,6 +79,7 @@ export class TestMode {
 	private async executePageHandler(
 		url: string,
 		pageHandler: PageHandler,
+		autoScroll?: boolean | { step?: number; interval?: number },
 	): Promise<void> {
 		const { createClickAndVerify, createClickCode } = await import(
 			"../../utils/click-actions"
@@ -117,6 +95,13 @@ export class TestMode {
 			this.config.locale,
 		);
 		await mappingManager.initialize();
+
+		// 执行自动滚动（如果启用）
+		if (autoScroll) {
+			const { autoScrollToBottom } = await import("../../utils/auto-scroll");
+			const scrollConfig = typeof autoScroll === "boolean" ? {} : autoScroll;
+			await autoScrollToBottom(this.page, scrollConfig);
+		}
 
 		await pageHandler({
 			currentPage: this.page,
@@ -137,7 +122,7 @@ export class TestMode {
 	 * 执行 Block Handler
 	 */
 	private async executeBlockHandler(
-		locators: Locator[],
+		blockLocator: string,
 		blockHandler: BlockHandler,
 	): Promise<void> {
 		const { createClickAndVerify, createClickCode } = await import(
@@ -158,6 +143,12 @@ export class TestMode {
 		);
 		await mappingManager.initialize();
 
+		// 获取所有 blocks
+		const locators = await this.page.locator(blockLocator).all();
+		console.log(
+			`\n${this.i18n.t("crawler.testFoundBlocks", { count: locators.length })}`,
+		);
+
 		// 需要一个临时配置对象来创建 BlockNameExtractor
 		// 因为 BlockNameExtractor 需要 blockNameLocator 等配置
 		const tempConfig = {
@@ -173,7 +164,13 @@ export class TestMode {
 				(await nameExtractor.extract(locatorItem)) || `test-block-${i}`;
 			const blockPath = `test/${blockName}`;
 
-			console.log(`\n处理测试目标 ${i + 1}/${locators.length}: ${blockName}`);
+			console.log(
+				`\n${this.i18n.t("crawler.testProcessingBlock", {
+					current: i + 1,
+					total: locators.length,
+					name: blockName,
+				})}`,
+			);
 
 			await blockHandler({
 				currentPage: this.page,
@@ -199,4 +196,3 @@ export class TestMode {
 		await mappingManager.save();
 	}
 }
-

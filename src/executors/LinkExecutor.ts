@@ -6,7 +6,7 @@ import {
 	type AutoScrollConfig,
 	autoScrollToBottom,
 	formatScrollConfig,
-} from "../utils/autoScroll";
+} from "../utils/auto-scroll";
 import { type ContextLogger, createLogger } from "../utils/logger";
 import type { ExecutionContext } from "./ExecutionContext";
 

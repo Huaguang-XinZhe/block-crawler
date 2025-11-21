@@ -59,6 +59,10 @@ const messages = {
 		"crawler.testRunning": "🚀 执行测试逻辑...",
 		"crawler.testComplete": "✅ 测试完成！",
 		"crawler.testFailed": "❌ 测试失败",
+		"crawler.testScriptWarning": "⚠️ 测试模式暂不支持脚本注入",
+		"crawler.testVisitingUrl": "📍 测试模式：访问 {url}",
+		"crawler.testFoundBlocks": "📦 找到 {count} 个 block",
+		"crawler.testProcessingBlock": "🔄 处理 block {current}/{total}: {name}",
 
 		// 进度相关
 		"progress.disabled": "⚪ 进度恢复已关闭，从头开始",
@@ -255,6 +259,10 @@ const messages = {
 		"crawler.testRunning": "🚀 Running test logic...",
 		"crawler.testComplete": "✅ Test completed!",
 		"crawler.testFailed": "❌ Test failed",
+		"crawler.testScriptWarning": "⚠️ Script injection not supported in test mode",
+		"crawler.testVisitingUrl": "📍 Test mode: Visiting {url}",
+		"crawler.testFoundBlocks": "📦 Found {count} block(s)",
+		"crawler.testProcessingBlock": "🔄 Processing block {current}/{total}: {name}",
 
 		// Progress
 		"progress.disabled": "⚪ Progress resume disabled, starting from scratch",

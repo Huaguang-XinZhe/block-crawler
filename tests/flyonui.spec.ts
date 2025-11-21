@@ -18,16 +18,16 @@ test("flyonui", async ({ page }) => {
 		// .tabSections("//main/section")
 		// .name("h3")
 		// .count("p")
-		.open()
+		.open("https://flyonui.com/blocks/application/cards", "load")
 		.page({
 			autoScroll: true,
 		})
-		.block(
-			'//main/div/div[3]/div/div/div[contains(@class, "flex")]',
-			async ({ blockName }) => {
-				console.log(blockName);
-			},
-		)
-		.skipFree("FREE") // 跳过 free block
+		// .block(
+		// 	'//main/div/div[3]/div/div/div[contains(@class, "flex")]',
+		// 	async ({ blockName }) => {
+		// 		console.log(blockName);
+		// 	},
+		// )
+		// .skipFree("FREE") // 跳过 free block
 		.run();
 });
