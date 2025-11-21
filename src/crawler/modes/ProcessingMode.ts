@@ -110,7 +110,7 @@ export class ProcessingMode {
 	 */
 	private setupSignalHandlers(): void {
 		const handler: NodeJS.SignalsListener = async (signal) => {
-			console.log(`\n${this.i18n.t("common.signalReceived", { signal })}`);
+			console.log(`\n${this.i18n.t("common.signalReceived", { signal })}\n`);
 			await this.taskProgress?.saveProgress();
 			process.exit(0);
 		};

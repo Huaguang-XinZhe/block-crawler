@@ -6,7 +6,10 @@ test("flyonui", async ({ page }) => {
 
 	const crawler = new BlockCrawler(page, {
 		startUrl: "https://flyonui.com/blocks",
-		maxConcurrency: 2,
+		maxConcurrency: 5,
+		progress: {
+			enable: false,
+		},
 	});
 
 	await crawler
