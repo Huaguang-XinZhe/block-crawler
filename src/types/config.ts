@@ -185,4 +185,26 @@ export interface CrawlerConfig {
 	 * });
 	 */
 	pauseOnError?: boolean;
+
+	/**
+	 * 日志级别
+	 * - 'info': 简洁模式，只显示关键信息，不显示错误堆栈
+	 * - 'debug': 详细模式，显示完整错误堆栈和详细信息
+	 * - 'silent': 静默模式，只显示必要的进度信息
+	 *
+	 * @default 'info'
+	 * @example
+	 * // 简洁模式（默认）
+	 * const crawler = new BlockCrawler(page, {
+	 *   logLevel: 'info',  // 用户终止（Ctrl+C）不显示错误
+	 *   // ... 其他配置
+	 * });
+	 *
+	 * // 详细模式（用于调试）
+	 * const crawler = new BlockCrawler(page, {
+	 *   logLevel: 'debug',  // 显示完整错误堆栈
+	 *   // ... 其他配置
+	 * });
+	 */
+	logLevel?: "info" | "debug" | "silent";
 }

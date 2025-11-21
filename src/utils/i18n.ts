@@ -27,7 +27,7 @@ const messages = {
 		"crawler.modeTest": "🧪 测试模式",
 		"crawler.initProgress": "📊 初始化任务进度...",
 		"crawler.visiting": "📡 正在访问目标链接...",
-		"crawler.visitingPage": "📡 正在访问: {url}",
+		"crawler.visitingPage": "📡 正在访问...",
 		"crawler.pageLoaded": "✅ 页面加载完成",
 		"crawler.allComplete": "🎉 ===== 所有任务已完成 =====",
 		"crawler.processingCategory": "🔍 正在处理分类: {category}",
@@ -36,14 +36,15 @@ const messages = {
 			"🚀 开始并发处理所有链接 (最大并发: {concurrency})...",
 		"crawler.startProcessing": "📦 开始处理 {total} 个集合链接...",
 		"crawler.loadedFreePages": "📋 已加载 {count} 个已知 Free 页面",
-		"crawler.skipCompleted": "⏭️  跳过已完成的页面: {name}",
+		"crawler.skipCompleted": "⏭️ 跳过已完成",
 		"crawler.skipKnownFree": "🆓 跳过已知 Free 页面: {name}",
-		"crawler.linkComplete": "✅ [{progress}] 完成: {name}",
-		"crawler.linkFailed": "❌ [{progress}] 失败: {name}",
+		"crawler.linkComplete": "✅ [{progress}] 完成",
+		"crawler.linkFailed": "❌ [{progress}] 失败",
+		"crawler.linkFailedSimple": "❌ [{progress}] 失败: {error}",
 		"crawler.statistics": "📊 处理完成统计:",
 		"crawler.success": "✅ 成功: {count}/{total}",
 		"crawler.failed": "❌ 失败: {count}/{total}",
-		"crawler.closePage": "🔍 关闭页面: {path}",
+		"crawler.closePage": "🔍 关闭页面",
 		"crawler.testUrl": "🎯 测试URL: {url}",
 		"crawler.testSectionLocator": "📍 BlockSection定位符: {locator}",
 		"crawler.testBlockName": "🔖 指定组件: {name}",
@@ -134,13 +135,11 @@ const messages = {
 
 		// 页面处理
 		"page.processing": "🔄 [{current}/{total}] 正在处理: {path}",
-		"page.skip": "⏭️  跳过已完成的页面: {path}",
+		"page.skip": "⏭️ 跳过已完成的页面: {path}",
 		"page.skipFree": "🆓 跳过 Free 页面: {path}",
 		"page.autoScrolling": "📜 自动滚动页面...",
-		"page.autoScrollParamsDefault": "(默认参数: {params})",
-		"page.autoScrollParamsCustom": "(自定义参数: {params})",
-		"page.autoScrollComplete": "✅ 滚动完成，耗时 {duration}秒",
-		"page.autoScrollError": "⚠️  滚动异常终止，耗时 {duration}秒",
+		"page.autoScrollComplete": "✅ 滚动完成 (耗时 {duration}s)",
+		"page.autoScrollError": "⚠️ 滚动异常",
 		"page.freeError":
 			'❌ Free 页面标记匹配错误：\n   期望找到 1 个匹配项，实际找到 {count} 个\n   匹配文本: "{text}"\n\n请检查：\n   1. 文本是否唯一（建议使用更精确的文本）\n   2. 或使用自定义函数配置更精确的判断逻辑',
 		"page.processFailed": "❌ 处理页面失败: {path}",
@@ -148,7 +147,7 @@ const messages = {
 		// Block 处理
 		"block.found": "📦 找到 {count} 个 Block",
 		"block.processing": "🔄 [{current}/{total}] 正在处理 Block: {name}",
-		"block.skip": "⏭️  跳过已完成的 Block: {name}",
+		"block.skip": "⏭️ 跳过已完成的 Block: {name}",
 		"block.skipFree": "🆓 跳过 Free Block: {name}",
 		"block.saved": "✅ Block 已保存: {path}",
 		"block.freeError":
@@ -160,12 +159,8 @@ const messages = {
 		"block.processFailed": "❌ 处理 block 失败: {name}",
 		"block.complexHeading":
 			"❌ 检测到 heading 内部结构复杂（子元素 > 1）但未找到 link 元素\n\n请配置以下选项之一：\n   1. getBlockName: (block) => Promise<string | null>\n   2. blockNameLocator: string",
-		"block.verifyIncompleteDebug":
-			"\n⚠️  Block 采集不完整！\n   页面: {pagePath}\n   预期数量: {expectedCount}\n   实际处理: {processedCount}\n   差异: {diff}\n\n   已处理的 Block:\n{blockList}\n\n   ⏸️  页面即将暂停，请检查问题...\n",
-		"block.verifyIncompleteNonDebug":
-			"\n⚠️  Block 采集不完整！\n   页面: {pagePath}\n   预期数量: {expectedCount}\n   实际处理: {processedCount}\n   差异: {diff}\n\n   已处理的 Block:\n{blockList}\n\n   💡 提示: 使用 --debug 模式运行可以自动暂停页面进行检查\n",
-		"block.verifyComplete":
-			"\n✅ Block 采集验证通过\n   页面: {pagePath}\n   预期数量: {expectedCount}\n   实际处理: {processedCount}\n",
+		"block.verifyIncomplete": "⚠️ Block 采集不完整",
+		"block.verifyComplete": "✅ Block 采集验证通过 (共 {count} 个)",
 
 		// 错误处理
 		"error.pauseOnErrorDebug":

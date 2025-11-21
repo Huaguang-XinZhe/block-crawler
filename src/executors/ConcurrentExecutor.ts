@@ -1,5 +1,4 @@
 import type { Page } from "@playwright/test";
-import { FreeRecorder } from "../state/FreeRecorder";
 import type {
 	BeforeContext,
 	BlockHandler,
@@ -8,6 +7,7 @@ import type {
 } from "../types";
 import type { CollectionLink } from "../types/meta";
 import type { AutoScrollConfig } from "../utils/autoScroll";
+import { createLogger } from "../utils/logger";
 import type { ExecutionContext } from "./ExecutionContext";
 import { LinkExecutor } from "./LinkExecutor";
 
@@ -57,7 +57,7 @@ export class ConcurrentExecutor {
 			})}`,
 		);
 		console.log(
-			`\n${this.context.i18n.t("crawler.startProcessing", { total })}`,
+			`\n${this.context.i18n.t("crawler.startProcessing", { total })}\n`,
 		);
 
 		await Promise.allSettled(
@@ -67,9 +67,17 @@ export class ConcurrentExecutor {
 						? linkObj.link.slice(1)
 						: linkObj.link;
 
+					// 创建页面上下文日志记录器（排除 baseUrlPath）
+					const displayPath =
+						this.context.baseUrlPath &&
+						linkObj.link.startsWith(this.context.baseUrlPath)
+							? linkObj.link.slice(this.context.baseUrlPath.length)
+							: linkObj.link;
+					const logger = createLogger(displayPath);
+
 					// 跳过已完成的页面
 					if (this.context.taskProgress?.isPageComplete(normalizedPath)) {
-						console.log(
+						logger.log(
 							this.context.i18n.t("crawler.skipCompleted", {
 								name: linkObj.name || normalizedPath,
 							}),
@@ -80,7 +88,7 @@ export class ConcurrentExecutor {
 
 					// 跳过已知的 Free 页面
 					if (knownFreePages.has(linkObj.link)) {
-						console.log(
+						logger.log(
 							this.context.i18n.t("crawler.skipKnownFree", {
 								name: linkObj.name || linkObj.link,
 							}),
@@ -99,22 +107,45 @@ export class ConcurrentExecutor {
 						);
 						completed++;
 						const progress = `${completed + failed}/${total}`;
-						console.log(
-							`${this.context.i18n.t("crawler.linkComplete", {
+						logger.log(
+							this.context.i18n.t("crawler.linkComplete", {
 								progress,
-								name: linkObj.name || linkObj.link,
-							})}\n`,
+							}),
 						);
 					} catch (error) {
+						// 检查是否是用户主动停止（Ctrl+C）
+						const errorMessage =
+							error instanceof Error ? error.message : String(error);
+						const isUserAbort = errorMessage.includes(
+							"Target page, context or browser has been closed",
+						);
+
+						// 用户主动停止不计入失败，也不输出错误
+						if (isUserAbort) {
+							return;
+						}
+
 						failed++;
 						const progress = `${completed + failed}/${total}`;
-						console.error(
-							`${this.context.i18n.t("crawler.linkFailed", {
-								progress,
-								name: linkObj.name || linkObj.link,
-							})}\n`,
-							error,
-						);
+
+						// 根据日志级别输出不同详细程度的错误信息
+						const logLevel = this.context.config.logLevel;
+						if (logLevel === "debug") {
+							logger.error(
+								this.context.i18n.t("crawler.linkFailed", {
+									progress,
+								}),
+								error,
+							);
+						} else if (logLevel === "info") {
+							logger.error(
+								this.context.i18n.t("crawler.linkFailedSimple", {
+									progress,
+									error: errorMessage.split("\n")[0], // 只显示第一行错误信息
+								}),
+							);
+						}
+						// silent 模式不输出错误详情
 					}
 				}),
 			),

@@ -16,6 +16,7 @@ export interface InternalConfig {
 	stateBaseDir: string;
 	maxConcurrency: number;
 	pauseOnError: boolean;
+	logLevel: "info" | "debug" | "silent";
 	progress: {
 		enable: boolean;
 		rebuild?: import("../types/progress").ProgressRebuildConfig;
@@ -80,6 +81,7 @@ export function createInternalConfig(config: CrawlerConfig): InternalConfig {
 		stateBaseDir: config.stateDir || ".crawler",
 		maxConcurrency: config.maxConcurrency || 5,
 		pauseOnError: config.pauseOnError ?? true,
+		logLevel: config.logLevel || "info",
 		progress: {
 			enable: config.progress?.enable ?? true,
 			rebuild: config.progress?.rebuild,

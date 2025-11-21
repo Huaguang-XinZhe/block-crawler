@@ -7,6 +7,7 @@ import {
 	autoScrollToBottom,
 	formatScrollConfig,
 } from "../utils/autoScroll";
+import { type ContextLogger, createLogger } from "../utils/logger";
 import type { ExecutionContext } from "./ExecutionContext";
 
 /**
@@ -41,6 +42,14 @@ export class LinkExecutor {
 		const domain = new URL(this.context.baseUrl).hostname;
 		const url = `https://${domain}${relativeLink}`;
 
+		// 创建页面上下文日志记录器（排除 baseUrlPath）
+		const displayPath =
+			this.context.baseUrlPath &&
+			relativeLink.startsWith(this.context.baseUrlPath)
+				? relativeLink.slice(this.context.baseUrlPath.length)
+				: relativeLink;
+		const logger = createLogger(displayPath);
+
 		// 创建页面（第一次使用传入的页面，后续创建新 tab）
 		const newPage = await this.createPage(page, isFirst);
 
@@ -54,7 +63,7 @@ export class LinkExecutor {
 				);
 			}
 
-			console.log(this.context.i18n.t("crawler.visitingPage", { url }));
+			logger.log(this.context.i18n.t("crawler.visitingPage", { url }));
 			const gotoOptions = options.waitUntil
 				? { waitUntil: options.waitUntil }
 				: { waitUntil: "load" as const };
@@ -77,7 +86,7 @@ export class LinkExecutor {
 					this.context.extendedConfig.skipFree,
 				);
 				if (isPageFree) {
-					console.log(
+					logger.log(
 						this.context.i18n.t("page.skipFree", { path: relativeLink }),
 					);
 					this.context.freeRecorder.addFreePage(relativeLink);
@@ -90,7 +99,7 @@ export class LinkExecutor {
 
 			// 自动滚动页面（如果配置了）
 			if (options.autoScroll) {
-				await this.autoScrollPage(newPage, options.autoScroll);
+				await this.autoScrollPage(newPage, options.autoScroll, logger);
 			}
 
 			// 先执行页面级处理器（如果配置了）
@@ -107,11 +116,12 @@ export class LinkExecutor {
 					options.blockHandler,
 					options.beforeProcessBlocks,
 					options.verifyBlockCompletion ?? true,
+					logger,
 				);
 			}
 		} finally {
-			console.log(
-				`${this.context.i18n.t("crawler.closePage", { path: relativeLink })}`,
+			logger.log(
+				this.context.i18n.t("crawler.closePage", { path: relativeLink }),
 			);
 			await newPage.close();
 		}
@@ -136,37 +146,57 @@ export class LinkExecutor {
 	private async autoScrollPage(
 		page: Page,
 		config: boolean | AutoScrollConfig,
+		logger: ContextLogger,
 	): Promise<void> {
 		// 解析配置
 		const scrollConfig: AutoScrollConfig =
 			typeof config === "boolean" ? {} : config;
 
-		// 格式化配置信息用于日志
-		const { isDefault, info } = formatScrollConfig(scrollConfig);
-		const paramsInfo = isDefault
-			? this.context.i18n.t("page.autoScrollParamsDefault", {
-					params: info,
-				})
-			: this.context.i18n.t("page.autoScrollParamsCustom", { params: info });
+		const step = scrollConfig.step ?? 800;
+		const interval = scrollConfig.interval ?? 500;
+		const timeout = scrollConfig.timeout ?? 120000;
 
-		console.log(`  ${this.context.i18n.t("page.autoScrolling")} ${paramsInfo}`);
+		logger.log(this.context.i18n.t("page.autoScrolling"));
+
+		// 只在自定义参数时才显示参数详情
+		const isCustom =
+			scrollConfig.step !== undefined ||
+			scrollConfig.interval !== undefined ||
+			scrollConfig.timeout !== undefined;
+
+		if (isCustom) {
+			logger.logItems({
+				step: `${step}px`,
+				interval: `${interval}ms`,
+				timeout: `${timeout}ms`,
+			});
+		}
 
 		// 执行滚动
 		const result = await autoScrollToBottom(page, scrollConfig);
 
 		// 输出结果
 		if (result.success) {
-			console.log(
-				`  ${this.context.i18n.t("page.autoScrollComplete", {
+			logger.log(
+				this.context.i18n.t("page.autoScrollComplete", {
 					duration: result.duration.toFixed(2),
-				})}`,
+				}),
 			);
 		} else {
-			console.warn(
-				`  ${this.context.i18n.t("page.autoScrollError", {
-					duration: result.duration.toFixed(2),
-				})} ${result.error || ""}`,
+			// 检查是否是用户主动停止（Ctrl+C）
+			const isUserAbort = result.error?.includes(
+				"Target page, context or browser has been closed",
 			);
+			if (isUserAbort) {
+				// 用户主动停止，不输出错误日志
+				return;
+			}
+
+			logger.warn(this.context.i18n.t("page.autoScrollError"));
+			logger.logItems({
+				耗时: `${result.duration.toFixed(2)}s`,
+				错误: result.error || "未知错误",
+			});
 		}
 	}
 
@@ -180,6 +210,7 @@ export class LinkExecutor {
 		blockHandler: BlockHandler,
 		beforeProcessBlocks: ((context: BeforeContext) => Promise<void>) | null,
 		verifyBlockCompletion: boolean,
+		logger: ContextLogger,
 	): Promise<void> {
 		const blockProcessor = new BlockProcessor(
 			this.context.config,
@@ -191,6 +222,7 @@ export class LinkExecutor {
 			this.context.filenameMappingManager,
 			verifyBlockCompletion,
 			this.context.extendedConfig,
+			logger,
 		);
 
 		const result = await blockProcessor.processBlocksInPage(page, relativeLink);

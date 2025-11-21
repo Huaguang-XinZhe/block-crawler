@@ -28,9 +28,9 @@ export interface AutoScrollResult {
  * 默认配置
  */
 const DEFAULT_CONFIG = {
-	step: 1000,
+	step: 800,
 	interval: 500,
-	timeout: 30000, // 默认 30 秒
+	timeout: 120000, // 默认 120 秒
 };
 
 /**

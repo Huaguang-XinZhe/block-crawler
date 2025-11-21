@@ -7,6 +7,8 @@ alwaysApply: false
 - ❌ **永远不要选择 major** - 等项目稳定后手动发布 1.0.0
 - 📝 **每次修改都创建 changeset** - 写 changeset md 文件
 
-Tip：记得检查国际化（调用 `pnpm run i18n`）和更新 README.md
+后续步骤：
+- 检查国际化（调用 `pnpm run i18n`）
+- Git 提交
 
 

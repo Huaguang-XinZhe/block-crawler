@@ -33,6 +33,7 @@ export class ExecutionContext {
 	public readonly filenameMappingManager: FilenameMappingManager;
 	public readonly limit: ReturnType<typeof pLimit>;
 	public readonly extendedConfig: ExtendedExecutionConfig;
+	public readonly baseUrlPath: string;
 
 	constructor(
 		public readonly config: InternalConfig,
@@ -57,6 +58,14 @@ export class ExecutionContext {
 			config.locale,
 		);
 		this.limit = pLimit(config.maxConcurrency);
+
+		// 解析 startUrl 的路径部分（用于从日志路径中排除）
+		try {
+			const url = new URL(baseUrl);
+			this.baseUrlPath = url.pathname === "/" ? "" : url.pathname;
+		} catch {
+			this.baseUrlPath = "";
+		}
 	}
 
 	/**

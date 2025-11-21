@@ -7,6 +7,10 @@ import type { BeforeContext, BlockContext, BlockHandler } from "../types";
 import { createClickAndVerify, createClickCode } from "../utils/click-actions";
 import { isDebugMode } from "../utils/debug";
 import { createI18n, type I18n } from "../utils/i18n";
+import {
+	ContextLogger,
+	type ContextLogger as IContextLogger,
+} from "../utils/logger";
 import { createSafeOutput } from "../utils/safe-output";
 import { BlockNameExtractor } from "./BlockNameExtractor";
 
@@ -17,6 +21,7 @@ import { BlockNameExtractor } from "./BlockNameExtractor";
 export class BlockProcessor {
 	private i18n: I18n;
 	private blockNameExtractor: BlockNameExtractor;
+	private logger: IContextLogger;
 
 	constructor(
 		private config: InternalConfig,
@@ -30,9 +35,11 @@ export class BlockProcessor {
 		private filenameMappingManager?: FilenameMappingManager,
 		private verifyBlockCompletion: boolean = true,
 		private extendedConfig: ExtendedExecutionConfig = {},
+		logger?: IContextLogger,
 	) {
 		this.i18n = createI18n(config.locale);
 		this.blockNameExtractor = new BlockNameExtractor(config, extendedConfig);
+		this.logger = logger || new ContextLogger();
 	}
 
 	/**
@@ -59,7 +66,7 @@ export class BlockProcessor {
 		// 获取所有 block 节点（作为预期数量）
 		const blocks = await this.getAllBlocks(page);
 		const expectedCount = blocks.length;
-		console.log(this.i18n.t("block.found", { count: expectedCount }));
+		this.logger.log(this.i18n.t("block.found", { count: expectedCount }));
 
 		let completedCount = 0;
 		let processedCount = 0; // 实际处理的 block 数量（包括 free 和跳过的）
@@ -90,18 +97,24 @@ export class BlockProcessor {
 		if (completedCount === blocks.length && blocks.length > 0) {
 			const normalizedPath = this.normalizePagePath(pagePath);
 			this.taskProgress?.markPageComplete(normalizedPath);
-			console.log(this.i18n.t("block.pageComplete", { total: blocks.length }));
 		}
 
 		// 验证 Block 采集完整性（如果启用）
 		if (this.verifyBlockCompletion) {
-			await this.verifyCompletion(
+			const isComplete = await this.verifyCompletion(
 				page,
 				pagePath,
 				expectedCount,
 				processedCount,
 				processedBlockNames,
 			);
+
+			// 只在验证通过时输出简洁的确认信息
+			if (isComplete) {
+				this.logger.log(
+					this.i18n.t("block.verifyComplete", { count: processedCount }),
+				);
+			}
 		}
 
 		// 返回实际处理的数量（不包括跳过的）
@@ -167,10 +180,10 @@ export class BlockProcessor {
 		const blockName = await this.getBlockName(block);
 
 		if (!blockName) {
-			console.warn(this.i18n.t("block.nameEmpty"));
+			this.logger.warn(this.i18n.t("block.nameEmpty"));
 			// 打印当前 block 的 html
 			const html = await block.innerHTML();
-			console.log(`\nurlPath: ${urlPath}\nhtml: ${html}`);
+			this.logger.log(`html: ${html}`);
 			await page.pause();
 			return { success: false, isFree: false };
 		}
@@ -181,14 +194,14 @@ export class BlockProcessor {
 
 		// 2. 检查是否已完成（优先检查，避免不必要的 DOM 查询）
 		if (this.taskProgress?.isBlockComplete(blockPath)) {
-			console.log(this.i18n.t("block.skip", { name: blockName }));
+			this.logger.log(this.i18n.t("block.skip", { name: blockName }));
 			return { success: true, isFree: false, blockName };
 		}
 
 		// 3. 检查是否为 Free Block（需要 DOM 查询，所以放在完成状态检查之后）
 		const isFree = await this.isBlockFree(block);
 		if (isFree) {
-			console.log(this.i18n.t("block.skipFree", { name: blockName }));
+			this.logger.log(this.i18n.t("block.skipFree", { name: blockName }));
 			// 如果是 Free Block，直接跳过处理
 			return { success: true, isFree: true, blockName };
 		}
@@ -223,7 +236,7 @@ export class BlockProcessor {
 					? "error.pauseOnErrorDebug"
 					: "error.pauseOnErrorNonDebug";
 
-				console.error(
+				this.logger.error(
 					this.i18n.t(messageKey, {
 						type: "Block",
 						name: blockName,
@@ -251,7 +264,7 @@ export class BlockProcessor {
 	 */
 	private async getAllBlocks(page: Page): Promise<Locator[]> {
 		if (this.extendedConfig.getAllBlocks) {
-			console.log(`  ${this.i18n.t("block.getAllCustom")}`);
+			this.logger.log(this.i18n.t("block.getAllCustom"));
 			return await this.extendedConfig.getAllBlocks(page);
 		}
 
@@ -269,6 +282,8 @@ export class BlockProcessor {
 	/**
 	 * 验证 Block 采集完整性
 	 * 如果预期数量与实际处理数量不一致，暂停并提示用户检查
+	 *
+	 * @returns 是否验证通过
 	 */
 	private async verifyCompletion(
 		page: Page,
@@ -276,38 +291,40 @@ export class BlockProcessor {
 		expectedCount: number,
 		processedCount: number,
 		processedBlockNames: string[],
-	): Promise<void> {
+	): Promise<boolean> {
 		if (expectedCount !== processedCount) {
 			const debugMode = isDebugMode();
-			const messageKey = debugMode
-				? "block.verifyIncompleteDebug"
-				: "block.verifyIncompleteNonDebug";
 
-			console.error(
-				this.i18n.t(messageKey, {
-					pagePath,
-					expectedCount,
-					processedCount,
-					diff: expectedCount - processedCount,
-					blockList: processedBlockNames
-						.map((name, idx) => `     ${idx + 1}. ${name}`)
-						.join("\n"),
-				}),
-			);
+			this.logger.error(this.i18n.t("block.verifyIncomplete"));
+			this.logger.logItems({
+				预期数量: expectedCount,
+				实际处理: processedCount,
+				差异: expectedCount - processedCount,
+			});
 
-			// 只在 debug 模式下暂停
-			if (debugMode) {
-				await page.pause();
+			// 根据日志级别输出详细信息
+			const logLevel = this.config.logLevel;
+			if (logLevel === "debug") {
+				console.log("\n已处理的 Block:");
+				processedBlockNames.forEach((name, idx) => {
+					console.log(`  ${idx + 1}. ${name}`);
+				});
 			}
-		} else {
-			console.log(
-				this.i18n.t("block.verifyComplete", {
-					pagePath,
-					expectedCount,
-					processedCount,
-				}),
-			);
+
+			// 只在 debug 环境下暂停
+			if (debugMode) {
+				console.log("\n⏸️  页面即将暂停，请检查问题...\n");
+				await page.pause();
+			} else if (logLevel !== "silent") {
+				console.log(
+					"\n💡 提示: 使用 --debug 模式运行可以自动暂停页面进行检查\n",
+				);
+			}
+
+			return false;
 		}
+
+		return true;
 	}
 
 	/**
