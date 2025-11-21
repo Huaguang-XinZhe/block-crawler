@@ -43,16 +43,20 @@ export class TestMode {
 			console.warn(this.i18n.t("crawler.testScriptWarning"));
 		}
 
-		// 执行 page handler
+		// 执行自动滚动（如果配置了）
+		if (processingConfig.autoScroll) {
+			await this.performAutoScroll(processingConfig.autoScroll);
+		}
+
+		// 执行 page handler（如果配置了）
 		if (processingConfig.pageHandler) {
 			await this.executePageHandler(
 				processingConfig.testUrl,
 				processingConfig.pageHandler,
-				processingConfig.autoScroll,
 			);
 		}
 
-		// 执行 block handler
+		// 执行 block handler（如果配置了）
 		if (processingConfig.blockHandler && processingConfig.blockLocator) {
 			await this.executeBlockHandler(
 				processingConfig.blockLocator,
@@ -74,12 +78,33 @@ export class TestMode {
 	}
 
 	/**
+	 * 执行自动滚动
+	 */
+	private async performAutoScroll(
+		autoScroll: boolean | { step?: number; interval?: number },
+	): Promise<void> {
+		const { autoScrollToBottom } = await import("../../utils/auto-scroll");
+		const scrollConfig = typeof autoScroll === "boolean" ? {} : autoScroll;
+		console.log(this.i18n.t("page.autoScrolling"));
+		const result = await autoScrollToBottom(this.page, scrollConfig);
+		if (result.success) {
+			console.log(
+				this.i18n.t("page.autoScrollComplete", { duration: result.duration }),
+			);
+		} else {
+			console.log(
+				this.i18n.t("page.autoScrollError") +
+					` (${result.duration}s)${result.error ? `: ${result.error}` : ""}`,
+			);
+		}
+	}
+
+	/**
 	 * 执行 Page Handler
 	 */
 	private async executePageHandler(
 		url: string,
 		pageHandler: PageHandler,
-		autoScroll?: boolean | { step?: number; interval?: number },
 	): Promise<void> {
 		const { createClickAndVerify, createClickCode } = await import(
 			"../../utils/click-actions"
@@ -95,13 +120,6 @@ export class TestMode {
 			this.config.locale,
 		);
 		await mappingManager.initialize();
-
-		// 执行自动滚动（如果启用）
-		if (autoScroll) {
-			const { autoScrollToBottom } = await import("../../utils/auto-scroll");
-			const scrollConfig = typeof autoScroll === "boolean" ? {} : autoScroll;
-			await autoScrollToBottom(this.page, scrollConfig);
-		}
 
 		await pageHandler({
 			currentPage: this.page,
