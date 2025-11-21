@@ -67,7 +67,9 @@ export class BlockProcessor {
 		// 获取所有 block 节点（作为预期数量）
 		const blocks = await this.getAllBlocks(page);
 		const expectedCount = blocks.length;
-		this.logger.log(this.i18n.t("block.found", { count: expectedCount }));
+		this.logger.log(
+			`${this.i18n.t("block.found", { count: expectedCount })}\n`,
+		);
 
 		let completedCount = 0;
 		let processedCount = 0; // 实际处理的 block 数量（包括 free 和跳过的）
@@ -100,45 +102,52 @@ export class BlockProcessor {
 			this.taskProgress?.markPageComplete(normalizedPath);
 		}
 
-	// 验证 Block 采集完整性（如果启用）
-	if (this.verifyBlockCompletion) {
-		const isComplete = await this.verifyCompletion(
-			page,
-			pagePath,
-			expectedCount,
-			processedCount,
-			processedBlockNames,
-		);
-
-		// 只在验证通过时输出简洁的确认信息
-		if (isComplete) {
-			this.logger.log(
-				this.i18n.t("block.verifyComplete", { count: processedCount }),
+		// 验证 Block 采集完整性（如果启用）
+		if (this.verifyBlockCompletion) {
+			const isComplete = await this.verifyCompletion(
+				page,
+				pagePath,
+				expectedCount,
+				processedCount,
+				processedBlockNames,
 			);
+
+			// 只在验证通过时输出简洁的确认信息
+			if (isComplete) {
+				this.logger.log(
+					this.i18n.t("block.verifyComplete", { count: processedCount }),
+				);
+			}
 		}
-	}
 
-	// 输出跳过的 Free Blocks 统计
-	if (freeBlocks.length > 0) {
-		this.logger.log(
-			`\n⏭️  ${this.i18n.t("block.skipFreeCount", { count: freeBlocks.length })}`,
-		);
-		freeBlocks.forEach((name, idx) => {
-			this.logger.log(`   ${idx + 1}. ${name}`);
-		});
-	}
+		// 输出跳过的 Free Blocks 统计
+		if (freeBlocks.length > 0) {
+			this.logger.log(
+				`\n⏭️  ${this.i18n.t("block.skipFreeCount", { count: freeBlocks.length })}`,
+			);
+			freeBlocks.forEach((name, idx) => {
+				this.logger.log(`   ${idx + 1}. ${name}`);
+			});
+		}
 
-	// 返回实际处理的数量（不包括跳过的）
-	return {
-		totalCount: completedCount,
-		freeBlocks,
-	};
-}
+		// 返回实际处理的数量（不包括跳过的）
+		return {
+			totalCount: completedCount,
+			freeBlocks,
+		};
+	}
 
 	/**
 	 * 检查单个 Block 是否为 Free
 	 */
 	private async isBlockFree(block: Locator): Promise<boolean> {
+		// 🔍 调试日志
+		console.log("🔍 isBlockFree 调用:", {
+			hasSkipFree: !!this.extendedConfig.skipFree,
+			skipFreeValue: this.extendedConfig.skipFree,
+			extendedConfig: this.extendedConfig,
+		});
+
 		// 在 block 处理器中，skipFree 只会是 string 或接收 Locator 的函数
 		return await checkBlockFreeUtil(
 			block,

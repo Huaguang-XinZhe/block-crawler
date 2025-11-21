@@ -23,9 +23,9 @@ async function checkFreeGeneric<T extends Page | Locator>(
 		return false;
 	}
 
-	// 字符串配置：使用 getByText 精确匹配
+	// 字符串配置：使用 getByText 查找（子串匹配）
 	if (typeof skipFree === "string") {
-		const count = await target.getByText(skipFree, { exact: true }).count();
+		const count = await target.getByText(skipFree).count();
 
 		if (count === 0) {
 			return false;
