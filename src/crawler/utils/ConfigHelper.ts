@@ -39,7 +39,8 @@ export interface ProcessingConfig {
 	pageHandler?: any;
 	blockLocator?: string;
 	blockHandler?: any;
-	skipFreeText?: string;
+	// skipFreeText: undefined = 未设置, null = 使用默认匹配(/free/i), string = 精确匹配
+	skipFreeText?: string | null;
 	skipFreeMode?: "page" | "block";
 	// 测试模式配置
 	testUrl?: string;

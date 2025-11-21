@@ -325,12 +325,34 @@ export class BlockCrawler {
 
 	/**
 	 * 跳过 Free 页面或 Block
+	 *
+	 * @param text 可选的文本匹配规则：
+	 *   - 不传参数：默认使用 /free/i（忽略大小写匹配 "free"）
+	 *   - 传入字符串：精确匹配指定文本（如 "FREE"、"Pro"）
+	 *
+	 * ⚠️ 注意：
+	 * - 匹配的是 **DOM 中的文本内容**，不是网页显示的文本
+	 * - CSS 可能会改变显示效果（如大小写转换、隐藏文本等）
+	 * - 建议使用浏览器开发者工具查看实际的 DOM 文本
+	 *
+	 * @example
+	 * ```typescript
+	 * // 默认跳过包含 "free" 的 blocks（忽略大小写）
+	 * .skipFree()
+	 *
+	 * // 跳过包含 "FREE" 的 blocks
+	 * .skipFree("FREE")
+	 *
+	 * // 跳过包含 "Pro" 的 blocks
+	 * .skipFree("Pro")
+	 * ```
 	 */
-	skipFree(text: string): this {
+	skipFree(text?: string): this {
 		if (!this.processingConfig.skipFreeMode) {
 			throw new Error("skipFree() 必须在 page() 或 block() 之后调用");
 		}
-		this.processingConfig.skipFreeText = text;
+		// 如果没有传入 text，使用默认值（后续在 free-checker 中处理）
+		this.processingConfig.skipFreeText = text === undefined ? null : text;
 		return this;
 	}
 
