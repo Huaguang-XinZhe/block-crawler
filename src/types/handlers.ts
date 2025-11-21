@@ -65,7 +65,7 @@ export interface PageConfig {
 	/** 页面处理器函数（可选，如果只需要自动滚动可以不提供） */
 	handler?: PageHandler;
 	/** 自动滚动配置（默认关闭） */
-	autoScroll?: boolean | { step?: number; interval?: number };
+	autoScroll?: boolean | { step?: number; interval?: number; timeout?: number };
 }
 
 /**

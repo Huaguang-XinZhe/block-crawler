@@ -168,6 +168,10 @@ export class BlockProcessor {
 
 		if (!blockName) {
 			console.warn(this.i18n.t("block.nameEmpty"));
+			// 打印当前 block 的 html
+			const html = await block.innerHTML();
+			console.log(`\nurlPath: ${urlPath}\nhtml: ${html}`);
+			await page.pause();
 			return { success: false, isFree: false };
 		}
 

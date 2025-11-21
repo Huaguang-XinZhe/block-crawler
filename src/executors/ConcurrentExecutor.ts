@@ -7,6 +7,7 @@ import type {
 	PageHandler,
 } from "../types";
 import type { CollectionLink } from "../types/meta";
+import type { AutoScrollConfig } from "../utils/autoScroll";
 import type { ExecutionContext } from "./ExecutionContext";
 import { LinkExecutor } from "./LinkExecutor";
 
@@ -39,7 +40,7 @@ export class ConcurrentExecutor {
 			beforeOpenScripts?: string[];
 			afterOpenScripts?: string[];
 			verifyBlockCompletion?: boolean;
-			autoScroll?: boolean | { step?: number; interval?: number };
+			autoScroll?: boolean | AutoScrollConfig;
 		},
 	): Promise<void> {
 		const allLinks = collectResult.collections;

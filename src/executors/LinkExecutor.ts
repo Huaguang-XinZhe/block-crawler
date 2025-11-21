@@ -2,6 +2,11 @@ import type { Page } from "@playwright/test";
 import { BlockProcessor } from "../processors/BlockProcessor";
 import { PageProcessor } from "../processors/PageProcessor";
 import type { BeforeContext, BlockHandler, PageHandler } from "../types";
+import {
+	type AutoScrollConfig,
+	autoScrollToBottom,
+	formatScrollConfig,
+} from "../utils/autoScroll";
 import type { ExecutionContext } from "./ExecutionContext";
 
 /**
@@ -30,7 +35,7 @@ export class LinkExecutor {
 			beforeOpenScripts?: string[];
 			afterOpenScripts?: string[];
 			verifyBlockCompletion?: boolean;
-			autoScroll?: boolean | { step?: number; interval?: number };
+			autoScroll?: boolean | AutoScrollConfig;
 		},
 	): Promise<void> {
 		const domain = new URL(this.context.baseUrl).hostname;
@@ -130,35 +135,39 @@ export class LinkExecutor {
 	 */
 	private async autoScrollPage(
 		page: Page,
-		config: boolean | { step?: number; interval?: number },
+		config: boolean | AutoScrollConfig,
 	): Promise<void> {
-		const step = typeof config === "boolean" ? 1000 : (config.step ?? 1000);
-		const interval =
-			typeof config === "boolean" ? 500 : (config.interval ?? 500);
+		// 解析配置
+		const scrollConfig: AutoScrollConfig =
+			typeof config === "boolean" ? {} : config;
 
-		console.log(`  ${this.context.i18n.t("page.autoScrolling")}`);
+		// 格式化配置信息用于日志
+		const { isDefault, info } = formatScrollConfig(scrollConfig);
+		const paramsInfo = isDefault
+			? this.context.i18n.t("page.autoScrollParamsDefault", {
+					params: info,
+				})
+			: this.context.i18n.t("page.autoScrollParamsCustom", { params: info });
 
-		// page.evaluate 在浏览器上下文中执行，需要传递参数
-		await page.evaluate(
-			async ({ step, interval }) => {
-				await new Promise<void>((resolve) => {
-					let totalHeight = 0;
-					const distance = step;
+		console.log(`  ${this.context.i18n.t("page.autoScrolling")} ${paramsInfo}`);
 
-					const timer = setInterval(() => {
-						const scrollHeight = document.body.scrollHeight;
-						window.scrollBy(0, distance);
-						totalHeight += distance;
+		// 执行滚动
+		const result = await autoScrollToBottom(page, scrollConfig);
 
-						if (totalHeight >= scrollHeight) {
-							clearInterval(timer);
-							resolve();
-						}
-					}, interval);
-				});
-			},
-			{ step, interval },
-		);
+		// 输出结果
+		if (result.success) {
+			console.log(
+				`  ${this.context.i18n.t("page.autoScrollComplete", {
+					duration: result.duration.toFixed(2),
+				})}`,
+			);
+		} else {
+			console.warn(
+				`  ${this.context.i18n.t("page.autoScrollError", {
+					duration: result.duration.toFixed(2),
+				})} ${result.error || ""}`,
+			);
+		}
 	}
 
 	/**

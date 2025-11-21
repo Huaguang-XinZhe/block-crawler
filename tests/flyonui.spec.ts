@@ -6,6 +6,7 @@ test("flyonui", async ({ page }) => {
 
 	const crawler = new BlockCrawler(page, {
 		startUrl: "https://flyonui.com/blocks",
+		maxConcurrency: 2,
 	});
 
 	await crawler
@@ -16,7 +17,7 @@ test("flyonui", async ({ page }) => {
 		// .count("p")
 		.open()
 		.page({
-			autoScroll: true, // 启用自动滚动（默认 step=1000, interval=500）
+			autoScroll: true,
 		})
 		.block(
 			'//main/div/div[3]/div/div/div[contains(@class, "flex")]',
