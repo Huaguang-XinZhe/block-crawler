@@ -56,13 +56,20 @@ export class TestMode {
 			);
 		}
 
-		// 执行 block handler（如果配置了）
-		if (processingConfig.blockHandler && processingConfig.blockLocator) {
-			await this.executeBlockHandler(
-				processingConfig.blockLocator,
-				processingConfig.blockHandler,
-			);
-		}
+	// 执行 block handler（如果配置了）
+	if (processingConfig.blockHandler && processingConfig.blockLocator) {
+		// 只在 skipFreeMode 为 "block" 时传递 skipFreeText
+		const skipFreeText =
+			processingConfig.skipFreeMode === "block"
+				? processingConfig.skipFreeText
+				: undefined;
+
+		await this.executeBlockHandler(
+			processingConfig.blockLocator,
+			processingConfig.blockHandler,
+			skipFreeText,
+		);
+	}
 	}
 
 	/**
@@ -85,7 +92,7 @@ export class TestMode {
 	): Promise<void> {
 		const { autoScrollToBottom } = await import("../../utils/auto-scroll");
 		const scrollConfig = typeof autoScroll === "boolean" ? {} : autoScroll;
-		console.log(this.i18n.t("page.autoScrolling"));
+		console.log(`\n${this.i18n.t("page.autoScrolling")}`);
 		const result = await autoScrollToBottom(this.page, scrollConfig);
 		if (result.success) {
 			console.log(
@@ -142,6 +149,7 @@ export class TestMode {
 	private async executeBlockHandler(
 		blockLocator: string,
 		blockHandler: BlockHandler,
+		skipFreeText?: string,
 	): Promise<void> {
 		const { createClickAndVerify, createClickCode } = await import(
 			"../../utils/click-actions"
@@ -190,6 +198,15 @@ export class TestMode {
 				})}`,
 			);
 
+			// 检查是否为 Free Block（如果配置了 skipFree）
+			if (skipFreeText) {
+				const isFree = await this.isBlockFree(locatorItem, skipFreeText);
+				if (isFree) {
+					console.log(this.i18n.t("block.skipFree", { name: blockName }));
+					continue; // 跳过这个 block
+				}
+			}
+
 			await blockHandler({
 				currentPage: this.page,
 				block: locatorItem,
@@ -212,5 +229,27 @@ export class TestMode {
 		}
 
 		await mappingManager.save();
+	}
+
+	/**
+	 * 检查单个 Block 是否为 Free
+	 */
+	private async isBlockFree(
+		block: import("@playwright/test").Locator,
+		skipFreeText: string,
+	): Promise<boolean> {
+		const count = await block.getByText(skipFreeText, { exact: true }).count();
+
+		if (count === 0) {
+			return false;
+		}
+
+		if (count !== 1) {
+			throw new Error(
+				this.i18n.t("block.freeError", { count, text: skipFreeText }),
+			);
+		}
+
+		return true;
 	}
 }
