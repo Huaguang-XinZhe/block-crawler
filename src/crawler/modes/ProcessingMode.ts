@@ -128,31 +128,31 @@ export class ProcessingMode {
 
 			console.log(`\n${this.i18n.t("common.signalReceived", { signal })}\n`);
 
-		try {
-			await this.taskProgress?.saveProgress();
-			// 输出保存成功日志
-			if (this.taskProgress) {
-				console.log(
-					this.i18n.t("progress.saved", {
-						blocks: this.taskProgress.getCompletedBlockCount(),
-						pages: this.taskProgress.getCompletedPageCount(),
+			try {
+				await this.taskProgress?.saveProgress();
+				// 输出保存成功日志
+				if (this.taskProgress) {
+					console.log(
+						this.i18n.t("progress.saved", {
+							blocks: this.taskProgress.getCompletedBlockCount(),
+							pages: this.taskProgress.getCompletedPageCount(),
+						}),
+					);
+				}
+
+				// 保存 Free 记录
+				if (this.orchestrator) {
+					await this.orchestrator.cleanup();
+				}
+			} catch (error) {
+				console.error(
+					this.i18n.t("progress.saveFailed", {
+						error: error instanceof Error ? error.message : String(error),
 					}),
 				);
 			}
 
-			// 保存 Free 记录
-			if (this.orchestrator) {
-				await this.orchestrator.cleanup();
-			}
-		} catch (error) {
-			console.error(
-				this.i18n.t("progress.saveFailed", {
-					error: error instanceof Error ? error.message : String(error),
-				}),
-			);
-		}
-
-		process.exit(0);
+			process.exit(0);
 		};
 
 		process.on("SIGINT", handler);
