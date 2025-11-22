@@ -12,6 +12,7 @@ import { createI18n, type I18n, type Locale } from "../utils/i18n";
 export class TaskProgress {
 	private progressFile: string;
 	private outputDir: string;
+	private collectFile: string;
 	private completedBlocks: Set<string>;
 	private completedPages: Set<string>;
 	private isDirty: boolean = false;
@@ -27,6 +28,7 @@ export class TaskProgress {
 	) {
 		this.progressFile = progressFile;
 		this.outputDir = outputDir;
+		this.collectFile = path.join(path.dirname(progressFile), "collect.json");
 		// stateDir 参数保留用于未来扩展，当前未使用
 		this.completedBlocks = new Set();
 		this.completedPages = new Set();
@@ -92,11 +94,12 @@ export class TaskProgress {
 	 * 重建进度：从 outputDir 扫描已有文件
 	 *
 	 * 重建逻辑：
-	 * 1. 扫描 outputDir，找到所有"页面目录"（根据实际目录结构动态判断）
+	 * 1. 优先从 collect.json 读取页面列表（如果存在）
 	 * 2. 对于每个页面，扫描其下的 block（文件或目录，根据 blockType 配置）
 	 * 3. 使用自定义或默认的检查函数判断 block 是否完成
-	 * 4. 在内存中标记已完成的 blocks 和 pages
-	 * 5. 根据 saveToProgress 配置决定是否保存到 progress.json
+	 * 4. 如果没有 collect.json，则回退到扫描 outputDir 动态判断
+	 * 5. 在内存中标记已完成的 blocks 和 pages
+	 * 6. 根据 saveToProgress 配置决定是否保存到 progress.json
 	 */
 	private async rebuildProgress(): Promise<void> {
 		if (!(await fse.pathExists(this.outputDir))) {
@@ -109,13 +112,25 @@ export class TaskProgress {
 			{ total: number; completed: number }
 		>();
 
-		// 扫描 outputDir，找到所有内容
-		await this.scanOutputDir(
-			this.outputDir,
-			"",
-			pageBlocksMap,
-			completedBlocks,
-		);
+		// 优先从 collect.json 读取页面列表
+		const pageLinks = await this.loadPageLinksFromCollect();
+
+		if (pageLinks.length > 0) {
+			// 使用 collect.json 的页面列表
+			await this.scanPagesFromCollect(
+				pageLinks,
+				pageBlocksMap,
+				completedBlocks,
+			);
+		} else {
+			// 回退到扫描 outputDir
+			await this.scanOutputDir(
+				this.outputDir,
+				"",
+				pageBlocksMap,
+				completedBlocks,
+			);
+		}
 
 		this.completedBlocks = new Set(completedBlocks);
 
@@ -137,6 +152,89 @@ export class TaskProgress {
 			(completedBlocks.length > 0 || completedPages.length > 0)
 		) {
 			await this.saveProgress();
+		}
+	}
+
+	/**
+	 * 从 collect.json 加载页面链接列表
+	 */
+	private async loadPageLinksFromCollect(): Promise<string[]> {
+		try {
+			if (!(await fse.pathExists(this.collectFile))) {
+				return [];
+			}
+
+			const data = await fse.readJson(this.collectFile);
+			if (!data.collections || !Array.isArray(data.collections)) {
+				return [];
+			}
+
+			// 提取所有链接并标准化（去掉开头的 /）
+			return data.collections.map((item: { link: string }) => {
+				const link = item.link;
+				return link.startsWith("/") ? link.slice(1) : link;
+			});
+		} catch {
+			return [];
+		}
+	}
+
+	/**
+	 * 根据 collect.json 的页面列表扫描 blocks
+	 */
+	private async scanPagesFromCollect(
+		pageLinks: string[],
+		pageBlocksMap: Map<string, { total: number; completed: number }>,
+		completedBlocks: string[],
+	): Promise<void> {
+		const blockType = this.progressConfig.rebuild.blockType;
+
+		for (const pagePath of pageLinks) {
+			const fullPagePath = path.join(this.outputDir, pagePath);
+
+			if (!(await fse.pathExists(fullPagePath))) {
+				continue;
+			}
+
+			const pageStats = { total: 0, completed: 0 };
+			pageBlocksMap.set(pagePath, pageStats);
+
+			const entries = await fse.readdir(fullPagePath, {
+				withFileTypes: true,
+			});
+
+			if (blockType === "file") {
+				// block 是文件
+				const files = entries.filter((e) => e.isFile());
+				const componentFiles = files.filter((f) =>
+					this.isComponentFile(f.name),
+				);
+
+				for (const file of componentFiles) {
+					const blockPath = path.join(pagePath, file.name).replace(/\\/g, "/");
+					pageStats.total++;
+
+					const isComplete = await this.checkBlockComplete(blockPath);
+					if (isComplete) {
+						completedBlocks.push(blockPath);
+						pageStats.completed++;
+					}
+				}
+			} else {
+				// block 是目录
+				const dirs = entries.filter((e) => e.isDirectory());
+
+				for (const dir of dirs) {
+					const blockPath = path.join(pagePath, dir.name).replace(/\\/g, "/");
+					pageStats.total++;
+
+					const isComplete = await this.checkBlockComplete(blockPath);
+					if (isComplete) {
+						completedBlocks.push(blockPath);
+						pageStats.completed++;
+					}
+				}
+			}
 		}
 	}
 
@@ -238,6 +336,9 @@ export class TaskProgress {
 					}
 				}
 			}
+			// 重要：找到页面目录后，不再向下递归！
+			// 这样可以避免把 block 目录也当作页面目录
+			return;
 		} else {
 			// 不是页面目录，继续向下递归
 			for (const dir of dirs) {

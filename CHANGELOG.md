@@ -1,5 +1,22 @@
 # block-crawler
 
+## 0.25.15
+
+### Patch Changes
+
+- fix: 修复重建进度时 block 目录被误判为页面的问题
+
+  - 在 scanOutputDir 中，识别为页面目录后立即 return，不再向下递归
+  - 这样可以避免 block 目录（如 Hero 10/）也被当作页面目录处理
+  - 确保 completedPages 只包含真正的页面路径，不混入 block 路径
+
+- feat: 优先使用 collect.json 重建进度，避免复杂的目录扫描判断
+
+  - 从 collect.json 读取页面列表，直接定位页面目录
+  - 只有在 collect.json 不存在时才回退到扫描 outputDir
+  - 避免了复杂的"页面目录"判断逻辑和递归误判
+  - 确保 completedPages 100% 准确，只包含真正的页面路径
+
 ## 0.25.14
 
 ### Patch Changes
