@@ -20,8 +20,9 @@ export class ProcessingMode {
 	private i18n: I18n;
 	private taskProgress?: TaskProgress;
 	private orchestrator?: ExecutionOrchestrator;
-	private signalHandler?: NodeJS.SignalsListener;
+	private signalHandler?: (signal: NodeJS.Signals) => void;
 	private static isTerminating = false;
+	private static handlingSignal = false; // 防止重复处理信号
 
 	/**
 	 * 检查是否正在终止
@@ -123,33 +124,47 @@ export class ProcessingMode {
 	 */
 	private setupSignalHandlers(): void {
 		const handler = (signal: NodeJS.Signals) => {
-			// 设置终止标志
+			// 防止重复处理
+			if (ProcessingMode.handlingSignal) {
+				return;
+			}
+			ProcessingMode.handlingSignal = true;
 			ProcessingMode.isTerminating = true;
 
 			console.log(`\n${this.i18n.t("common.signalReceived", { signal })}\n`);
 
-			// 使用立即执行的异步函数确保 cleanup 完成后再退出
-			(async () => {
-				try {
-					// 保存所有状态（进度、Free 记录、文件名映射）
-					if (this.orchestrator) {
-						await this.orchestrator.cleanup();
-					}
-				} catch (error) {
-					console.error(
-						this.i18n.t("progress.saveFailed", {
-							error: error instanceof Error ? error.message : String(error),
-						}),
-					);
-				} finally {
-					process.exit(0);
-				}
-			})();
+			// 立即移除信号处理器，防止再次触发
+			this.removeSignalHandlers();
+
+			// 同步执行清理并退出
+			this.performCleanupAndExit();
 		};
 
-		process.on("SIGINT", handler);
-		process.on("SIGTERM", handler);
+		process.once("SIGINT", handler);
+		process.once("SIGTERM", handler);
 		this.signalHandler = handler;
+	}
+
+	/**
+	 * 执行清理并退出
+	 */
+	private performCleanupAndExit(): void {
+		try {
+			if (this.orchestrator) {
+				// 使用同步方法确保保存完成
+				this.orchestrator.cleanupSync();
+			}
+			console.log("\n✅ 状态保存完成\n");
+		} catch (error) {
+			console.error(
+				this.i18n.t("progress.saveFailed", {
+					error: error instanceof Error ? error.message : String(error),
+				}),
+			);
+		} finally {
+			// 确保退出
+			process.exit(0);
+		}
 	}
 
 	/**
@@ -159,6 +174,7 @@ export class ProcessingMode {
 		if (this.signalHandler) {
 			process.off("SIGINT", this.signalHandler);
 			process.off("SIGTERM", this.signalHandler);
+			this.signalHandler = undefined;
 		}
 	}
 }

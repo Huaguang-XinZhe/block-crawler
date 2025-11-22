@@ -132,4 +132,33 @@ export class ExecutionContext {
 		// 保存文件名映射
 		await this.filenameMappingManager.save();
 	}
+
+	/**
+	 * 同步清理资源（用于信号处理等紧急场景）
+	 * @param silent 是否静默执行（不输出日志）
+	 */
+	cleanupSync(silent: boolean = false): void {
+		// 同步保存进度
+		if (this.taskProgress) {
+			const blockCount = this.taskProgress.getCompletedBlockCount();
+			const pageCount = this.taskProgress.getCompletedPageCount();
+			
+			this.taskProgress.saveProgressSync();
+			
+			// 只有在有进度数据时才输出日志
+			if (!silent && (blockCount > 0 || pageCount > 0)) {
+				console.log(
+					`\n${this.i18n.t("progress.saved", {
+						blocks: blockCount,
+						pages: pageCount,
+					})}`,
+				);
+			}
+		}
+
+		// 同步保存 Free 记录
+		this.freeRecorder.saveSync();
+
+		// 文件名映射暂时不同步保存（不太重要）
+	}
 }

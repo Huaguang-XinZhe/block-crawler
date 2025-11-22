@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import fse from "fs-extra";
@@ -87,5 +88,41 @@ export async function atomicWriteJson<T extends object>(
 				throw new Error(`原子写入失败: ${lastError.message}`);
 			}
 		}
+	}
+}
+
+/**
+ * 同步原子写入 JSON 文件（用于信号处理等紧急场景）
+ *
+ * @param filePath 目标文件路径
+ * @param data 要写入的数据
+ */
+export function atomicWriteJsonSync<T extends object>(
+	filePath: string,
+	data: T,
+): void {
+	const tempFileName = `block-crawler-${randomUUID()}.tmp`;
+	const tempFile = path.join(os.tmpdir(), tempFileName);
+
+	try {
+		// 确保目录存在
+		const dir = path.dirname(filePath);
+		if (!fs.existsSync(dir)) {
+			fs.mkdirSync(dir, { recursive: true });
+		}
+
+		// 写入临时文件
+		fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), "utf-8");
+
+		// 原子性替换
+		fs.renameSync(tempFile, filePath);
+	} catch (error) {
+		// 清理临时文件
+		if (fs.existsSync(tempFile)) {
+			try {
+				fs.unlinkSync(tempFile);
+			} catch {}
+		}
+		throw error;
 	}
 }

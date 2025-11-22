@@ -1,7 +1,7 @@
 import path from "node:path";
 import fse from "fs-extra";
 import type { ProgressConfig } from "../types";
-import { atomicWriteJson } from "../utils/atomic-write";
+import { atomicWriteJson, atomicWriteJsonSync } from "../utils/atomic-write";
 import { createI18n, type I18n, type Locale } from "../utils/i18n";
 
 /**
@@ -411,6 +411,24 @@ export class TaskProgress {
 
 		// 标记为已保存
 		this.isDirty = false;
+	}
+
+	/**
+	 * 同步保存进度到文件（用于信号处理等紧急场景）
+	 */
+	saveProgressSync(): void {
+		try {
+			// 准备要保存的数据
+			const data = this.prepareProgressData();
+
+			// 使用同步原子写入
+			atomicWriteJsonSync(this.progressFile, data);
+
+			// 标记为已保存
+			this.isDirty = false;
+		} catch (error) {
+			console.error("同步保存进度失败:", error);
+		}
 	}
 
 	/**

@@ -1,5 +1,17 @@
 # block-crawler
 
+## 0.25.11
+
+### Patch Changes
+
+- fix: 使用同步写入确保信号处理时可靠保存状态
+
+  - 添加 atomicWriteJsonSync 同步写入方法
+  - 为 TaskProgress 和 FreeRecorder 添加 saveSync 方法
+  - 信号处理器使用同步清理方法确保保存完成后再退出
+  - 使用 process.once 替代 process.on 避免重复处理
+  - 添加 handlingSignal 标志防止重复处理信号
+
 ## 0.25.10
 
 ### Patch Changes

@@ -68,6 +68,20 @@ export class ExecutionOrchestrator {
 	}
 
 	/**
+	 * 同步清理资源（用于信号处理等紧急场景）
+	 * @param silent 是否静默执行（不输出日志）
+	 */
+	cleanupSync(silent: boolean = false): void {
+		// 防止重复调用
+		if (this.cleanupCalled) {
+			return;
+		}
+		this.cleanupCalled = true;
+		
+		this.context.cleanupSync(silent);
+	}
+
+	/**
 	 * 执行爬取流程
 	 */
 	async run(

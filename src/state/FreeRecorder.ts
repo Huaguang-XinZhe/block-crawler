@@ -1,6 +1,6 @@
 import path from "node:path";
 import fse from "fs-extra";
-import { atomicWriteJson } from "../utils/atomic-write";
+import { atomicWriteJson, atomicWriteJsonSync } from "../utils/atomic-write";
 
 /**
  * Free 项目类型
@@ -106,6 +106,25 @@ export class FreeRecorder {
 		const outputDir = path.dirname(this.freeFile);
 		await fse.ensureDir(outputDir);
 		await atomicWriteJson(this.freeFile, record);
+	}
+
+	/**
+	 * 同步保存到 free.json（用于信号处理等紧急场景）
+	 */
+	saveSync(): void {
+		try {
+			const record: FreeRecord = {
+				lastUpdate: new Date().toLocaleString("zh-CN", {
+					timeZone: "Asia/Shanghai",
+				}),
+				pages: Array.from(this.pages).sort(),
+				blocks: Array.from(this.blocks).sort(),
+			};
+
+			atomicWriteJsonSync(this.freeFile, record);
+		} catch (error) {
+			console.error("同步保存 Free 记录失败:", error);
+		}
 	}
 
 	/**
