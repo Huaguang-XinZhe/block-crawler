@@ -146,8 +146,14 @@ export class FreeRecorder {
 
 	/**
 	 * 保存到 free.json
+	 * 如果没有 free 数据，跳过写入（保持文件原样）
 	 */
 	async save(): Promise<void> {
+		// 如果没有 free 数据，跳过写入
+		if (this.pages.size === 0 && this.blocks.size === 0) {
+			return;
+		}
+
 		// 转换 blocksByPage 为普通对象，只保留 blockName 避免冗余
 		const blocksByPageObj: Record<string, string[]> = {};
 		for (const [pagePath, blockPaths] of this.blocksByPage.entries()) {
@@ -178,9 +184,15 @@ export class FreeRecorder {
 
 	/**
 	 * 同步保存到 free.json（用于信号处理等紧急场景）
+	 * 如果没有 free 数据，跳过写入（保持文件原样）
 	 */
 	saveSync(): void {
 		try {
+			// 如果没有 free 数据，跳过写入
+			if (this.pages.size === 0 && this.blocks.size === 0) {
+				return;
+			}
+
 			// 转换 blocksByPage 为普通对象，只保留 blockName 避免冗余
 			const blocksByPageObj: Record<string, string[]> = {};
 			for (const [pagePath, blockPaths] of this.blocksByPage.entries()) {

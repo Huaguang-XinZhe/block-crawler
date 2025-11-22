@@ -102,6 +102,17 @@ export class ExecutionContext {
 		// 初始化 Free 记录器
 		await this.freeRecorder.initialize();
 
+		// 输出 Free 统计信息（如果有的话）
+		const freeStats = this.freeRecorder.getStatistics();
+		if (freeStats.totalBlocks > 0 || freeStats.totalPages > 0) {
+			console.log(
+				this.i18n.t("free.loaded", {
+					blocks: freeStats.totalBlocks,
+					pages: freeStats.totalPages,
+				}),
+			);
+		}
+
 		// 初始化文件名映射管理器
 		await this.filenameMappingManager.initialize();
 	}

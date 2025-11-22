@@ -88,6 +88,7 @@ const messages = {
 
 		// Free 相关
 		"free.saved": "🆓 Free 记录已保存 (跳过 Block: {blocks}, 跳过 Page: {pages})",
+		"free.loaded": "🆓 Free 记录已加载 (跳过 Block: {blocks}, 跳过 Page: {pages})",
 
 		// 配置相关
 		"config.parseUrlFailed": "⚠️ 解析 startUrl 失败，使用默认域名",
@@ -316,6 +317,7 @@ const messages = {
 
 		// Free
 		"free.saved": "🆓 Free records saved (Skipped blocks: {blocks}, Skipped pages: {pages})",
+		"free.loaded": "🆓 Free records loaded (Skipped blocks: {blocks}, Skipped pages: {pages})",
 
 		// Configuration
 		"config.parseUrlFailed": "⚠️ Failed to parse startUrl, using default domain",
