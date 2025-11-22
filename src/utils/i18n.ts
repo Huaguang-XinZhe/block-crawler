@@ -390,7 +390,8 @@ const messages = {
 			"\n🛑 Error detected, page paused for inspection\n   Type: {type}\n   Location: {name}{path}\n   Error: {error}\n\n   💡 Tip: After inspection, you can disable pauseOnError in config to continue\n",
 		"error.pauseOnErrorNonDebug":
 			"\n❌ Error detected\n   Type: {type}\n   Location: {name}{path}\n   Error: {error}\n\n   💡 Tips:\n   - Run with --debug flag to automatically pause the page for inspection\n   - Or disable pauseOnError in config to skip errors and continue\n",
-		"error.pauseBeforeDebug": "\n⏸️  Page will pause, please check the issue...\n",
+		"error.pauseBeforeDebug":
+			"\n⏸️  Page will pause, please check the issue...\n",
 
 		// Click actions
 		"click.retrying": "🔄 Click retry ({current}/{total}): {error}",
