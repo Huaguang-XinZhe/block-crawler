@@ -25,6 +25,7 @@ import {
 export class ExecutionOrchestrator {
 	private context: ExecutionContext;
 	private executor: ConcurrentExecutor;
+	private cleanupCalled = false; // 防止重复调用 cleanup
 
 	constructor(
 		config: InternalConfig,
@@ -57,6 +58,12 @@ export class ExecutionOrchestrator {
 	 * @param silent 是否静默执行（不输出日志）
 	 */
 	async cleanup(silent: boolean = false): Promise<void> {
+		// 防止重复调用
+		if (this.cleanupCalled) {
+			return;
+		}
+		this.cleanupCalled = true;
+		
 		await this.context.cleanup(silent);
 	}
 

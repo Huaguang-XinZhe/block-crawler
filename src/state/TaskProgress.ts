@@ -400,23 +400,14 @@ export class TaskProgress {
 	async saveProgress(): Promise<void> {
 		// 检查是否应该跳过保存
 		if (await this.shouldSkipSave()) {
-			console.log(
-				`[DEBUG] 跳过保存 progress.json - isDirty: ${this.isDirty}, hasProgress: ${this.hasProgress()}, blocks: ${this.completedBlocks.size}, pages: ${this.completedPages.size}`,
-			);
 			return;
 		}
 
 		// 准备要保存的数据
 		const data = this.prepareProgressData();
 
-		console.log(
-			`[DEBUG] 正在保存 progress.json 到 ${this.progressFile}, blocks: ${this.completedBlocks.size}, pages: ${this.completedPages.size}`,
-		);
-
 		// 使用原子写入工具保存
 		await atomicWriteJson(this.progressFile, data);
-
-		console.log(`[DEBUG] 已成功保存 progress.json`);
 
 		// 标记为已保存
 		this.isDirty = false;

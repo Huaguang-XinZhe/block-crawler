@@ -45,7 +45,11 @@ export class ConcurrentExecutor {
 	): Promise<void> {
 		const allLinks = collectResult.collections;
 		const total = allLinks.length;
-		let completed = 0;
+
+		// 统计已完成的页面数量（跳过的已完成页面也计入成功）
+		const previousCompletedPages =
+			this.context.taskProgress?.getCompletedPageCount() || 0;
+		let completed = 0; // 本次新完成的数量
 		let failed = 0;
 
 		// 加载已知的 Free 页面
@@ -151,7 +155,10 @@ export class ConcurrentExecutor {
 			),
 		);
 
-		this.printStatistics(completed, failed, total);
+		// 获取总的已完成数量（包括跳过的）
+		const totalCompleted = completed + previousCompletedPages;
+
+		this.printStatistics(totalCompleted, failed, total);
 	}
 
 	/**
