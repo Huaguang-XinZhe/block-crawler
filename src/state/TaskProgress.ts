@@ -193,10 +193,19 @@ export class TaskProgress {
 		pageBlocksMap: Map<string, { total: number; completed: number }>,
 		completedBlocks: string[],
 	): Promise<void> {
-		const blockType = this.progressConfig.rebuild.blockType;
+		let blockType = this.progressConfig.rebuild.blockType;
 		console.log(
-			`🔍 开始扫描 ${pageLinks.length} 个页面，blockType: ${blockType}`,
+			`🔍 开始扫描 ${pageLinks.length} 个页面，初始 blockType: ${blockType}`,
 		);
+
+		// 自动检测 blockType（如果第一个页面有内容）
+		if (pageLinks.length > 0) {
+			const detectedType = await this.detectBlockType(pageLinks);
+			if (detectedType) {
+				blockType = detectedType;
+				console.log(`✅ 自动检测到 blockType: ${blockType}`);
+			}
+		}
 
 		for (const pagePath of pageLinks) {
 			const fullPagePath = path.join(this.outputDir, pagePath);
@@ -249,6 +258,59 @@ export class TaskProgress {
 		console.log(
 			`✅ 扫描完成: ${pageBlocksMap.size} 个页面, ${completedBlocks.length} 个已完成 block`,
 		);
+	}
+
+	/**
+	 * 自动检测 blockType（通过检查第一个有内容的页面目录）
+	 */
+	private async detectBlockType(
+		pageLinks: string[],
+	): Promise<"file" | "directory" | null> {
+		// 检查前 5 个页面，找到第一个有内容的
+		const samplesToCheck = Math.min(5, pageLinks.length);
+
+		for (let i = 0; i < samplesToCheck; i++) {
+			const pagePath = pageLinks[i];
+			const fullPagePath = path.join(this.outputDir, pagePath);
+
+			if (!(await fse.pathExists(fullPagePath))) {
+				continue;
+			}
+
+			try {
+				const entries = await fse.readdir(fullPagePath, {
+					withFileTypes: true,
+				});
+
+				const files = entries.filter((e) => e.isFile());
+				const dirs = entries.filter((e) => e.isDirectory());
+
+				// 如果有组件文件，说明是 file 模式
+				const componentFiles = files.filter((f) =>
+					this.isComponentFile(f.name),
+				);
+				if (componentFiles.length > 0) {
+					return "file";
+				}
+
+				// 如果有子目录，说明可能是 directory 模式
+				// 进一步检查子目录内是否有组件文件
+				if (dirs.length > 0) {
+					for (const dir of dirs) {
+						const subDirPath = path.join(fullPagePath, dir.name);
+						const hasContent = await this.hasContentInDirectory(subDirPath);
+						if (hasContent) {
+							return "directory";
+						}
+					}
+				}
+			} catch {
+				// 读取失败，跳过
+				continue;
+			}
+		}
+
+		return null;
 	}
 
 	/**

@@ -67,8 +67,8 @@ exec(
 );
 
 // 步骤 5: 推送到远程
-console.log("\n🚀 步骤 5: 推送到远程仓库");
-exec("git push");
+// console.log("\n🚀 步骤 5: 推送到远程仓库");
+// exec("git push");
 
 console.log("\n🎉 发布流程完成！");
 console.log(`\n📊 版本: ${newVersion}`);

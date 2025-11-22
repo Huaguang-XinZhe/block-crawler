@@ -1,5 +1,16 @@
 # block-crawler
 
+## 0.25.17
+
+### Patch Changes
+
+- feat: 自动检测 blockType，避免默认值导致重建失败
+
+  - 在 scanPagesFromCollect 中添加自动检测逻辑
+  - 检查前 5 个页面目录，判断是 file 还是 directory 模式
+  - 如果检测成功，使用检测到的 blockType 覆盖默认配置
+  - 解决 flyonui 等使用 directory 模式但未配置导致重建为 0 的问题
+
 ## 0.25.16
 
 ### Patch Changes
