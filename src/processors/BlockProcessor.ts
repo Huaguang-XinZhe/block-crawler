@@ -118,16 +118,6 @@ export class BlockProcessor {
 			}
 		}
 
-		// 输出跳过的 Free Blocks 统计
-		if (freeBlocks.length > 0) {
-			this.logger.log(
-				`\n⏭️  ${this.i18n.t("block.skipFreeCount", { count: freeBlocks.length })}`,
-			);
-			freeBlocks.forEach((name, idx) => {
-				this.logger.log(`   ${idx + 1}. ${name}`);
-			});
-		}
-
 		// 返回实际处理的数量（不包括跳过的）
 		return {
 			totalCount: completedCount,

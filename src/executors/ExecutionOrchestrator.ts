@@ -53,6 +53,13 @@ export class ExecutionOrchestrator {
 	}
 
 	/**
+	 * 清理资源（保存进度和 Free 记录）
+	 */
+	async cleanup(): Promise<void> {
+		await this.context.cleanup();
+	}
+
+	/**
 	 * 执行爬取流程
 	 */
 	async run(
