@@ -220,9 +220,9 @@ export class BlockProcessor {
 		const isFree = await this.isBlockFree(block);
 		if (isFree) {
 			this.logger.log(this.i18n.t("block.skipFree", { name: blockName }));
-			// 如果是 Free Block，立即记录到 freeRecorder
+			// 如果是 Free Block，立即记录到 freeRecorder（传递完整路径）
 			if (this.freeRecorder && blockName) {
-				this.freeRecorder.addFreeBlock(blockName);
+				this.freeRecorder.addFreeBlock(blockPath, normalizedUrlPath);
 			}
 			// 如果是 Free Block，直接跳过处理
 			return { success: true, isFree: true, blockName };

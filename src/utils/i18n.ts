@@ -86,6 +86,9 @@ const messages = {
 		"progress.scanComplete":
 			"✅ 扫描完成: {pages} 个页面, {blocks} 个已完成 block",
 
+		// Free 相关
+		"free.saved": "🆓 Free 记录已保存 (跳过 Block: {blocks}, 跳过 Page: {pages})",
+
 		// 配置相关
 		"config.parseUrlFailed": "⚠️ 解析 startUrl 失败，使用默认域名",
 
@@ -310,6 +313,9 @@ const messages = {
 		"progress.detectedBlockType": "✅ Auto-detected blockType: {type}",
 		"progress.scanComplete":
 			"✅ Scan complete: {pages} pages, {blocks} completed blocks",
+
+		// Free
+		"free.saved": "🆓 Free records saved (Skipped blocks: {blocks}, Skipped pages: {pages})",
 
 		// Configuration
 		"config.parseUrlFailed": "⚠️ Failed to parse startUrl, using default domain",

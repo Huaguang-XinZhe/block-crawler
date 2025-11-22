@@ -115,10 +115,10 @@ export class ExecutionContext {
 		if (this.taskProgress) {
 			const blockCount = this.taskProgress.getCompletedBlockCount();
 			const pageCount = this.taskProgress.getCompletedPageCount();
-			
+
 			// 尝试保存进度
 			await this.taskProgress.saveProgress();
-			
+
 			// 只有在有进度数据时才输出日志
 			if (!silent && (blockCount > 0 || pageCount > 0)) {
 				console.log(
@@ -132,6 +132,19 @@ export class ExecutionContext {
 
 		// 保存 Free 记录
 		await this.freeRecorder.save();
+
+		// 输出 Free 统计信息（如果有的话）
+		if (!silent) {
+			const freeStats = this.freeRecorder.getStatistics();
+			if (freeStats.totalBlocks > 0 || freeStats.totalPages > 0) {
+				console.log(
+					this.i18n.t("free.saved", {
+						blocks: freeStats.totalBlocks,
+						pages: freeStats.totalPages,
+					}),
+				);
+			}
+		}
 
 		// 保存组件数不一致记录
 		await this.mismatchRecorder.save();
@@ -149,9 +162,9 @@ export class ExecutionContext {
 		if (this.taskProgress) {
 			const blockCount = this.taskProgress.getCompletedBlockCount();
 			const pageCount = this.taskProgress.getCompletedPageCount();
-			
+
 			this.taskProgress.saveProgressSync();
-			
+
 			// 只有在有进度数据时才输出日志
 			if (!silent && (blockCount > 0 || pageCount > 0)) {
 				console.log(

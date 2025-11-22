@@ -1,5 +1,37 @@
 # block-crawler
 
+## 0.27.3
+
+### Patch Changes
+
+- feat: 增强 Free 组件跟踪和日志显示
+
+  - **free.json 结构重构**：
+
+    - 添加 `totalPages` 和 `totalBlocks` 统计字段
+    - 新增 `blocksByPage` 字段，按页面分组显示 Free Blocks
+    - `blocksByPage` 中只存储 blockName 而非完整路径，避免冗余
+    - blocks 和 pages 现在存储完整路径而非仅名称
+    - 提供更直观的数据结构展示
+
+  - **日志增强**：
+
+    - 在进度保存时显示 Free 组件统计信息
+    - 新增 `free.saved` 国际化消息（中英文）
+    - 显示跳过的 Block 和 Page 数量
+
+  - **API 改进**：
+    - `FreeRecorder.addFreeBlock()` 现在接收 `blockPath` 和 `pagePath` 参数
+    - 新增 `getStatistics()` 方法获取统计信息
+    - 新增 `getBlocksByPage()` 方法获取按页面分组的数据
+    - `initialize()` 方法自动从 blockName 重建完整的 blockPath
+
+  **影响**：
+
+  - 用户现在可以清晰看到哪些组件被跳过了（因为是 Free）
+  - free.json 的数据结构更加直观、简洁和详细
+  - 解决了 progress.json 总数与预期不符的困惑（原因是跳过了 Free 组件）
+
 ## 0.27.2
 
 ### Patch Changes

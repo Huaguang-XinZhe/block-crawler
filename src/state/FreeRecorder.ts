@@ -18,10 +18,16 @@ export interface FreeItem {
 export interface FreeRecord {
 	/** 最后更新时间 */
 	lastUpdate: string;
-	/** Free 页面列表 */
+	/** 总 Free 页面数 */
+	totalPages: number;
+	/** 总 Free Block 数 */
+	totalBlocks: number;
+	/** Free 页面列表（完整路径） */
 	pages: string[];
-	/** Free Block 列表 */
+	/** Free Block 列表（完整路径） */
 	blocks: string[];
+	/** 按页面分组的 Free Blocks */
+	blocksByPage: Record<string, string[]>;
 }
 
 /**
@@ -35,6 +41,8 @@ export interface FreeRecord {
 export class FreeRecorder {
 	private pages = new Set<string>();
 	private blocks = new Set<string>();
+	// 按页面分组的 blocks: pagePath -> blockPath[]
+	private blocksByPage = new Map<string, Set<string>>();
 
 	constructor(private freeFile: string) {}
 
@@ -46,6 +54,21 @@ export class FreeRecorder {
 			const record: FreeRecord = await fse.readJson(this.freeFile);
 			record.pages.forEach((page) => this.pages.add(page));
 			record.blocks.forEach((block) => this.blocks.add(block));
+
+			// 加载 blocksByPage，重建完整的 blockPath
+			if (record.blocksByPage) {
+				for (const [pagePath, blockNames] of Object.entries(
+					record.blocksByPage,
+				)) {
+					const blockPathSet = new Set<string>();
+					for (const blockName of blockNames) {
+						// 从 blockName 重建完整的 blockPath
+						const blockPath = `${pagePath}/${blockName}`;
+						blockPathSet.add(blockPath);
+					}
+					this.blocksByPage.set(pagePath, blockPathSet);
+				}
+			}
 		}
 	}
 
@@ -58,9 +81,17 @@ export class FreeRecorder {
 
 	/**
 	 * 添加 Free Block
+	 * @param blockPath 完整的 block 路径，格式如 "blocks/marketing-ui/hero-section/Hero 1"
+	 * @param pagePath 页面路径，格式如 "blocks/marketing-ui/hero-section"
 	 */
-	addFreeBlock(blockName: string): void {
-		this.blocks.add(blockName);
+	addFreeBlock(blockPath: string, pagePath: string): void {
+		this.blocks.add(blockPath);
+
+		// 添加到 blocksByPage
+		if (!this.blocksByPage.has(pagePath)) {
+			this.blocksByPage.set(pagePath, new Set());
+		}
+		this.blocksByPage.get(pagePath)?.add(blockPath);
 	}
 
 	/**
@@ -87,20 +118,57 @@ export class FreeRecorder {
 	/**
 	 * 检查是否为 Free Block
 	 */
-	isFreeBlock(blockName: string): boolean {
-		return this.blocks.has(blockName);
+	isFreeBlock(blockPath: string): boolean {
+		return this.blocks.has(blockPath);
+	}
+
+	/**
+	 * 获取按页面分组的 Free Blocks
+	 */
+	getBlocksByPage(): Map<string, Set<string>> {
+		return this.blocksByPage;
+	}
+
+	/**
+	 * 获取统计信息
+	 */
+	getStatistics(): {
+		totalPages: number;
+		totalBlocks: number;
+		pagesWithBlocks: number;
+	} {
+		return {
+			totalPages: this.pages.size,
+			totalBlocks: this.blocks.size,
+			pagesWithBlocks: this.blocksByPage.size,
+		};
 	}
 
 	/**
 	 * 保存到 free.json
 	 */
 	async save(): Promise<void> {
+		// 转换 blocksByPage 为普通对象，只保留 blockName 避免冗余
+		const blocksByPageObj: Record<string, string[]> = {};
+		for (const [pagePath, blockPaths] of this.blocksByPage.entries()) {
+			// 从 blockPath 中提取 blockName（最后一部分）
+			blocksByPageObj[pagePath] = Array.from(blockPaths)
+				.map((blockPath) => {
+					const parts = blockPath.split("/");
+					return parts[parts.length - 1]; // 只保留 blockName
+				})
+				.sort();
+		}
+
 		const record: FreeRecord = {
 			lastUpdate: new Date().toLocaleString("zh-CN", {
 				timeZone: "Asia/Shanghai",
 			}),
+			totalPages: this.pages.size,
+			totalBlocks: this.blocks.size,
 			pages: Array.from(this.pages).sort(),
 			blocks: Array.from(this.blocks).sort(),
+			blocksByPage: blocksByPageObj,
 		};
 
 		const outputDir = path.dirname(this.freeFile);
@@ -113,17 +181,34 @@ export class FreeRecorder {
 	 */
 	saveSync(): void {
 		try {
+			// 转换 blocksByPage 为普通对象，只保留 blockName 避免冗余
+			const blocksByPageObj: Record<string, string[]> = {};
+			for (const [pagePath, blockPaths] of this.blocksByPage.entries()) {
+				// 从 blockPath 中提取 blockName（最后一部分）
+				blocksByPageObj[pagePath] = Array.from(blockPaths)
+					.map((blockPath) => {
+						const parts = blockPath.split("/");
+						return parts[parts.length - 1]; // 只保留 blockName
+					})
+					.sort();
+			}
+
 			const record: FreeRecord = {
 				lastUpdate: new Date().toLocaleString("zh-CN", {
 					timeZone: "Asia/Shanghai",
 				}),
+				totalPages: this.pages.size,
+				totalBlocks: this.blocks.size,
 				pages: Array.from(this.pages).sort(),
 				blocks: Array.from(this.blocks).sort(),
+				blocksByPage: blocksByPageObj,
 			};
 
 			atomicWriteJsonSync(this.freeFile, record);
 		} catch (error) {
-			console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
+			console.error(
+				`❌ ${error instanceof Error ? error.message : String(error)}`,
+			);
 		}
 	}
 
