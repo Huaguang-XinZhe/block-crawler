@@ -48,9 +48,8 @@ export class ConcurrentExecutor {
 		},
 	): Promise<void> {
 		const allLinks = collectResult.collections;
-		this.total = allLinks.length;
 
-		// 统计已完成的页面数量（跳过的已完成页面也计入成功）
+		// 统计已完成的页面数量
 		this.previousCompletedPages =
 			this.context.taskProgress?.getCompletedPageCount() || 0;
 		this.completed = 0; // 本次新完成的数量
@@ -59,17 +58,52 @@ export class ConcurrentExecutor {
 		// 加载已知的 Free 页面
 		const knownFreePages = await this.loadKnownFreePages();
 
+		// 先过滤出需要处理的链接（排除已完成的）
+		const pendingLinks: CollectionLink[] = [];
+		let skippedCompleted = 0;
+		let skippedFree = 0;
+
+		for (const linkObj of allLinks) {
+			const normalizedPath = linkObj.link.startsWith("/")
+				? linkObj.link.slice(1)
+				: linkObj.link;
+
+			// 跳过已完成的页面
+			if (this.context.taskProgress?.isPageComplete(normalizedPath)) {
+				skippedCompleted++;
+				continue;
+			}
+
+			// 跳过已知的 Free 页面
+			if (knownFreePages.has(linkObj.link)) {
+				skippedFree++;
+				continue;
+			}
+
+			pendingLinks.push(linkObj);
+		}
+
+		// 更新 total 为实际需要处理的数量
+		this.total = pendingLinks.length;
+
 		console.log(
 			`\n${this.context.i18n.t("crawler.startConcurrent", {
 				concurrency: this.context.config.maxConcurrency,
 			})}`,
 		);
-		console.log(
-			`\n${this.context.i18n.t("crawler.startProcessing", { total: this.total })}\n`,
-		);
+
+		// 输出跳过统计
+		if (skippedCompleted > 0) {
+			console.log(`⏭️  跳过 ${skippedCompleted} 个已完成的页面`);
+		}
+		if (skippedFree > 0) {
+			console.log(`⏭️  跳过 ${skippedFree} 个已知 Free 页面`);
+		}
+
+		console.log(`\n📦 开始处理 ${this.total} 个待处理链接...\n`);
 
 		await Promise.allSettled(
-			allLinks.map((linkObj: CollectionLink, index: number) =>
+			pendingLinks.map((linkObj: CollectionLink, index: number) =>
 				this.context.limit(async () => {
 					const normalizedPath = linkObj.link.startsWith("/")
 						? linkObj.link.slice(1)
@@ -82,29 +116,6 @@ export class ConcurrentExecutor {
 							? linkObj.link.slice(this.context.baseUrlPath.length)
 							: linkObj.link;
 					const logger = createLogger(displayPath);
-
-					// 跳过已完成的页面
-					if (this.context.taskProgress?.isPageComplete(normalizedPath)) {
-						logger.log(
-							this.context.i18n.t("crawler.skipCompleted", {
-								name: linkObj.name || normalizedPath,
-							}),
-						);
-						this.completed++;
-						return;
-					}
-
-					// 跳过已知的 Free 页面
-					if (knownFreePages.has(linkObj.link)) {
-						logger.log(
-							this.context.i18n.t("crawler.skipKnownFree", {
-								name: linkObj.name || linkObj.link,
-							}),
-						);
-						this.context.freeRecorder.addFreePage(linkObj.link);
-						this.completed++;
-						return;
-					}
 
 					try {
 						await this.linkExecutor.execute(
