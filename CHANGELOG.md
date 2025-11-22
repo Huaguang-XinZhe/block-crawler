@@ -1,5 +1,15 @@
 # block-crawler
 
+## 0.25.12
+
+### Patch Changes
+
+- feat: 信号中断时显示处理统计
+
+  - 将 completed、failed、total 改为实例变量以跟踪执行状态
+  - 添加 printCurrentStatistics 方法用于打印当前统计
+  - 在信号处理的 cleanupSync 中调用统计打印，显示中断时的处理进度
+
 ## 0.25.11
 
 ### Patch Changes

@@ -63,7 +63,7 @@ export class ExecutionOrchestrator {
 			return;
 		}
 		this.cleanupCalled = true;
-		
+
 		await this.context.cleanup(silent);
 	}
 
@@ -77,7 +77,11 @@ export class ExecutionOrchestrator {
 			return;
 		}
 		this.cleanupCalled = true;
-		
+
+		// 先打印统计信息
+		this.executor.printCurrentStatistics();
+
+		// 再保存状态
 		this.context.cleanupSync(silent);
 	}
 

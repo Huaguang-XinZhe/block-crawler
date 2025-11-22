@@ -20,6 +20,10 @@ import { LinkExecutor } from "./LinkExecutor";
  */
 export class ConcurrentExecutor {
 	private linkExecutor: LinkExecutor;
+	private completed = 0;
+	private failed = 0;
+	private total = 0;
+	private previousCompletedPages = 0;
 
 	constructor(private context: ExecutionContext) {
 		this.linkExecutor = new LinkExecutor(context);
@@ -44,13 +48,13 @@ export class ConcurrentExecutor {
 		},
 	): Promise<void> {
 		const allLinks = collectResult.collections;
-		const total = allLinks.length;
+		this.total = allLinks.length;
 
 		// 统计已完成的页面数量（跳过的已完成页面也计入成功）
-		const previousCompletedPages =
+		this.previousCompletedPages =
 			this.context.taskProgress?.getCompletedPageCount() || 0;
-		let completed = 0; // 本次新完成的数量
-		let failed = 0;
+		this.completed = 0; // 本次新完成的数量
+		this.failed = 0;
 
 		// 加载已知的 Free 页面
 		const knownFreePages = await this.loadKnownFreePages();
@@ -61,7 +65,7 @@ export class ConcurrentExecutor {
 			})}`,
 		);
 		console.log(
-			`\n${this.context.i18n.t("crawler.startProcessing", { total })}\n`,
+			`\n${this.context.i18n.t("crawler.startProcessing", { total: this.total })}\n`,
 		);
 
 		await Promise.allSettled(
@@ -86,7 +90,7 @@ export class ConcurrentExecutor {
 								name: linkObj.name || normalizedPath,
 							}),
 						);
-						completed++;
+						this.completed++;
 						return;
 					}
 
@@ -98,7 +102,7 @@ export class ConcurrentExecutor {
 							}),
 						);
 						this.context.freeRecorder.addFreePage(linkObj.link);
-						completed++;
+						this.completed++;
 						return;
 					}
 
@@ -109,8 +113,8 @@ export class ConcurrentExecutor {
 							index === 0,
 							options,
 						);
-						completed++;
-						const progress = `${completed + failed}/${total}`;
+						this.completed++;
+						const progress = `${this.completed + this.failed}/${this.total}`;
 						logger.log(
 							this.context.i18n.t("crawler.linkComplete", {
 								progress,
@@ -129,8 +133,8 @@ export class ConcurrentExecutor {
 							return;
 						}
 
-						failed++;
-						const progress = `${completed + failed}/${total}`;
+						this.failed++;
+						const progress = `${this.completed + this.failed}/${this.total}`;
 
 						// 根据日志级别输出不同详细程度的错误信息
 						const logLevel = this.context.config.logLevel;
@@ -156,9 +160,17 @@ export class ConcurrentExecutor {
 		);
 
 		// 获取总的已完成数量（包括跳过的）
-		const totalCompleted = completed + previousCompletedPages;
+		const totalCompleted = this.completed + this.previousCompletedPages;
 
-		this.printStatistics(totalCompleted, failed, total);
+		this.printStatistics(totalCompleted, this.failed, this.total);
+	}
+
+	/**
+	 * 打印当前统计信息（用于中断时）
+	 */
+	printCurrentStatistics(): void {
+		const totalCompleted = this.completed + this.previousCompletedPages;
+		this.printStatistics(totalCompleted, this.failed, this.total);
 	}
 
 	/**
