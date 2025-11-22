@@ -9,6 +9,7 @@ import { createI18n } from "./i18n";
  * - 匹配的是 **DOM 中的文本内容**，不是网页显示的文本
  * - CSS 可能会改变显示效果（如 text-transform、visibility 等）
  * - 建议使用浏览器开发者工具检查实际的 DOM 文本
+ * - 对于 Block 级别检查，会在 heading 的容器元素内查找（避免误匹配 Block 主体内容区域的文本）
  */
 
 /**
@@ -32,9 +33,18 @@ async function checkFreeGeneric<T extends Page | Locator>(
 		return false;
 	}
 
+	// 如果是 Locator（Block），只在 heading 的容器元素内查找
+	// 如果是 Page，在整个页面查找
+	const searchTarget =
+		"getByRole" in target
+			? (await target.getByRole("heading").count()) > 0
+				? target.getByRole("heading").first().locator("..")
+				: target
+			: target;
+
 	// "default" 表示使用默认匹配：/free/i（忽略大小写）
 	if (skipFree === "default") {
-		const count = await target.getByText(/free/i).count();
+		const count = await searchTarget.getByText(/free/i).count();
 
 		if (count === 0) {
 			return false;
@@ -52,7 +62,7 @@ async function checkFreeGeneric<T extends Page | Locator>(
 
 	// 字符串配置：使用 getByText 查找（子串匹配）
 	if (typeof skipFree === "string") {
-		const count = await target.getByText(skipFree).count();
+		const count = await searchTarget.getByText(skipFree).count();
 
 		if (count === 0) {
 			return false;
@@ -91,4 +101,3 @@ export async function checkBlockFree(
 ): Promise<boolean> {
 	return await checkFreeGeneric(block, config, skipFree, "block.freeError");
 }
-

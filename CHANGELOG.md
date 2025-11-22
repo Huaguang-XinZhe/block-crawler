@@ -1,5 +1,41 @@
 # block-crawler
 
+## 0.27.4
+
+### Patch Changes
+
+- fix: 修复 Free Block 判断范围过大的问题
+
+  **问题**：
+
+  - 之前在整个 Block 范围内查找 "Free" 文本
+  - 容易误匹配 Block 主体内容区域中的文本
+
+  **解决方案**：
+
+  - 改为在 heading 的容器元素内查找
+  - 使用 `locator('..')` 获取 heading 的父元素
+  - 范围更精确，避免误判
+
+  **影响**：
+
+  - Block 级别的 Free 检查更加准确
+  - 不影响 Page 级别的检查逻辑
+  - 兼容没有 heading 的特殊情况（回退到整个 Block）
+
+  **典型场景**：
+
+  ```html
+  <div class="block">
+    <div class="heading-container">
+      <!-- 在这个容器内查找 -->
+      <h1>Block Name</h1>
+      <span class="badge">Free</span>
+    </div>
+    <div class="content">... 不会误匹配这里的文本 ...</div>
+  </div>
+  ```
+
 ## 0.27.3
 
 ### Patch Changes
