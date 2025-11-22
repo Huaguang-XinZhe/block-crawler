@@ -123,7 +123,7 @@ export class FreeRecorder {
 
 			atomicWriteJsonSync(this.freeFile, record);
 		} catch (error) {
-			console.error("同步保存 Free 记录失败:", error);
+			console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 

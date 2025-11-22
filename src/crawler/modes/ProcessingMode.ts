@@ -155,7 +155,7 @@ export class ProcessingMode {
 				// 使用同步方法确保保存完成
 				this.orchestrator.cleanupSync();
 			}
-			console.log("\n✅ 状态保存完成\n");
+			console.log(`\n${this.i18n.t("common.stateSaved")}\n`);
 		} catch (error) {
 			console.error(
 				this.i18n.t("progress.saveFailed", {

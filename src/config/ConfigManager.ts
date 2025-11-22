@@ -17,6 +17,7 @@ export interface InternalConfig {
 	maxConcurrency: number;
 	pauseOnError: boolean;
 	logLevel: "info" | "debug" | "silent";
+	ignoreMismatch: boolean;
 	progress: {
 		enable: boolean;
 		rebuild?: import("../types/progress").ProgressRebuildConfig;
@@ -45,6 +46,7 @@ export function generatePathsForUrl(
 	url: string,
 ): {
 	hostname: string;
+	domain: string;
 	outputDir: string;
 	stateDir: string;
 	progressFile: string;
@@ -62,6 +64,7 @@ export function generatePathsForUrl(
 
 	return {
 		hostname,
+		domain: hostname, // domain 和 hostname 相同
 		outputDir,
 		stateDir,
 		progressFile,
@@ -82,6 +85,7 @@ export function createInternalConfig(config: CrawlerConfig): InternalConfig {
 		maxConcurrency: config.maxConcurrency || 5,
 		pauseOnError: config.pauseOnError ?? true,
 		logLevel: config.logLevel || "info",
+		ignoreMismatch: config.ignoreMismatch ?? false,
 		progress: {
 			enable: config.progress?.enable ?? true,
 			rebuild: config.progress?.rebuild,

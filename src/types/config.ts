@@ -207,4 +207,31 @@ export interface CrawlerConfig {
 	 * });
 	 */
 	logLevel?: "info" | "debug" | "silent";
+
+	/**
+	 * 忽略组件数不匹配，继续处理
+	 *
+	 * 当页面实际定位到的组件数与预期（collect.json 中的 blockCount）不一致时：
+	 * - false（默认）：跳过该页面，记录到 mismatch.json
+	 * - true：继续处理该页面，但仍记录到 mismatch.json
+	 *
+	 * 使用场景：
+	 * - 某些页面存在动态加载，但不影响主要组件的提取
+	 * - 组件数统计不准确，但仍想继续处理
+	 *
+	 * @default false
+	 * @example
+	 * // 跳过不匹配的页面（默认）
+	 * const crawler = new BlockCrawler(page, {
+	 *   ignoreMismatch: false,
+	 *   // ... 其他配置
+	 * });
+	 *
+	 * // 继续处理不匹配的页面
+	 * const crawler = new BlockCrawler(page, {
+	 *   ignoreMismatch: true,
+	 *   // ... 其他配置
+	 * });
+	 */
+	ignoreMismatch?: boolean;
 }

@@ -630,7 +630,7 @@ export class TaskProgress {
 			// 标记为已保存
 			this.isDirty = false;
 		} catch (error) {
-			console.error("同步保存进度失败:", error);
+			console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 

@@ -79,17 +79,19 @@ export class LinkExecutor {
 				);
 			}
 
-			// 检查页面是否为 Free（仅在 skipFreeMode 为 "page" 时）
-			if (
-				this.context.extendedConfig.skipFreeMode === "page" &&
-				this.context.extendedConfig.skipFree
-			) {
-				const isPageFree = await PageProcessor.checkPageFree(
-					newPage,
-					this.context.config,
-					this.context.extendedConfig.skipFree,
-				);
-				if (isPageFree) {
+		// 检查页面是否为 Free（仅在 skipFreeMode 为 "page" 时）
+		if (
+			this.context.extendedConfig.skipFreeMode === "page" &&
+			this.context.extendedConfig.skipFree
+		) {
+			const isPageFree = await PageProcessor.checkPageFree(
+				newPage,
+				this.context.config,
+				this.context.extendedConfig.skipFree as
+					| string
+					| ((page: Page) => Promise<boolean>),
+			);
+			if (isPageFree) {
 					logger.log(
 						this.context.i18n.t("page.skipFree", { path: relativeLink }),
 					);

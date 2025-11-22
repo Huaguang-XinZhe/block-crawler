@@ -78,18 +78,28 @@ export class BlockProcessor {
 		if (this.expectedBlockCount !== undefined && this.mismatchRecorder) {
 			if (actualCount !== this.expectedBlockCount) {
 				this.logger.warn(
-					`⚠️  组件数不一致: 预期 ${this.expectedBlockCount}, 实际定位到 ${actualCount}`,
+					this.i18n.t("block.mismatchWarning", {
+						expected: this.expectedBlockCount,
+						actual: actualCount,
+					}),
 				);
 				this.mismatchRecorder.addMismatch(
 					pagePath,
 					this.expectedBlockCount,
 					actualCount,
 				);
-				// 跳过此页面，不处理
-				return {
-					totalCount: 0,
-					freeBlocks: [],
-				};
+
+				// 如果未配置 ignoreMismatch，跳过此页面
+				if (!this.config.ignoreMismatch) {
+					this.logger.warn(this.i18n.t("block.skipMismatch"));
+					return {
+						totalCount: 0,
+						freeBlocks: [],
+					};
+				}
+
+				// 配置了 ignoreMismatch，继续处理但已记录
+				this.logger.log(this.i18n.t("block.continueWithMismatch"));
 			}
 		}
 
@@ -129,7 +139,7 @@ export class BlockProcessor {
 			const isComplete = await this.verifyCompletion(
 				page,
 				pagePath,
-				expectedCount,
+				actualCount,
 				processedCount,
 				processedBlockNames,
 			);

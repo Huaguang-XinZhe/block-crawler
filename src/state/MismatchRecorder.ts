@@ -1,5 +1,5 @@
-import fse from "fs-extra";
 import path from "node:path";
+import fse from "fs-extra";
 import { atomicWriteJson, atomicWriteJsonSync } from "../utils/atomic-write";
 
 /**
@@ -22,6 +22,8 @@ export interface MismatchItem {
 export interface MismatchRecord {
 	/** 最后更新时间 */
 	lastUpdate: string;
+	/** 不一致的页面总数 */
+	total: number;
 	/** 不一致的页面列表 */
 	mismatches: MismatchItem[];
 }
@@ -67,7 +69,9 @@ export class MismatchRecorder {
 			pagePath,
 			expectedCount,
 			actualCount,
-			timestamp: new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }),
+			timestamp: new Date().toLocaleString("zh-CN", {
+				timeZone: "Asia/Shanghai",
+			}),
 		});
 	}
 
@@ -89,11 +93,16 @@ export class MismatchRecorder {
 	 * 异步保存到文件
 	 */
 	async save(): Promise<void> {
+		const mismatches = Array.from(this.mismatches.values()).sort((a, b) =>
+			a.pagePath.localeCompare(b.pagePath),
+		);
+
 		const record: MismatchRecord = {
-			lastUpdate: new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }),
-			mismatches: Array.from(this.mismatches.values()).sort((a, b) =>
-				a.pagePath.localeCompare(b.pagePath),
-			),
+			lastUpdate: new Date().toLocaleString("zh-CN", {
+				timeZone: "Asia/Shanghai",
+			}),
+			total: mismatches.length,
+			mismatches,
 		};
 
 		const outputDir = path.dirname(this.mismatchFile);
@@ -105,11 +114,16 @@ export class MismatchRecorder {
 	 * 同步保存到文件（用于进程退出时）
 	 */
 	saveSync(): void {
+		const mismatches = Array.from(this.mismatches.values()).sort((a, b) =>
+			a.pagePath.localeCompare(b.pagePath),
+		);
+
 		const record: MismatchRecord = {
-			lastUpdate: new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" }),
-			mismatches: Array.from(this.mismatches.values()).sort((a, b) =>
-				a.pagePath.localeCompare(b.pagePath),
-			),
+			lastUpdate: new Date().toLocaleString("zh-CN", {
+				timeZone: "Asia/Shanghai",
+			}),
+			total: mismatches.length,
+			mismatches,
 		};
 
 		const outputDir = path.dirname(this.mismatchFile);
@@ -117,4 +131,3 @@ export class MismatchRecorder {
 		atomicWriteJsonSync(this.mismatchFile, record);
 	}
 }
-

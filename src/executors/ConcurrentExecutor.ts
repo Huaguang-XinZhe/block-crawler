@@ -94,13 +94,19 @@ export class ConcurrentExecutor {
 
 		// 输出跳过统计
 		if (skippedCompleted > 0) {
-			console.log(`⏭️  跳过 ${skippedCompleted} 个已完成的页面`);
+			console.log(
+				this.context.i18n.t("crawler.skippedCompleted", { count: skippedCompleted }),
+			);
 		}
 		if (skippedFree > 0) {
-			console.log(`⏭️  跳过 ${skippedFree} 个已知 Free 页面`);
+			console.log(
+				this.context.i18n.t("crawler.skippedFree", { count: skippedFree }),
+			);
 		}
 
-		console.log(`\n📦 开始处理 ${this.total} 个待处理链接...\n`);
+		console.log(
+			`\n${this.context.i18n.t("crawler.processingLinks", { total: this.total })}\n`,
+		);
 
 		await Promise.allSettled(
 			pendingLinks.map((linkObj: CollectionLink, index: number) =>

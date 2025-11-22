@@ -14,6 +14,7 @@ const messages = {
 		"common.start": "🚀 开始爬取: {url}",
 		"common.error": "❌ 处理过程中发生错误",
 		"common.signalReceived": "📡 收到信号 {signal}，正在保存状态...",
+		"common.stateSaved": "✅ 状态保存完成",
 		"common.complete": "✅ 爬取完成！",
 
 		// 爬虫任务
@@ -162,6 +163,10 @@ const messages = {
 		"block.skipFree": "⏭️  跳过 Free Block: {name}",
 		"block.skipFreeCount": "已跳过 {count} 个 Free Block：",
 		"block.saved": "✅ Block 已保存: {path}",
+		"block.mismatchWarning": "⚠️  组件数不一致: 预期 {expected}, 实际定位到 {actual}",
+		"block.skipMismatch": "⏭️  跳过此页面（组件数不匹配）",
+		"block.continueWithMismatch":
+			"▶️  继续处理（已启用 ignoreMismatch），但已记录",
 		"block.freeError":
 			'❌ Free Block 标记匹配错误：\n   期望找到 1 个匹配项，实际找到 {count} 个\n   匹配文本: "{text}"\n\n请检查：\n   1. 文本是否唯一（建议使用更精确的文本）\n   2. 或使用自定义函数配置更精确的判断逻辑',
 		"block.getNameCustom": "🔧 使用自定义 getBlockName 函数",
@@ -226,6 +231,7 @@ const messages = {
 		"common.start": "🚀 Starting crawl: {url}",
 		"common.error": "❌ An error occurred during processing",
 		"common.signalReceived": "📡 Received signal {signal}, saving state...",
+		"common.stateSaved": "✅ State saved successfully",
 		"common.complete": "✅ Crawl completed!",
 
 		// Crawler tasks
@@ -380,6 +386,11 @@ const messages = {
 		"block.skipFree": "⏭️  Skipping free block: {name}",
 		"block.skipFreeCount": "Skipped {count} free block(s):",
 		"block.saved": "✅ Block saved: {path}",
+		"block.mismatchWarning":
+			"⚠️  Block count mismatch: expected {expected}, actually located {actual}",
+		"block.skipMismatch": "⏭️  Skipping this page due to mismatch",
+		"block.continueWithMismatch":
+			"▶️  Continue processing (ignoreMismatch enabled), but recorded",
 		"block.freeError":
 			'❌ Free block marker matching error:\n   Expected 1 match, found {count}\n   Matching text: "{text}"\n\nPlease check:\n   1. Is the text unique (use more specific text)\n   2. Or use custom function for more precise logic',
 		"block.getNameCustom": "🔧 Using custom getBlockName function",
