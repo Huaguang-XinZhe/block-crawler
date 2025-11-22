@@ -1,5 +1,36 @@
 # block-crawler
 
+## 0.25.2
+
+### Patch Changes
+
+- **Bug 修复：优化 SIGINT 信号处理**
+
+  **修复问题：**
+
+  1. Ctrl+C 主动终止时，不再显示"检测到错误，页面已暂停"的误导性信息
+  2. 进度保存后现在会输出成功日志，确认进度已保存
+
+  **实现细节：**
+
+  - 在 `ProcessingMode` 中添加静态终止标志 `isTerminating`
+  - 在 `BlockProcessor` 和 `PageProcessor` 中检测进程终止导致的错误（如 "Test ended", "Browser closed", "Target closed"）
+  - 终止过程中的错误不再显示 pauseOnError 信息
+  - SIGINT 处理器现在会输出进度保存成功的日志
+
+  **用户体验改进：**
+
+  ```
+  之前：
+  📡 收到信号 SIGINT，正在保存进度...
+  🛑 检测到错误，页面已暂停方便检查 <-- 误导性信息
+     错误: locator.click: Test ended. <-- 不是真正的错误
+
+  现在：
+  📡 收到信号 SIGINT，正在保存进度...
+  💾 进度已保存 (已完成 Block: 5, 已完成 Page: 2) <-- 清晰的确认信息
+  ```
+
 ## 0.25.1
 
 ### Patch Changes

@@ -36,8 +36,8 @@ const messages = {
 			"🚀 开始并发处理所有链接 (最大并发: {concurrency})...",
 		"crawler.startProcessing": "📦 开始处理 {total} 个集合链接...",
 		"crawler.loadedFreePages": "📋 已加载 {count} 个已知 Free 页面",
-		"crawler.skipCompleted": "⏭️ 跳过已完成",
-		"crawler.skipKnownFree": "⏭️ 跳过已知 Free 页面: {name}",
+		"crawler.skipCompleted": "⏭️  跳过已完成",
+		"crawler.skipKnownFree": "⏭️  跳过已知 Free 页面: {name}",
 		"crawler.linkComplete": "✅ [{progress}] 完成",
 		"crawler.linkFailed": "❌ [{progress}] 失败",
 		"crawler.linkFailedSimple": "❌ [{progress}] 失败: {error}",
@@ -139,8 +139,8 @@ const messages = {
 
 		// 页面处理
 		"page.processing": "🔄 [{current}/{total}] 正在处理: {path}",
-		"page.skip": "⏭️ 跳过已完成的页面: {path}",
-		"page.skipFree": "⏭️ 跳过 Free 页面: {path}",
+		"page.skip": "⏭️  跳过已完成的页面: {path}",
+		"page.skipFree": "⏭️  跳过 Free 页面: {path}",
 		"page.autoScrolling": "📜 自动滚动页面...",
 		"page.autoScrollComplete": "✅ 滚动完成 (耗时 {duration}s)",
 		"page.autoScrollError": "⚠️ 滚动异常",
@@ -151,8 +151,8 @@ const messages = {
 		// Block 处理
 		"block.found": "📦 找到 {count} 个 Block",
 		"block.processing": "🔄 [{current}/{total}] 正在处理 Block: {name}",
-		"block.skip": "⏭️ 跳过已完成的 Block: {name}",
-		"block.skipFree": "⏭️ 跳过 Free Block: {name}",
+		"block.skip": "⏭️  跳过已完成的 Block: {name}",
+		"block.skipFree": "⏭️  跳过 Free Block: {name}",
 		"block.skipFreeCount": "已跳过 {count} 个 Free Block：",
 		"block.saved": "✅ Block 已保存: {path}",
 		"block.freeError":
@@ -240,7 +240,7 @@ const messages = {
 		"crawler.startProcessing": "📦 Processing {total} collection links...",
 		"crawler.loadedFreePages": "📋 Loaded {count} known free page(s)",
 		"crawler.skipCompleted": "⏭️  Skipping completed page: {name}",
-		"crawler.skipKnownFree": "🆓 Skipping known free page: {name}",
+		"crawler.skipKnownFree": "⏭️  Skipping known free page: {name}",
 		"crawler.linkComplete": "✅ [{progress}] Completed: {name}",
 		"crawler.linkFailed": "❌ [{progress}] Failed: {name}",
 		"crawler.statistics": "📊 Processing Statistics:",
@@ -347,7 +347,7 @@ const messages = {
 		// Page processing
 		"page.processing": "🔄 [{current}/{total}] Processing: {path}",
 		"page.skip": "⏭️  Skipping completed page: {path}",
-		"page.skipFree": "🆓 Skipping free page: {path}",
+		"page.skipFree": "⏭️  Skipping free page: {path}",
 		"page.autoScrolling": "📜 Auto-scrolling page...",
 		"page.autoScrollParamsDefault": "(default params: {params})",
 		"page.autoScrollParamsCustom": "(custom params: {params})",
@@ -361,7 +361,7 @@ const messages = {
 		"block.found": "📦 Found {count} blocks",
 		"block.processing": "🔄 [{current}/{total}] Processing block: {name}",
 		"block.skip": "⏭️  Skipping completed block: {name}",
-		"block.skipFree": "🆓 Skipping free block: {name}",
+		"block.skipFree": "⏭️  Skipping free block: {name}",
 		"block.skipFreeCount": "Skipped {count} free block(s):",
 		"block.saved": "✅ Block saved: {path}",
 		"block.freeError":

@@ -224,6 +224,24 @@ export class BlockProcessor {
 			this.taskProgress?.markBlockComplete(blockPath);
 			return { success: true, isFree: false, blockName };
 		} catch (error) {
+			// 检测是否是进程终止导致的错误（Ctrl+C）
+			const isTerminationError =
+				error instanceof Error &&
+				(error.message.includes("Test ended") ||
+					error.message.includes("Browser closed") ||
+					error.message.includes("Target closed"));
+
+			// 导入 ProcessingMode 来检查终止状态
+			const { ProcessingMode } = await import(
+				"../crawler/modes/ProcessingMode"
+			);
+			const isTerminating = ProcessingMode.isProcessTerminating();
+
+			// 如果是终止导致的错误，不显示错误信息
+			if (isTerminating || isTerminationError) {
+				return { success: false, isFree: false, blockName };
+			}
+
 			// 如果开启了 pauseOnError，暂停页面方便检查
 			if (this.config.pauseOnError) {
 				const debugMode = isDebugMode();

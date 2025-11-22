@@ -1,6 +1,6 @@
 {
 	"name": "@huaguang/block-crawler",
-	"version": "0.25.1",
+	"version": "0.25.2",
 	"description": "基于 Playwright 的通用 Block 爬虫框架，支持受限并发、进度恢复、单页面或单 Block 处理模式",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",

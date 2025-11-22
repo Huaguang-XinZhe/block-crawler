@@ -21,6 +21,14 @@ export class ProcessingMode {
 	private taskProgress?: TaskProgress;
 	private orchestrator?: ExecutionOrchestrator;
 	private signalHandler?: NodeJS.SignalsListener;
+	private static isTerminating = false;
+
+	/**
+	 * 检查是否正在终止
+	 */
+	static isProcessTerminating(): boolean {
+		return ProcessingMode.isTerminating;
+	}
 
 	constructor(
 		private config: InternalConfig,
@@ -110,8 +118,26 @@ export class ProcessingMode {
 	 */
 	private setupSignalHandlers(): void {
 		const handler: NodeJS.SignalsListener = async (signal) => {
+			// 设置终止标志
+			ProcessingMode.isTerminating = true;
+
 			console.log(`\n${this.i18n.t("common.signalReceived", { signal })}\n`);
-			await this.taskProgress?.saveProgress();
+
+			try {
+				await this.taskProgress?.saveProgress();
+				// 输出保存成功日志
+				if (this.taskProgress) {
+					console.log(
+						this.i18n.t("progress.saved", {
+							blocks: this.taskProgress.getCompletedBlockCount(),
+							pages: this.taskProgress.getCompletedPageCount(),
+						}),
+					);
+				}
+			} catch (error) {
+				console.error("⚠️ 保存进度失败:", error);
+			}
+
 			process.exit(0);
 		};
 
