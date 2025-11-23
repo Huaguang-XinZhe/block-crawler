@@ -1,7 +1,12 @@
 import type { Page } from "@playwright/test";
 import { BlockProcessor } from "../processors/BlockProcessor";
 import { PageProcessor } from "../processors/PageProcessor";
-import type { BeforeContext, BlockHandler, PageHandler } from "../types";
+import type {
+	BeforeContext,
+	BlockAutoConfig,
+	BlockHandler,
+	PageHandler,
+} from "../types";
 import {
 	type AutoScrollConfig,
 	autoScrollToBottom,
@@ -30,6 +35,7 @@ export class LinkExecutor {
 		options: {
 			blockSectionLocator: string | null;
 			blockHandler: BlockHandler | null;
+			blockAutoConfig: BlockAutoConfig | null;
 			pageHandler: PageHandler | null;
 			beforeProcessBlocks: ((context: BeforeContext) => Promise<void>) | null;
 			waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
@@ -114,12 +120,16 @@ export class LinkExecutor {
 			}
 
 			// 再执行 Block 级处理器（如果配置了）
-			if (options.blockSectionLocator && options.blockHandler) {
+			if (
+				options.blockSectionLocator &&
+				(options.blockHandler || options.blockAutoConfig)
+			) {
 				await this.processBlocks(
 					newPage,
 					relativeLink,
 					options.blockSectionLocator,
 					options.blockHandler,
+					options.blockAutoConfig,
 					options.beforeProcessBlocks,
 					options.verifyBlockCompletion ?? true,
 					options.expectedBlockCount, // 传递预期组件数
@@ -214,7 +224,8 @@ export class LinkExecutor {
 		page: Page,
 		relativeLink: string,
 		blockSectionLocator: string,
-		blockHandler: BlockHandler,
+		blockHandler: BlockHandler | null,
+		blockAutoConfig: BlockAutoConfig | null,
 		beforeProcessBlocks: ((context: BeforeContext) => Promise<void>) | null,
 		verifyBlockCompletion: boolean,
 		expectedBlockCount: number | undefined,
@@ -234,6 +245,7 @@ export class LinkExecutor {
 			this.context.mismatchRecorder,
 			expectedBlockCount,
 			logger,
+			blockAutoConfig ?? undefined,
 		);
 
 		await blockProcessor.processBlocksInPage(page, relativeLink);

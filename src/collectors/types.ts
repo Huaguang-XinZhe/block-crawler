@@ -6,8 +6,6 @@ import type { Locale } from "../utils/i18n";
  * 收集结果类型
  */
 export interface CollectResult {
-	/** 起始 URL */
-	startUrl: string;
 	/** 最后更新时间 */
 	lastUpdate: string;
 	/** 链接总数 */

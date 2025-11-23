@@ -16,6 +16,7 @@ import type {
 	PageConfig,
 	PageHandler,
 } from "../types";
+import type { BlockAutoConfig } from "../types/handlers";
 import { createI18n, type I18n } from "../utils/i18n";
 import { CollectionMode } from "./modes/CollectionMode";
 import { ProcessingMode } from "./modes/ProcessingMode";
@@ -356,10 +357,55 @@ export class BlockCrawler {
 
 	/**
 	 * 设置 Block 级处理器（在单个 block 执行）
+	 *
+	 * 支持两种用法：
+	 * 1. 传统方式：传入 handler 函数
+	 * 2. 自动处理：传入配置对象，自动处理文件 Tab 遍历、代码提取和变种切换
+	 *
+	 * @example
+	 * ```typescript
+	 * // 传统方式
+	 * .block('selector', async ({ block, safeOutput }) => {
+	 *   // 自定义处理逻辑
+	 * })
+	 *
+	 * // 自动处理方式（无变种）
+	 * .block('selector', {
+	 *   fileTabs: '//div[2]/div[2]/div[1]/div',
+	 *   // extractCode 使用默认（从 pre 获取 textContent）
+	 * })
+	 *
+	 * // 自动处理方式（带变种）
+	 * .block('selector', {
+	 *   fileTabs: (block) => block.getByRole("tablist").getByRole("tab").all(),
+	 *   extractCode: customExtractor,
+	 *   variants: [
+	 *     {
+	 *       buttonLocator: (block) => block.getByRole("button", { name: "Change theme" }),
+	 *       nameMapping: { "TypeScript": "ts", "JavaScript": "js" },
+	 *       waitTime: 500
+	 *     }
+	 *   ]
+	 * })
+	 * ```
 	 */
-	block(sectionLocator: string, handler: BlockHandler): this {
+	block(sectionLocator: string, handler: BlockHandler): this;
+	block(sectionLocator: string, config: BlockAutoConfig): this;
+	block(
+		sectionLocator: string,
+		handlerOrConfig: BlockHandler | BlockAutoConfig,
+	): this {
 		this.processingConfig.blockLocator = sectionLocator;
-		this.processingConfig.blockHandler = handler;
+
+		// 判断是 handler 还是配置对象
+		if (typeof handlerOrConfig === "function") {
+			// 传统方式
+			this.processingConfig.blockHandler = handlerOrConfig;
+		} else {
+			// 自动处理方式
+			this.processingConfig.blockAutoConfig = handlerOrConfig;
+		}
+
 		this.processingConfig.skipFreeMode = "block";
 		return this;
 	}
@@ -454,7 +500,8 @@ export class BlockCrawler {
 		// 步骤 2: 执行处理阶段（如果配置了处理器）
 		if (
 			this.processingConfig.pageHandler ||
-			this.processingConfig.blockHandler
+			this.processingConfig.blockHandler ||
+			this.processingConfig.blockAutoConfig
 		) {
 			if (!collectResult) {
 				throw new Error(
@@ -464,6 +511,7 @@ export class BlockCrawler {
 			await this.getProcessingMode().execute(
 				collectResult,
 				this.processingConfig,
+				this.collectionConfig.startUrl,
 			);
 		}
 	}

@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import type {
 	BeforeContext,
+	BlockAutoConfig,
 	BlockHandler,
 	CollectResult,
 	PageHandler,
@@ -38,6 +39,7 @@ export class ConcurrentExecutor {
 		options: {
 			blockSectionLocator: string | null;
 			blockHandler: BlockHandler | null;
+			blockAutoConfig: BlockAutoConfig | null;
 			pageHandler: PageHandler | null;
 			beforeProcessBlocks: ((context: BeforeContext) => Promise<void>) | null;
 			waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";

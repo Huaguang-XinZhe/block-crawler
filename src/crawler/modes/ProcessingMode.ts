@@ -44,9 +44,14 @@ export class ProcessingMode {
 	async execute(
 		collectResult: CollectResult,
 		processingConfig: ProcessingConfig,
+		startUrl?: string,
 	): Promise<void> {
 		// 初始化执行器
-		await this.initializeOrchestrator(collectResult, processingConfig);
+		await this.initializeOrchestrator(
+			collectResult,
+			processingConfig,
+			startUrl,
+		);
 
 		this.setupSignalHandlers();
 
@@ -59,6 +64,7 @@ export class ProcessingMode {
 				this.page,
 				processingConfig.blockLocator || null,
 				processingConfig.blockHandler || null,
+				processingConfig.blockAutoConfig || null,
 				processingConfig.pageHandler || null,
 				null,
 				{
@@ -79,8 +85,11 @@ export class ProcessingMode {
 	private async initializeOrchestrator(
 		collectResult: CollectResult,
 		processingConfig: ProcessingConfig,
+		startUrl?: string,
 	): Promise<void> {
-		const startUrl = collectResult.startUrl;
+		if (!startUrl) {
+			throw new Error("startUrl is required for processing mode");
+		}
 		const paths = generatePathsForUrl(this.config, startUrl);
 
 		this.taskProgress = new TaskProgress(

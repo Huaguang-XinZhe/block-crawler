@@ -3,6 +3,7 @@ import type { InternalConfig } from "../config/ConfigManager";
 import type { TaskProgress } from "../state/TaskProgress";
 import type {
 	BeforeContext,
+	BlockAutoConfig,
 	BlockHandler,
 	CollectResult,
 	PageHandler,
@@ -94,6 +95,7 @@ export class ExecutionOrchestrator {
 		page: Page,
 		blockSectionLocator: string | null,
 		blockHandler: BlockHandler | null,
+		blockAutoConfig: BlockAutoConfig | null,
 		pageHandler: PageHandler | null,
 		beforeProcessBlocks: ((context: BeforeContext) => Promise<void>) | null,
 		options?: {
@@ -145,6 +147,7 @@ export class ExecutionOrchestrator {
 			await this.executor.executeAll(page, this.collectResult, {
 				blockSectionLocator,
 				blockHandler,
+				blockAutoConfig,
 				pageHandler,
 				beforeProcessBlocks,
 				waitUntil: options?.waitUntil,

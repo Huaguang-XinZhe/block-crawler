@@ -1,5 +1,49 @@
 # block-crawler
 
+## 0.28.0
+
+### Minor Changes
+
+- 新增 Block 自动处理功能，内置文件 Tab 遍历、代码提取和变种切换逻辑
+
+  **重大改进：**
+
+  1. **自动文件 Tab 处理**：配置 `fileTabs` 定位符或自定义逻辑，框架自动遍历所有文件 Tab
+  2. **自动代码提取**：默认从 `pre` 元素提取 `textContent`，支持自定义提取函数
+  3. **自动变种切换**：配置 `variants` 列表，框架自动切换变种（如 TypeScript/JavaScript）并保存到不同目录
+  4. **改进的日志输出**：日志中显示组件名称，方便追踪处理进度
+  5. **优化终止处理**：在测试模式下按 Ctrl+C 终止时不再显示错误信息
+
+  **新增配置项：**
+
+  - `BlockAutoConfig` 接口：用于配置自动处理
+    - `fileTabs?`: 文件 Tab 定位符或自定义逻辑
+    - `extractCode?`: 自定义代码提取函数（默认从 pre 元素提取）
+    - `variants?`: 变种配置列表
+    - `handler?`: 可选的自定义处理逻辑
+  - `VariantConfig` 接口：用于配置变种切换
+    - `buttonLocator`: 切换按钮定位符（必需）
+    - `nameMapping?`: 选项名称到目录名的映射
+    - `waitTime?`: 切换后等待时间（默认 500ms）
+
+  **示例用法：**
+
+  ```typescript
+  await crawler
+    .block("//main/div", {
+      fileTabs: (block) => block.getByRole("tab").all(),
+      extractCode: customExtractor, // 可选
+      variants: [
+        {
+          buttonLocator: (block) =>
+            block.getByRole("button", { name: "Change theme" }),
+          nameMapping: { TypeScript: "ts", JavaScript: "js" },
+        },
+      ],
+    } as BlockAutoConfig)
+    .run();
+  ```
+
 ## 0.27.5
 
 ### Patch Changes

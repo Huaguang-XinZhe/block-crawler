@@ -5,7 +5,12 @@ import type { FilenameMappingManager } from "../state/FilenameMapping";
 import type { FreeRecorder } from "../state/FreeRecorder";
 import type { MismatchRecorder } from "../state/MismatchRecorder";
 import type { TaskProgress } from "../state/TaskProgress";
-import type { BeforeContext, BlockContext, BlockHandler } from "../types";
+import type {
+	BeforeContext,
+	BlockAutoConfig,
+	BlockContext,
+	BlockHandler,
+} from "../types";
 import { createClickAndVerify, createClickCode } from "../utils/click-actions";
 import { isDebugMode } from "../utils/debug";
 import { checkBlockFree as checkBlockFreeUtil } from "../utils/free-checker";
@@ -15,6 +20,7 @@ import {
 	type ContextLogger as IContextLogger,
 } from "../utils/logger";
 import { createSafeOutput } from "../utils/safe-output";
+import { AutoFileProcessor } from "./AutoFileProcessor";
 import { BlockNameExtractor } from "./BlockNameExtractor";
 
 /**
@@ -30,7 +36,7 @@ export class BlockProcessor {
 		private config: InternalConfig,
 		private outputDir: string,
 		private blockSectionLocator: string,
-		private blockHandler: BlockHandler,
+		private blockHandler: BlockHandler | null,
 		private taskProgress?: TaskProgress,
 		private beforeProcessBlocks?:
 			| ((context: BeforeContext) => Promise<void>)
@@ -42,6 +48,7 @@ export class BlockProcessor {
 		private mismatchRecorder?: MismatchRecorder,
 		private expectedBlockCount?: number, // 新增：预期的组件数
 		logger?: IContextLogger,
+		private blockAutoConfig?: BlockAutoConfig, // 新增：自动处理配置
 	) {
 		this.i18n = createI18n(config.locale);
 		this.blockNameExtractor = new BlockNameExtractor(config, extendedConfig);
@@ -246,8 +253,27 @@ export class BlockProcessor {
 		};
 
 		try {
-			// 只有非 Free Block 才调用 blockHandler
-			await this.blockHandler(context);
+			// 如果配置了自动处理，使用 AutoFileProcessor
+			if (this.blockAutoConfig) {
+				// 自动点击 Code 按钮
+				await context.clickCode();
+
+				// 创建自动文件处理器
+				const autoProcessor = new AutoFileProcessor(
+					this.config,
+					this.blockAutoConfig,
+					this.outputDir,
+					blockPath,
+					blockName,
+				);
+
+				// 处理文件和变种
+				await autoProcessor.process(block, page);
+			} else if (this.blockHandler) {
+				// 只有非 Free Block 才调用 blockHandler（传统方式）
+				await this.blockHandler(context);
+			}
+
 			this.taskProgress?.markBlockComplete(blockPath);
 			return { success: true, isFree: false, blockName };
 		} catch (error) {
@@ -258,15 +284,22 @@ export class BlockProcessor {
 					error.message.includes("Browser closed") ||
 					error.message.includes("Target closed"));
 
-			// 导入 ProcessingMode 来检查终止状态
-			const { ProcessingMode } = await import(
-				"../crawler/modes/ProcessingMode"
-			);
-			const isTerminating = ProcessingMode.isProcessTerminating();
-
-			// 如果是终止导致的错误，不显示错误信息
-			if (isTerminating || isTerminationError) {
+			// 如果是终止导致的错误，直接返回，不显示任何错误信息
+			if (isTerminationError) {
 				return { success: false, isFree: false, blockName };
+			}
+
+			// 导入 ProcessingMode 来检查终止状态（仅在非测试模式下）
+			try {
+				const { ProcessingMode } = await import(
+					"../crawler/modes/ProcessingMode"
+				);
+				const isTerminating = ProcessingMode.isProcessTerminating();
+				if (isTerminating) {
+					return { success: false, isFree: false, blockName };
+				}
+			} catch {
+				// 如果无法导入 ProcessingMode（如测试模式），继续处理错误
 			}
 
 			// 如果开启了 pauseOnError，暂停页面方便检查
@@ -371,6 +404,15 @@ export class BlockProcessor {
 	 * 标准化页面路径
 	 */
 	private normalizePagePath(link: string): string {
+		// 如果是完整 URL，提取路径部分
+		if (link.startsWith("http://") || link.startsWith("https://")) {
+			try {
+				const url = new URL(link);
+				link = url.pathname;
+			} catch (e) {
+				// 如果解析失败，使用原始链接
+			}
+		}
 		return link.startsWith("/") ? link.slice(1) : link;
 	}
 }

@@ -92,7 +92,10 @@ export class TestMode {
 		}
 
 		// 执行 block handler（如果配置了）
-		if (processingConfig.blockHandler && processingConfig.blockLocator) {
+		if (
+			(processingConfig.blockHandler || processingConfig.blockAutoConfig) &&
+			processingConfig.blockLocator
+		) {
 			// 准备 ExtendedExecutionConfig
 			const extendedConfig: ExtendedExecutionConfig = {
 				getBlockName: processingConfig.getBlockName,
@@ -114,12 +117,17 @@ export class TestMode {
 				this.config,
 				outputDir,
 				processingConfig.blockLocator,
-				processingConfig.blockHandler,
+				processingConfig.blockHandler || null,
 				undefined, // taskProgress (测试模式不需要)
 				undefined, // beforeProcessBlocks
 				mappingManager,
 				false, // verifyBlockCompletion (测试模式不需要验证)
 				extendedConfig,
+				undefined, // freeRecorder
+				undefined, // mismatchRecorder
+				undefined, // expectedBlockCount
+				undefined, // logger
+				processingConfig.blockAutoConfig, // blockAutoConfig
 			);
 
 			await blockProcessor.processBlocksInPage(

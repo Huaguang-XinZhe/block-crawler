@@ -28,10 +28,12 @@ export { TaskProgress } from "./state/TaskProgress";
 // Type exports
 export type {
 	BeforeContext,
+	BlockAutoConfig,
 	BlockContext,
 	BlockHandler,
 	ClickAndVerify,
 	ClickCode,
+	CodeExtractor,
 	CollectionLink,
 	CrawlerConfig,
 	FreeItem,
@@ -40,8 +42,9 @@ export type {
 	ProgressConfig,
 	ProgressRebuildConfig,
 	SiteMeta,
+	VariantConfig,
 } from "./types";
-
+export { defaultCodeExtractor } from "./utils/default-code-extractor";
 // Utils
 export type { Locale } from "./utils/i18n";
 export type { SafeOutput } from "./utils/safe-output";

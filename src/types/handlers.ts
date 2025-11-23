@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 
+import type { LocatorOrCustom, LocatorsOrCustom } from "../collectors/types";
 import type { SafeOutput } from "../utils/safe-output";
 import type { ClickAndVerify, ClickCode } from "./actions";
 
@@ -115,3 +116,35 @@ export interface TestContext {
  * 测试模式处理函数类型
  */
 export type TestHandler = (context: TestContext) => Promise<void>;
+
+/**
+ * 代码提取器函数类型
+ * 从 pre 元素中提取代码内容
+ */
+export type CodeExtractor = (pre: Locator) => Promise<string>;
+
+/**
+ * 变种配置
+ * 用于配置代码变种切换（如 TypeScript/JavaScript）
+ */
+export interface VariantConfig {
+	/** 切换按钮定位符或自定义逻辑（必需） */
+	buttonLocator: LocatorOrCustom<Locator>;
+	/** 选项名称到目录名的映射（如 { "TypeScript": "ts", "JavaScript": "js" }） */
+	nameMapping?: Record<string, string>;
+	/** 切换后等待时间（毫秒，默认 500ms） */
+	waitTime?: number;
+}
+
+/**
+ * Block 自动处理配置
+ * 用于自动处理文件 Tab 遍历、代码提取和变种切换
+ */
+export interface BlockAutoConfig {
+	/** 文件 Tab 定位符或自定义逻辑（可选） */
+	fileTabs?: LocatorsOrCustom<Locator>;
+	/** 代码提取函数（可选，默认从 pre 获取 textContent） */
+	extractCode?: CodeExtractor;
+	/** 变种配置列表（可选，支持多个变种） */
+	variants?: VariantConfig[];
+}

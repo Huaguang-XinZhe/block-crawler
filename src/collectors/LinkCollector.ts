@@ -110,7 +110,6 @@ export class LinkCollector {
 
 		// 4. 汇总结果
 		const result: CollectResult = {
-			startUrl,
 			lastUpdate: new Date().toLocaleString("zh-CN", {
 				timeZone: "Asia/Shanghai",
 			}),

@@ -7,6 +7,7 @@ import type {
 	NameExtractFunction,
 	SectionConfig,
 } from "../../collectors/types";
+import type { BlockAutoConfig } from "../../types/handlers";
 import type { Locale } from "../../utils/i18n";
 
 /**
@@ -39,6 +40,8 @@ export interface ProcessingConfig {
 	pageHandler?: any;
 	blockLocator?: string;
 	blockHandler?: any;
+	// Block 自动处理配置
+	blockAutoConfig?: BlockAutoConfig;
 	// skipFreeText: undefined = 未设置, "default" = 使用默认匹配(/free/i), string = 精确匹配
 	skipFreeText?: string;
 	skipFreeMode?: "page" | "block";
