@@ -150,36 +150,36 @@ export class AutoFileProcessor {
 				await fileTab.click();
 			}
 
-		// 获取 Tab 名称
-		const tabName = (await fileTab.textContent())?.trim();
-		if (!tabName) {
-			console.warn("⚠️ tabName is null");
-			continue;
+			// 获取 Tab 名称
+			const tabName = (await fileTab.textContent())?.trim();
+			if (!tabName) {
+				console.warn("⚠️ tabName is null");
+				continue;
+			}
+
+			// 智能解析文件名：语言名 → index.ext，文件名 → 直接使用
+			const tabResult = resolveTabName(tabName);
+			const fileName = tabResult.isFilename
+				? tabResult.filename!
+				: `index${tabResult.extension}`;
+
+			// 定位 pre 元素
+			const pre = block.locator("pre");
+
+			// 提取代码
+			const code = await this.extractCode(pre);
+
+			// 构建输出路径
+			const outputPath = variantName
+				? `${this.outputDir}/${this.blockPath}/${variantName}/${fileName}`
+				: `${this.outputDir}/${this.blockPath}/${fileName}`;
+
+			// 输出文件
+			await fse.outputFile(outputPath, code);
+			console.log(
+				`   📝 [${this.blockName}] ${variantName ? `${variantName}/` : ""}${fileName}`,
+			);
 		}
-
-		// 智能解析文件名：语言名 → index.ext，文件名 → 直接使用
-		const tabResult = resolveTabName(tabName);
-		const fileName = tabResult.isFilename
-			? tabResult.filename!
-			: `index${tabResult.extension}`;
-
-		// 定位 pre 元素
-		const pre = block.locator("pre");
-
-		// 提取代码
-		const code = await this.extractCode(pre);
-
-		// 构建输出路径
-		const outputPath = variantName
-			? `${this.outputDir}/${this.blockPath}/${variantName}/${fileName}`
-			: `${this.outputDir}/${this.blockPath}/${fileName}`;
-
-		// 输出文件
-		await fse.outputFile(outputPath, code);
-		console.log(
-			`   📝 [${this.blockName}] ${variantName ? `${variantName}/` : ""}${fileName}`,
-		);
-	}
 	}
 
 	/**
