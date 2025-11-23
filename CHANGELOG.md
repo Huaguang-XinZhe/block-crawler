@@ -1,5 +1,22 @@
 # block-crawler
 
+## 0.28.2
+
+### Patch Changes
+
+- 70f5ea3: 修复测试模式下的认证问题
+
+  - 测试模式（直接 `.open(url)`）现在也会执行认证流程
+  - 如果配置了 `.auth()`，测试模式会在访问页面前自动处理认证（复用或执行登录）
+  - 从 `collect.json` 中移除冗余的 `startUrl` 字段，该字段应仅在全局配置中存在
+
+- 45c00af: 修复测试模式下的信号处理
+
+  - 测试模式现在可以正确处理 Ctrl+C (SIGINT) 和 SIGTERM 信号
+  - 按下 Ctrl+C 时会显示 "📡 收到信号 SIGINT，正在保存状态..." 日志
+  - 会同步保存 filename mapping，确保数据不丢失
+  - 不再输出多余的错误日志，行为与其他模式保持一致
+
 ## 0.28.1
 
 ### Patch Changes
