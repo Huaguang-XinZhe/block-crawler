@@ -22,6 +22,7 @@ import {
 import { createSafeOutput } from "../utils/safe-output";
 import { AutoFileProcessor } from "./AutoFileProcessor";
 import { BlockNameExtractor } from "./BlockNameExtractor";
+import { ProcessingContext } from "./ProcessingContext";
 
 /**
  * Block 处理器
@@ -31,6 +32,7 @@ export class BlockProcessor {
 	private i18n: I18n;
 	private blockNameExtractor: BlockNameExtractor;
 	private logger: IContextLogger;
+	private context: ProcessingContext;
 
 	constructor(
 		private config: InternalConfig,
@@ -53,6 +55,7 @@ export class BlockProcessor {
 		this.i18n = createI18n(config.locale);
 		this.blockNameExtractor = new BlockNameExtractor(config, extendedConfig);
 		this.logger = logger || new ContextLogger();
+		this.context = new ProcessingContext();
 	}
 
 	/**
@@ -185,6 +188,7 @@ export class BlockProcessor {
 				| string
 				| ((locator: Locator) => Promise<boolean>)
 				| undefined,
+			this.context,
 		);
 	}
 
@@ -265,6 +269,7 @@ export class BlockProcessor {
 					this.outputDir,
 					blockPath,
 					blockName,
+					this.context,
 				);
 
 				// 处理文件和变种

@@ -9,6 +9,7 @@ import type {
 } from "../types/handlers";
 import { defaultCodeExtractor } from "../utils/default-code-extractor";
 import { createI18n, type I18n } from "../utils/i18n";
+import type { ProcessingContext } from "./ProcessingContext";
 
 /**
  * 自动文件处理器
@@ -24,6 +25,7 @@ export class AutoFileProcessor {
 		private outputDir: string,
 		private blockPath: string,
 		private blockName: string,
+		private context: ProcessingContext,
 	) {
 		this.i18n = createI18n(config.locale);
 		this.extractCode = autoConfig.extractCode || defaultCodeExtractor;
@@ -51,39 +53,64 @@ export class AutoFileProcessor {
 	): Promise<void> {
 		const variants = this.autoConfig.variants!;
 
-		for (const variantConfig of variants) {
-			const button = await this.resolveLocator(
-				variantConfig.buttonLocator,
-				block,
-			);
-			await button.click();
+		for (let variantIndex = 0; variantIndex < variants.length; variantIndex++) {
+			const variantConfig = variants[variantIndex];
+			const cacheKey = `variant-${variantIndex}`;
 
-			// 获取所有选项
-			const options = currentPage.getByRole("option");
-			const count = await options.count();
+			// 检查是否有完整的 nameMapping
+			const hasCompleteMapping =
+				variantConfig.nameMapping &&
+				Object.keys(variantConfig.nameMapping).length > 0;
 
-			// 先获取所有选项的文本（在菜单打开时）
-			const optionTexts: string[] = [];
-			for (let i = 0; i < count; i++) {
-				const text = (await options.nth(i).textContent())?.trim() || "";
-				optionTexts.push(text);
+			let variantNames: string[];
+
+			if (hasCompleteMapping) {
+				// 如果配置了完整的 nameMapping，直接使用它的值
+				variantNames = Object.values(variantConfig.nameMapping!);
+			} else {
+				// 尝试从缓存获取变种名称
+				const cached = this.context.getVariantNames(cacheKey);
+				if (cached) {
+					variantNames = cached;
+				} else {
+					// 第一次处理：获取所有变种名称
+					const button = await this.resolveLocator(
+						variantConfig.buttonLocator,
+						block,
+					);
+					await button.click();
+
+					const options = currentPage.getByRole("option");
+					const count = await options.count();
+
+					const optionTexts: string[] = [];
+					for (let i = 0; i < count; i++) {
+						const text = (await options.nth(i).textContent())?.trim() || "";
+						optionTexts.push(text);
+					}
+
+					variantNames = optionTexts;
+					// 缓存变种名称
+					this.context.setVariantNames(cacheKey, variantNames);
+
+					// 关闭菜单（点击第一个选项，因为它本来就是选中的）
+					await options.nth(0).click();
+				}
 			}
 
-			// 遍历所有选项
-			for (let i = 0; i < count; i++) {
-				const optionText = optionTexts[i];
-				// 应用名称映射
-				const variantName =
-					(variantConfig.nameMapping &&
-						variantConfig.nameMapping[optionText]) ||
-					optionText;
+			// 处理每个变种
+			for (let i = 0; i < variantNames.length; i++) {
+				const variantName = variantNames[i];
 
 				// 如果不是第一个选项，需要点击切换
 				if (i !== 0) {
-					// 打开菜单
+					const button = await this.resolveLocator(
+						variantConfig.buttonLocator,
+						block,
+					);
 					await button.click();
 
-					// 点击对应的选项
+					const options = currentPage.getByRole("option");
 					await options.nth(i).click();
 					// 等待切换完成
 					await currentPage.waitForTimeout(variantConfig.waitTime ?? 500);

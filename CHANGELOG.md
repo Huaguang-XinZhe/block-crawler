@@ -1,5 +1,26 @@
 # block-crawler
 
+## 0.28.1
+
+### Patch Changes
+
+- 优化 block 处理性能
+
+  **性能优化：**
+
+  1. **变种名称缓存**：
+
+     - 如果配置了完整的 `nameMapping`，直接使用映射值，无需点击菜单获取
+     - 如果未配置映射，第一次处理 block 时获取所有变种名称并缓存，后续 block 直接使用缓存
+
+  2. **Free block 检查策略优化**：
+
+     - 智能检测 heading 结构（多元素 vs 单元素）
+     - 第一次检测后缓存策略，后续检查速度更快
+     - 支持两种检查策略：直接在 heading 中查找 或 在 heading 容器中查找
+
+  3. **处理上下文**：新增 `ProcessingContext` 类用于缓存运行时信息，提升整体性能
+
 ## 0.28.0
 
 ### Minor Changes
