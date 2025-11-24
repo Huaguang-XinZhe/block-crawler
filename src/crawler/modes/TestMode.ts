@@ -3,6 +3,7 @@ import type { InternalConfig } from "../../config/ConfigManager";
 import type { ExtendedExecutionConfig } from "../../executors/ExecutionContext";
 import { BlockProcessor } from "../../processors/BlockProcessor";
 import { PageProcessor } from "../../processors/PageProcessor";
+import { ScriptInjector } from "../../processors/ScriptInjector";
 import { FilenameMappingManager } from "../../state/FilenameMapping";
 import { createI18n, type I18n } from "../../utils/i18n";
 import { SignalHandler } from "../../utils/signal-handler";
@@ -43,10 +44,14 @@ export class TestMode {
 			throw new Error("测试模式需要提供 testUrl");
 		}
 
+		// 生成域名特定的路径
+		const { generatePathsForUrl } = await import("../../config/ConfigManager");
+		const paths = generatePathsForUrl(this.config, processingConfig.testUrl);
+
 		// 初始化 filename mapping（用于 safe output）
 		const outputDir = this.config.outputBaseDir + "/test";
 		this.mappingManager = new FilenameMappingManager(
-			this.config.stateBaseDir,
+			paths.stateDir,
 			this.config.locale,
 		);
 		await this.mappingManager.initialize();
@@ -60,18 +65,55 @@ export class TestMode {
 		this.signalHandler.setup();
 
 		try {
+			// 初始化脚本注入器（使用域名特定的 stateDir）
+			const scriptInjector = new ScriptInjector(
+				this.config,
+				paths.stateDir,
+				processingConfig.scriptInjection,
+			);
+
+			// 注入 beforePageLoad 脚本
+			if (processingConfig.beforeOpenScripts.length > 0) {
+				await scriptInjector.injectScripts(
+					this.page,
+					processingConfig.beforeOpenScripts,
+					"beforePageLoad",
+				);
+			}
+
 			// 导航到测试页面
 			await this.navigateToTestPage(
 				processingConfig.testUrl,
 				processingConfig.waitUntil || "load",
 			);
 
-			// 注入脚本警告
-			if (
-				processingConfig.beforeOpenScripts.length > 0 ||
-				processingConfig.afterOpenScripts.length > 0
-			) {
-				console.warn(this.i18n.t("crawler.testScriptWarning"));
+			// 注入 afterPageLoad 脚本
+			if (processingConfig.afterOpenScripts.length > 0) {
+				await scriptInjector.injectScripts(
+					this.page,
+					processingConfig.afterOpenScripts,
+					"afterPageLoad",
+				);
+			}
+
+			// 检查页面级 skipFree（如果配置了）
+			// 注意：必须尽早检查，在自动滚动之前，这样可以避免不必要的操作
+			if (processingConfig.pageSkipFreeText) {
+				const { PageProcessor } = await import(
+					"../../processors/PageProcessor"
+				);
+				const isFree = await PageProcessor.checkPageFree(
+					this.page,
+					this.config,
+					processingConfig.pageSkipFreeText,
+				);
+				if (isFree) {
+					console.log(
+						this.i18n.t("page.skipFree", { path: processingConfig.testUrl }),
+					);
+					await this.mappingManager.save();
+					return; // 跳过整个页面
+				}
 			}
 
 			// 执行自动滚动（如果配置了）
@@ -89,25 +131,6 @@ export class TestMode {
 					this.mappingManager,
 				);
 
-				// 检查是否为 Free Page（仅在 skipFreeMode 为 "page" 时）
-				if (
-					processingConfig.skipFreeMode === "page" &&
-					processingConfig.skipFreeText
-				) {
-					const isFree = await PageProcessor.checkPageFree(
-						this.page,
-						this.config,
-						processingConfig.skipFreeText,
-					);
-					if (isFree) {
-						console.log(
-							this.i18n.t("page.skipFree", { path: processingConfig.testUrl }),
-						);
-						await this.mappingManager.save();
-						return; // 跳过整个页面
-					}
-				}
-
 				await pageProcessor.processPage(this.page, processingConfig.testUrl);
 			}
 
@@ -122,14 +145,7 @@ export class TestMode {
 					blockNameLocator: processingConfig.blockNameLocator,
 					getAllBlocks: processingConfig.getAllBlocks,
 					scriptInjection: processingConfig.scriptInjection,
-					skipFreeMode: processingConfig.skipFreeMode,
-					// skipFree 根据 skipFreeMode 传递
-					skipFree:
-						processingConfig.skipFreeMode === "block"
-							? processingConfig.skipFreeText
-							: processingConfig.skipFreeMode === "page"
-								? processingConfig.skipFreeText
-								: undefined,
+					blockSkipFree: processingConfig.blockSkipFreeText,
 				};
 
 				// 使用真实的 BlockProcessor

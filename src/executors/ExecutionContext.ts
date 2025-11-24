@@ -18,23 +18,21 @@ export interface ExtendedExecutionConfig {
 	getAllBlocks?: (page: Page) => Promise<Locator[]>;
 	scriptInjection?: boolean | { enabled: boolean; scripts?: string[] };
 	/**
-	 * skipFree 支持 Page 级别和 Block 级别：
+	 * 页面级 skipFree：
 	 *   - undefined: 未启用跳过
 	 *   - "default": 使用默认匹配 /free/i（忽略大小写）
 	 *   - string: 精确匹配指定文本
-	 *   - function: 自定义判断逻辑
+	 *   - function: 自定义判断逻辑（接收 Page）
 	 */
-	skipFree?:
-		| string
-		| ((page: Page) => Promise<boolean>)
-		| ((locator: Locator) => Promise<boolean>);
+	pageSkipFree?: string | ((page: Page) => Promise<boolean>);
 	/**
-	 * skipFreeMode 标识在哪个级别跳过：
-	 *   - "page": 页面级别（在 LinkExecutor 中检查）
-	 *   - "block": Block 级别（在 BlockProcessor 中检查）
-	 *   - undefined: 未启用
+	 * Block 级 skipFree：
+	 *   - undefined: 未启用跳过
+	 *   - "default": 使用默认匹配 /free/i（忽略大小写）
+	 *   - string: 精确匹配指定文本
+	 *   - function: 自定义判断逻辑（接收 Locator）
 	 */
-	skipFreeMode?: "page" | "block";
+	blockSkipFree?: string | ((locator: Locator) => Promise<boolean>);
 }
 
 /**

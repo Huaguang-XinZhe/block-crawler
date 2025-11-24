@@ -23,9 +23,9 @@ export class CollectionMode {
 	}
 
 	/**
-	 * 执行收集（包含2种场景）
-	 * 1. 配置了 section → 执行新收集
-	 * 2. 未配置 section + 配置了 startUrl → 从 collect.json 加载
+	 * 执行收集（智能跳过逻辑）
+	 * 只有在：配置了 section + 没有 collect.json 时才执行收集
+	 * 其他情况跳过收集阶段（返回空结果）
 	 */
 	async execute(collectionConfig: CollectionConfig): Promise<CollectResult> {
 		if (!collectionConfig.startUrl) {
@@ -34,12 +34,23 @@ export class CollectionMode {
 
 		const hasSection = ConfigHelper.hasSection(collectionConfig);
 
+		// 未配置 section → 跳过收集
 		if (!hasSection) {
-			// 场景 2: 配置了 startUrl 但未配置 section → 从文件加载
-			return await this.loadFromFile(collectionConfig.startUrl);
+			console.log(this.i18n.t("collection.skipped"));
+			return this.emptyResult();
 		}
 
-		// 场景 1: 配置了 section → 执行新收集
+		// 配置了 section，检查是否已有 collect.json
+		const existingResult = await this.tryLoadFromFile(
+			collectionConfig.startUrl,
+		);
+		if (existingResult) {
+			// 已有 collect.json → 跳过收集（避免重复）
+			console.log(this.i18n.t("collection.skipExisting"));
+			return this.emptyResult();
+		}
+
+		// 配置了 section + 没有 collect.json → 执行收集
 		return await this.performCollection(collectionConfig);
 	}
 
@@ -63,9 +74,11 @@ export class CollectionMode {
 	}
 
 	/**
-	 * 从 collect.json 加载已有结果
+	 * 尝试从 collect.json 加载（不抛出错误）
 	 */
-	private async loadFromFile(startUrl: string): Promise<CollectResult> {
+	private async tryLoadFromFile(
+		startUrl: string,
+	): Promise<CollectResult | null> {
 		const { CollectResultStore } = await import(
 			"../../collectors/store/CollectResultStore"
 		);
@@ -75,13 +88,18 @@ export class CollectionMode {
 			this.config.locale,
 		);
 
-		const result = await store.load();
-		if (!result) {
-			throw new Error(
-				`未找到 collect.json 文件。请先配置 section（如 .tabSections() 或 .tabSection()）来执行一次收集。`,
-			);
-		}
+		return await store.load();
+	}
 
-		return result;
+	/**
+	 * 返回空的收集结果
+	 */
+	private emptyResult(): CollectResult {
+		return {
+			lastUpdate: new Date().toISOString(),
+			totalLinks: 0,
+			totalBlocks: 0,
+			collections: [],
+		};
 	}
 }

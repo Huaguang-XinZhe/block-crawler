@@ -112,14 +112,8 @@ export class ProcessingMode {
 			blockNameLocator: processingConfig.blockNameLocator,
 			getAllBlocks: processingConfig.getAllBlocks,
 			scriptInjection: processingConfig.scriptInjection,
-			skipFreeMode: processingConfig.skipFreeMode,
-			// skipFree 根据 skipFreeMode 传递
-			skipFree:
-				processingConfig.skipFreeMode === "block"
-					? processingConfig.skipFreeText
-					: processingConfig.skipFreeMode === "page"
-						? processingConfig.skipFreeText
-						: undefined,
+			pageSkipFree: processingConfig.pageSkipFreeText,
+			blockSkipFree: processingConfig.blockSkipFreeText,
 		};
 
 		this.orchestrator = new ExecutionOrchestrator(

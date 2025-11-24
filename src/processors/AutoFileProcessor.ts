@@ -42,6 +42,9 @@ export class AutoFileProcessor {
 		} else if (this.autoConfig.fileTabs) {
 			// 如果没有变种但配置了 fileTabs，直接处理文件
 			await this.processFileTabs(block, currentPage);
+		} else {
+			// 如果只提供了 extractCode，处理单个文件
+			await this.processSingleFile(block);
 		}
 	}
 
@@ -123,6 +126,31 @@ export class AutoFileProcessor {
 				}
 			}
 		}
+	}
+
+	/**
+	 * 处理单个文件（最简单的场景，只提供 extractCode）
+	 */
+	private async processSingleFile(block: Locator): Promise<void> {
+		// 定位 pre 元素
+		const preLocator = block.locator("pre");
+		const preCount = await preLocator.count();
+
+		// 如果有多个 pre 元素，取最后一个
+		const pre = preCount > 1 ? preLocator.last() : preLocator;
+
+		// 提取代码
+		const code = await this.extractCode(pre);
+
+		// 使用默认文件名 index.tsx
+		const fileName = "index.tsx";
+
+		// 构建输出路径
+		const outputPath = `${this.outputDir}/${this.blockPath}/${fileName}`;
+
+		// 输出文件
+		await fse.outputFile(outputPath, code);
+		console.log(`   📝 [${this.blockName}] ${fileName}`);
 	}
 
 	/**

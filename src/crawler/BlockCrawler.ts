@@ -318,7 +318,7 @@ export class BlockCrawler {
 			this.processingConfig.pageHandler = handlerOrConfig.handler;
 			this.processingConfig.autoScroll = handlerOrConfig.autoScroll;
 		}
-		this.processingConfig.skipFreeMode = "page";
+		this.processingConfig._currentConfigStage = "page";
 		return this;
 	}
 
@@ -347,11 +347,18 @@ export class BlockCrawler {
 	 * ```
 	 */
 	skipFree(text?: string): this {
-		if (!this.processingConfig.skipFreeMode) {
+		if (!this.processingConfig._currentConfigStage) {
 			throw new Error("skipFree() 必须在 page() 或 block() 之后调用");
 		}
 		// 如果没有传入 text，使用 "default" 表示默认匹配
-		this.processingConfig.skipFreeText = text === undefined ? "default" : text;
+		const skipFreeText = text === undefined ? "default" : text;
+
+		// 根据当前配置阶段设置对应的 skipFree
+		if (this.processingConfig._currentConfigStage === "page") {
+			this.processingConfig.pageSkipFreeText = skipFreeText;
+		} else {
+			this.processingConfig.blockSkipFreeText = skipFreeText;
+		}
 		return this;
 	}
 
@@ -451,7 +458,7 @@ export class BlockCrawler {
 			}
 		}
 
-		this.processingConfig.skipFreeMode = "block";
+		this.processingConfig._currentConfigStage = "block";
 		return this;
 	}
 
@@ -461,20 +468,47 @@ export class BlockCrawler {
 	 * 执行爬虫任务（必须调用）
 	 */
 	async run(): Promise<void> {
-		// 测试模式：直接执行测试
+		// 测试模式
 		if (this.processingConfig.testUrl) {
 			// 测试模式必须调用 open()
 			if (!this.isOpenCalled) {
 				throw new Error("测试模式必须调用 open() 方法");
 			}
 
-			// 步骤 0: 处理认证（如果配置了 authConfig）
-			if (this.authConfig) {
+			// 检查是否需要执行收集阶段
+			// 条件：配置了 tabSections/tabSection + 没有 collect.json
+			const needsCollection =
+				this.collectionConfig.startUrl &&
+				(this.collectionConfig.tabSectionsConfig ||
+					this.collectionConfig.tabSectionConfig);
+
+			let collectJsonExists = false;
+			if (needsCollection) {
+				// 检查 collect.json 是否存在
+				const { CollectResultStore } = await import(
+					"../collectors/store/CollectResultStore"
+				);
 				const { generatePathsForUrl } = await import("../config/ConfigManager");
 				const paths = generatePathsForUrl(
 					this.config,
-					this.processingConfig.testUrl,
+					this.collectionConfig.startUrl!,
 				);
+				const store = new CollectResultStore(
+					this.collectionConfig.startUrl!,
+					paths.stateDir,
+					this.config.locale,
+				);
+				collectJsonExists = await store.exists();
+			}
+
+			// 步骤 0: 处理认证（如果配置了 authConfig）
+			const authUrl =
+				needsCollection && !collectJsonExists
+					? this.collectionConfig.startUrl
+					: this.processingConfig.testUrl;
+			if (this.authConfig && authUrl) {
+				const { generatePathsForUrl } = await import("../config/ConfigManager");
+				const paths = generatePathsForUrl(this.config, authUrl);
 
 				// 根据 authConfig 创建最终的 authHandler
 				let finalAuthHandler: ((page: Page) => Promise<void>) | undefined;
@@ -509,6 +543,12 @@ export class BlockCrawler {
 				await authManager.ensureAuth();
 			}
 
+			// 步骤 1: 如果配置了收集且 collect.json 不存在，先执行收集
+			if (needsCollection && !collectJsonExists) {
+				await this.getCollectionMode().execute(this.collectionConfig);
+			}
+
+			// 步骤 2: 执行测试模式
 			await this.getTestMode().execute(this.processingConfig);
 			return;
 		}

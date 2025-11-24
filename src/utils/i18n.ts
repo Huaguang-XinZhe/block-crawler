@@ -63,7 +63,6 @@ const messages = {
 		"crawler.testRunning": "🚀 执行测试逻辑...",
 		"crawler.testComplete": "✅ 测试完成！",
 		"crawler.testFailed": "❌ 测试失败",
-		"crawler.testScriptWarning": "⚠️ 测试模式暂不支持脚本注入",
 		"crawler.testVisitingUrl": "📍 测试模式：访问 {url}",
 		"crawler.testFoundBlocks": "📦 找到 {count} 个 block",
 		"crawler.testProcessingBlock": "🔄 处理 block {current}/{total}: {name}",
@@ -87,8 +86,14 @@ const messages = {
 			"✅ 扫描完成: {pages} 个页面, {blocks} 个已完成 block",
 
 		// Free 相关
-		"free.saved": "🆓 Free 记录已保存 (跳过 Block: {blocks}, 跳过 Page: {pages})",
-		"free.loaded": "🆓 Free 记录已加载 (跳过 Block: {blocks}, 跳过 Page: {pages})",
+		"free.saved":
+			"🆓 Free 记录已保存 (跳过 Block: {blocks}, 跳过 Page: {pages})",
+		"free.loaded":
+			"🆓 Free 记录已加载 (跳过 Block: {blocks}, 跳过 Page: {pages})",
+
+		// 收集相关
+		"collection.skipped": "⏭️  未配置收集，跳过收集阶段",
+		"collection.skipExisting": "⏭️  已有 collect.json，跳过收集阶段",
 
 		// 配置相关
 		"config.parseUrlFailed": "⚠️ 解析 startUrl 失败，使用默认域名",
@@ -170,7 +175,8 @@ const messages = {
 		"block.skipFree": "⏭️  跳过 Free Block: {name}",
 		"block.skipFreeCount": "已跳过 {count} 个 Free Block：",
 		"block.saved": "✅ Block 已保存: {path}",
-		"block.mismatchWarning": "⚠️  组件数不一致: 预期 {expected}, 实际定位到 {actual}",
+		"block.mismatchWarning":
+			"⚠️  组件数不一致: 预期 {expected}, 实际定位到 {actual}",
 		"block.skipMismatch": "⏭️  跳过此页面（组件数不匹配）",
 		"block.continueWithMismatch":
 			"▶️  继续处理（已启用 ignoreMismatch），但已记录",
@@ -187,7 +193,8 @@ const messages = {
 		"block.verifyComplete": "✅ Block 采集验证通过 (共 {count} 个)",
 		"block.processedList": "已处理的 Block:",
 		"block.progressiveMode": "🔄 启用渐进式定位模式 (批次大小: {batchSize})",
-		"block.progressiveBatch": "📦 批次 {batch}: 处理 {count} 个 block (剩余 {remaining} 个)",
+		"block.progressiveBatch":
+			"📦 批次 {batch}: 处理 {count} 个 block (剩余 {remaining} 个)",
 		"block.progressiveComplete": "✅ 渐进式定位完成：未发现新的 block",
 		"block.progressiveTotal": "✅ 渐进式处理完成，共处理 {count} 个 block",
 
@@ -235,6 +242,8 @@ const messages = {
 		"script.injectedBefore": "💉 脚本已在页面加载前注入: {name}",
 		"script.injectedAfter": "💉 脚本已在页面加载后注入: {name}",
 		"script.injectError": "❌ 注入脚本失败 [{name}]: {error}",
+		"script.gmPolyfillInjected": "🔧 油猴 API polyfill 已注入",
+		"script.gmPolyfillError": "⚠️  油猴 polyfill 注入失败",
 
 		// 文件名映射
 		"filename.loadFailed": "⚠️ 加载文件名映射失败: {path}",
@@ -320,8 +329,10 @@ const messages = {
 			"✅ Scan complete: {pages} pages, {blocks} completed blocks",
 
 		// Free
-		"free.saved": "🆓 Free records saved (Skipped blocks: {blocks}, Skipped pages: {pages})",
-		"free.loaded": "🆓 Free records loaded (Skipped blocks: {blocks}, Skipped pages: {pages})",
+		"free.saved":
+			"🆓 Free records saved (Skipped blocks: {blocks}, Skipped pages: {pages})",
+		"free.loaded":
+			"🆓 Free records loaded (Skipped blocks: {blocks}, Skipped pages: {pages})",
 
 		// Configuration
 		"config.parseUrlFailed": "⚠️ Failed to parse startUrl, using default domain",
@@ -428,10 +439,14 @@ const messages = {
 			"\n⚠️  Block collection incomplete!\n   Page: {pagePath}\n   Expected: {expectedCount}\n   Processed: {processedCount}\n   Difference: {diff}\n\n   Processed Blocks:\n{blockList}\n\n   💡 Tip: Run with --debug flag to automatically pause the page for inspection\n",
 		"block.verifyComplete":
 			"\n✅ Block collection verification passed\n   Page: {pagePath}\n   Expected: {expectedCount}\n   Processed: {processedCount}\n",
-		"block.progressiveMode": "🔄 Progressive locate mode enabled (batch size: {batchSize})",
-		"block.progressiveBatch": "📦 Batch {batch}: Processing {count} block(s) ({remaining} remaining)",
-		"block.progressiveComplete": "✅ Progressive locating complete: No new blocks found",
-		"block.progressiveTotal": "✅ Progressive processing complete, processed {count} block(s) in total",
+		"block.progressiveMode":
+			"🔄 Progressive locate mode enabled (batch size: {batchSize})",
+		"block.progressiveBatch":
+			"📦 Batch {batch}: Processing {count} block(s) ({remaining} remaining)",
+		"block.progressiveComplete":
+			"✅ Progressive locating complete: No new blocks found",
+		"block.progressiveTotal":
+			"✅ Progressive processing complete, processed {count} block(s) in total",
 
 		// Mismatch records
 		"mismatch.noRecords": "✅ No block count mismatch records",

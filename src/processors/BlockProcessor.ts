@@ -330,14 +330,11 @@ export class BlockProcessor {
 	 *   - function: 自定义判断逻辑
 	 */
 	private async isBlockFree(block: Locator): Promise<boolean> {
-		// 在 block 处理器中，skipFree 只会是 string 或接收 Locator 的函数
+		// 使用 blockSkipFree 配置
 		return await checkBlockFreeUtil(
 			block,
 			this.config,
-			this.extendedConfig.skipFree as
-				| string
-				| ((locator: Locator) => Promise<boolean>)
-				| undefined,
+			this.extendedConfig.blockSkipFree,
 			this.context,
 		);
 	}

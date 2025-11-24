@@ -44,9 +44,12 @@ export interface ProcessingConfig {
 	blockAutoConfig?: BlockAutoConfig;
 	// 渐进式定位（批次大小固定为 3）
 	progressiveLocate?: boolean;
-	// skipFreeText: undefined = 未设置, "default" = 使用默认匹配(/free/i), string = 精确匹配
-	skipFreeText?: string;
-	skipFreeMode?: "page" | "block";
+	// 页面级 skipFree: undefined = 未设置, "default" = 使用默认匹配(/free/i), string = 精确匹配
+	pageSkipFreeText?: string;
+	// Block 级 skipFree: undefined = 未设置, "default" = 使用默认匹配(/free/i), string = 精确匹配
+	blockSkipFreeText?: string;
+	// 当前配置阶段（用于确定 skipFree 作用范围）
+	_currentConfigStage?: "page" | "block";
 	// 测试模式配置
 	testUrl?: string;
 	// 页面级自动滚动配置

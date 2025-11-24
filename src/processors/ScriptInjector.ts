@@ -119,6 +119,115 @@ export class ScriptInjector {
 	}
 
 	/**
+	 * 检查脚本是否是油猴脚本（UserScript）
+	 */
+	private isUserScript(content: string): boolean {
+		return content.includes("// ==UserScript==");
+	}
+
+	/**
+	 * 生成油猴 API polyfill
+	 * 为油猴脚本提供必要的 API 模拟
+	 */
+	private getGMPolyfill(): string {
+		return `
+// Tampermonkey API Polyfill for Playwright
+(function() {
+    'use strict';
+    
+    // GM_xmlhttpRequest polyfill using fetch
+    window.GM_xmlhttpRequest = function(details) {
+        const {
+            method = 'GET',
+            url,
+            headers = {},
+            data,
+            onload,
+            onerror,
+            ontimeout,
+            timeout = 30000
+        } = details;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            if (ontimeout) ontimeout();
+        }, timeout);
+
+        const fetchOptions = {
+            method: method,
+            headers: headers,
+            signal: controller.signal
+        };
+
+        if (data && (method === 'POST' || method === 'PUT')) {
+            fetchOptions.body = data;
+        }
+
+        fetch(url, fetchOptions)
+            .then(response => {
+                clearTimeout(timeoutId);
+                return response.text().then(text => ({
+                    status: response.status,
+                    statusText: response.statusText,
+                    responseText: text,
+                    response: text,
+                    readyState: 4
+                }));
+            })
+            .then(result => {
+                if (onload) onload(result);
+            })
+            .catch(error => {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    if (ontimeout) ontimeout();
+                } else {
+                    if (onerror) onerror(error);
+                }
+            });
+    };
+
+    // 其他常用油猴 API 的 polyfill
+    window.GM_getValue = function(key, defaultValue) {
+        const value = localStorage.getItem('GM_' + key);
+        return value !== null ? JSON.parse(value) : defaultValue;
+    };
+
+    window.GM_setValue = function(key, value) {
+        localStorage.setItem('GM_' + key, JSON.stringify(value));
+    };
+
+    window.GM_deleteValue = function(key) {
+        localStorage.removeItem('GM_' + key);
+    };
+
+    window.GM_listValues = function() {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('GM_')) {
+                keys.push(key.substring(3));
+            }
+        }
+        return keys;
+    };
+
+    window.GM_info = {
+        script: {
+            name: 'UserScript via Playwright',
+            version: '1.0'
+        },
+        scriptHandler: 'Playwright ScriptInjector',
+        version: '1.0'
+    };
+
+    console.log('[GM] Tampermonkey API polyfill loaded');
+})();
+`;
+	}
+
+	/**
 	 * 动态注入指定脚本列表
 	 * @param page 页面对象
 	 * @param scriptNames 脚本名称列表（从 .crawler/域名/scripts/ 目录加载）
@@ -132,6 +241,43 @@ export class ScriptInjector {
 		const fs = await import("node:fs/promises");
 		const path = await import("node:path");
 
+		let hasUserScript = false;
+
+		// 预检查是否有油猴脚本
+		for (const scriptName of scriptNames) {
+			try {
+				const scriptPath = path.join(this.stateDir, "scripts", scriptName);
+				const content = await fs.readFile(scriptPath, "utf-8");
+				if (this.isUserScript(content)) {
+					hasUserScript = true;
+					break;
+				}
+			} catch (error) {
+				// 继续检查其他脚本
+			}
+		}
+
+		// 如果有油猴脚本，先注入 polyfill
+		if (hasUserScript) {
+			try {
+				if (timing === "beforePageLoad") {
+					await page.addInitScript(this.getGMPolyfill());
+				} else {
+					await page.evaluate(this.getGMPolyfill());
+				}
+				console.log(
+					this.i18n.t("script.gmPolyfillInjected") ||
+						"🔧 油猴 API polyfill 已注入",
+				);
+			} catch (error) {
+				console.warn(
+					this.i18n.t("script.gmPolyfillError") || "⚠️  油猴 polyfill 注入失败:",
+					error,
+				);
+			}
+		}
+
+		// 注入用户脚本
 		for (const scriptName of scriptNames) {
 			try {
 				const scriptPath = path.join(this.stateDir, "scripts", scriptName);

@@ -63,7 +63,7 @@ export class LinkExecutor {
 
 		try {
 			// 注入 beforeOpen 脚本
-			if (!isFirst && options.beforeOpenScripts?.length) {
+			if (options.beforeOpenScripts?.length) {
 				await this.context.scriptInjector.injectScripts(
 					newPage,
 					options.beforeOpenScripts,
@@ -78,7 +78,7 @@ export class LinkExecutor {
 			await newPage.goto(url, gotoOptions);
 
 			// 注入 afterOpen 脚本
-			if (!isFirst && options.afterOpenScripts?.length) {
+			if (options.afterOpenScripts?.length) {
 				await this.context.scriptInjector.injectScripts(
 					newPage,
 					options.afterOpenScripts,
@@ -86,17 +86,12 @@ export class LinkExecutor {
 				);
 			}
 
-			// 检查页面是否为 Free（仅在 skipFreeMode 为 "page" 时）
-			if (
-				this.context.extendedConfig.skipFreeMode === "page" &&
-				this.context.extendedConfig.skipFree
-			) {
+			// 检查页面是否为 Free（如果配置了页面级 skipFree）
+			if (this.context.extendedConfig.pageSkipFree) {
 				const isPageFree = await PageProcessor.checkPageFree(
 					newPage,
 					this.context.config,
-					this.context.extendedConfig.skipFree as
-						| string
-						| ((page: Page) => Promise<boolean>),
+					this.context.extendedConfig.pageSkipFree,
 				);
 				if (isPageFree) {
 					logger.log(

@@ -6,89 +6,37 @@ test("untitledui", async ({ page }) => {
 
 	const crawler = new BlockCrawler(page, {
 		startUrl: "https://www.untitledui.com/react/components",
-		skipFree: "FREE",
-		locale: "zh",
-		collectionLinkWaitOptions: {
-			// 得加这个，不加这个，Live view 的点击可能会失效❗
-			waitUntil: "networkidle",
-		},
-		scriptInjection: {
-			script: "custom-script.js", // 单个脚本，从 .crawler/www.untitledui.com/ 读取
-		},
-		// 进度恢复配置
-		// progress: {
-		//   enable: true,
-		//   rebuild: {
-		//     // blockType 已移除，框架会自动检测（file 或 directory）
-		//     saveToProgress: true,
-		//   },
-		// },
 	});
 
-	// 如果需要登录，可以使用 auth() 方法
-	// await crawler
-	//   .auth(async (page) => {
-	//     await page.goto("https://www.untitledui.com/login");
-	//     await page.fill("#username", "user");
-	//     await page.fill("#password", "pass");
-	//     await page.click("button[type=submit]");
-	//     // 重要：必须等待登录完成，否则 cookies 可能还未设置
-	//     await page.waitForURL("**/dashboard");
-	//   })
-
-	// 独立的收集阶段
 	await crawler
-		.collect()
-		.tabSections(async (page) => {
-			// 返回所有包含内容的 sections
-			return page.locator("xpath=//section[3]/div/div").all();
-		})
-		.name("p:first-of-type")
-		.count("p:last-of-type")
-		.run();
-
-	// 独立的处理阶段
-	await crawler
-		.open("networkidle")
+		// .collect()
+		// .tabSections("//section[3]/div/div")
+		// .name("p:first-of-type")
+		// .count("p:last-of-type")
+		.inject(["custom-script.js"])
+		// .open("networkidle")
+		.open(
+			"https://www.untitledui.com/react/components/text-editors",
+			"networkidle",
+		)
 		.page(async ({ currentPage, clickAndVerify }) => {
 			// 前置逻辑示例：在整个页面执行
 			const listViewTab = currentPage.getByRole("tab", { name: "List view" });
-			// 使用 clickAndVerify 确保点击生效（tab 元素会自动验证 aria-selected）
+			// 立即判断是否可见，如果可见则点击
 			if (await listViewTab.isVisible({ timeout: 0 })) {
+				// 使用 clickAndVerify 确保点击生效（tab 元素会自动验证 aria-selected）
 				await clickAndVerify(listViewTab);
 			}
 		})
-		.block("[data-preview]", async ({ block, safeOutput, clickCode }) => {
-			// 使用 clickCode 点击 Code 按钮（内置验证）
-			await clickCode();
-			// 获取内部 pre
-			const code = await extractCodeFromDOM(block);
-			// 输出到文件
-			await safeOutput(code);
+		.skipFree("FREE")
+		.block("[data-preview]", {
+			extractCode: extractCodeFromPre,
 		})
 		.run();
-
-	// 测试模式示例
-	// await crawler
-	//   .open("networkidle")
-	//   .page(async ({ currentPage, clickAndVerify }) => {
-	//     // 前置逻辑：点击切换到 List view
-	//     const listViewTab = currentPage.getByRole("tab", { name: "List view" });
-	//     if (await listViewTab.isVisible({ timeout: 0 })) {
-	//       await clickAndVerify(listViewTab);
-	//     }
-	//   })
-	//   .test(
-	//     "https://www.untitledui.com/react/components/sign-up-pages",
-	//     "[data-preview]",
-	//     { index: 1 }
-	//   )
-	//   .run();
 });
 
 // 从 DOM 中提取 Code
-async function extractCodeFromDOM(section: Locator): Promise<string> {
-	const pre = section.locator("pre").last();
+async function extractCodeFromPre(pre: Locator): Promise<string> {
 	// 等待 export 文本出现
 	await pre
 		.getByText("export")
