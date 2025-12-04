@@ -1,6 +1,6 @@
 {
 	"name": "@huaguang/block-crawler",
-	"version": "0.30.0",
+	"version": "0.35.1",
 	"description": "基于 Playwright 的通用 Block 爬虫框架，支持受限并发、进度恢复、单页面或单 Block 处理模式",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -55,7 +55,8 @@
 	},
 	"dependencies": {
 		"fs-extra": "^11.3.2",
-		"p-limit": "^7.2.0"
+		"p-limit": "^7.2.0",
+		"prettier": "^3.7.4"
 	},
 	"peerDependencies": {
 		"@playwright/test": "^1.0.0"

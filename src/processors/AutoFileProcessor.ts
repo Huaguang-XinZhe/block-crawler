@@ -40,10 +40,10 @@ export class AutoFileProcessor {
 		if (this.autoConfig.variants && this.autoConfig.variants.length > 0) {
 			await this.processWithVariants(block, currentPage);
 		} else if (this.autoConfig.fileTabs) {
-			// 如果没有变种但配置了 fileTabs，直接处理文件
+			// 如果配置了 fileTabs，处理多文件
 			await this.processFileTabs(block, currentPage);
 		} else {
-			// 如果只提供了 extractCode，处理单个文件
+			// 没有 fileTabs，处理单个文件（输出到 blockName.extension）
 			await this.processSingleFile(block);
 		}
 	}
@@ -129,9 +129,13 @@ export class AutoFileProcessor {
 	}
 
 	/**
-	 * 处理单个文件（最简单的场景，只提供 extractCode）
+	 * 处理单个文件（没有 fileTabs 的场景）
+	 * 输出到 blockName.extension（而非 目录/index.extension）
 	 */
 	private async processSingleFile(block: Locator): Promise<void> {
+		// 先滚动 block 到视口顶部，触发懒加载
+		await this.scrollToTop(block);
+
 		// 定位 pre 元素
 		const preLocator = block.locator("pre");
 		const preCount = await preLocator.count();
@@ -142,11 +146,11 @@ export class AutoFileProcessor {
 		// 提取代码
 		const code = await this.extractCode(pre);
 
-		// 使用默认文件名 index.tsx
-		const fileName = "index.tsx";
+		// 没有 fileTabs 时，直接输出到 blockName.tsx
+		const fileName = `${this.blockName}.tsx`;
 
-		// 构建输出路径
-		const outputPath = `${this.outputDir}/${this.blockPath}/${fileName}`;
+		// 构建输出路径（不再嵌套目录）
+		const outputPath = `${this.outputDir}/${this.blockPath}.tsx`;
 
 		// 输出文件
 		await fse.outputFile(outputPath, code);
@@ -162,6 +166,9 @@ export class AutoFileProcessor {
 		variantName?: string,
 	): Promise<void> {
 		if (!this.autoConfig.fileTabs) return;
+
+		// 先滚动 block 到视口顶部，触发懒加载
+		await this.scrollToTop(block);
 
 		// 获取所有文件 Tab
 		const fileTabs = await this.resolveLocators(
@@ -235,4 +242,17 @@ export class AutoFileProcessor {
 		}
 		return await locatorsOrCustom(parent);
 	}
+
+	/**
+	 * 滚动元素到视口顶部
+	 * 用于触发懒加载：将 block 滚动到顶部，确保 pre 区域进入视口
+	 */
+	private async scrollToTop(element: Locator): Promise<void> {
+		await element.evaluate((el) => {
+			el.scrollIntoView({ block: "start", behavior: "instant" });
+		});
+		// // 等待懒加载完成
+		// await element.page().waitForTimeout(200);
+	}
+
 }

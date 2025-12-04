@@ -5,6 +5,7 @@ import { BlockProcessor } from "../../processors/BlockProcessor";
 import { PageProcessor } from "../../processors/PageProcessor";
 import { ScriptInjector } from "../../processors/ScriptInjector";
 import { FilenameMappingManager } from "../../state/FilenameMapping";
+import { TaskProgress } from "../../state/TaskProgress";
 import { createI18n, type I18n } from "../../utils/i18n";
 import { SignalHandler } from "../../utils/signal-handler";
 import type { ProcessingConfig } from "../utils/ConfigHelper";
@@ -20,6 +21,7 @@ import type { ProcessingConfig } from "../utils/ConfigHelper";
 export class TestMode {
 	private i18n: I18n;
 	private mappingManager?: FilenameMappingManager;
+	private taskProgress?: TaskProgress;
 	private signalHandler?: SignalHandler;
 
 	/**
@@ -49,17 +51,33 @@ export class TestMode {
 		const paths = generatePathsForUrl(this.config, processingConfig.testUrl);
 
 		// 初始化 filename mapping（用于 safe output）
-		const outputDir = this.config.outputBaseDir + "/test";
+		// 输出路径：output/test/域名/xxx
+		const outputDir = `${this.config.outputBaseDir}/test/${paths.domain}`;
 		this.mappingManager = new FilenameMappingManager(
 			paths.stateDir,
 			this.config.locale,
 		);
 		await this.mappingManager.initialize();
 
+		// 初始化进度管理器（只有显式配置 enable: true 时才启用）
+		if (this.config.progress?.enable === true) {
+			this.taskProgress = new TaskProgress(
+				paths.progressFile,
+				outputDir,
+				paths.stateDir,
+				this.config.locale,
+				this.config.progress,
+			);
+			await this.taskProgress.initialize();
+		}
+
 		// 设置信号处理器
 		this.signalHandler = new SignalHandler(this.config.locale, () => {
 			if (this.mappingManager) {
 				this.mappingManager.saveSync();
+			}
+			if (this.taskProgress) {
+				this.taskProgress.saveProgressSync();
 			}
 		});
 		this.signalHandler.setup();
@@ -154,7 +172,7 @@ export class TestMode {
 					outputDir,
 					processingConfig.blockLocator,
 					processingConfig.blockHandler || null,
-					undefined, // taskProgress (测试模式不需要)
+					this.taskProgress, // taskProgress（支持进度恢复）
 					undefined, // beforeProcessBlocks
 					this.mappingManager,
 					false, // verifyBlockCompletion (测试模式不需要验证)
@@ -173,8 +191,11 @@ export class TestMode {
 				);
 			}
 
-			// 保存 filename mapping
+			// 保存 filename mapping 和进度
 			await this.mappingManager.save();
+			if (this.taskProgress) {
+				await this.taskProgress.saveProgress();
+			}
 		} finally {
 			// 移除信号处理器
 			this.signalHandler?.cleanup();

@@ -98,13 +98,16 @@ export class ProcessingMode {
 		}
 		const paths = generatePathsForUrl(this.config, startUrl);
 
-		this.taskProgress = new TaskProgress(
-			paths.progressFile,
-			paths.outputDir,
-			paths.stateDir,
-			this.config.locale,
-			this.config.progress,
-		);
+		// 只有显式配置 enable: true 时才启用进度管理
+		if (this.config.progress?.enable === true) {
+			this.taskProgress = new TaskProgress(
+				paths.progressFile,
+				paths.outputDir,
+				paths.stateDir,
+				this.config.locale,
+				this.config.progress,
+			);
+		}
 
 		// 构建扩展配置
 		const extendedConfig: ExtendedExecutionConfig = {

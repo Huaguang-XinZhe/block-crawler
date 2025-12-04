@@ -228,7 +228,9 @@ export class TaskProgress {
 				);
 
 				for (const file of componentFiles) {
-					const blockPath = path.join(pagePath, file.name).replace(/\\/g, "/");
+					// blockPath 不包含扩展名（与 BlockProcessor 标记时一致）
+					const blockName = path.parse(file.name).name;
+					const blockPath = path.join(pagePath, blockName).replace(/\\/g, "/");
 					pageStats.total++;
 
 					const isComplete = await this.checkBlockComplete(
@@ -376,20 +378,39 @@ export class TaskProgress {
 		let blockType: "file" | "directory" | null = null;
 
 		if (componentFiles.length > 0) {
-			// 有组件文件，这就是页面目录，block 是文件
+			// 当前目录直接有组件文件 → 这是页面目录，block 是文件
 			isPageDir = true;
 			blockType = "file";
 		} else {
-			// 检查是否有子目录包含组件文件
+			// 检查子目录：
+			// - 如果子目录直接有组件文件 → 子目录是页面目录，继续递归
+			// - 如果子目录没有直接组件文件但有更深层的 → 当前是页面目录，block 是目录
+			let hasSubDirWithDirectFiles = false;
+			let hasSubDirWithDeepFiles = false;
+
 			for (const dir of dirs) {
 				const subDirPath = path.join(fullPath, dir.name);
-				const hasContent = await this.hasContentInDirectory(subDirPath);
-				if (hasContent) {
-					isPageDir = true;
-					blockType = "directory";
-					break;
+				const hasDirectFiles =
+					await this.hasDirectComponentFiles(subDirPath);
+				if (hasDirectFiles) {
+					// 子目录直接有组件文件，它自己是页面目录
+					hasSubDirWithDirectFiles = true;
+				} else {
+					// 检查子目录是否有更深层的组件文件
+					const hasDeepFiles =
+						await this.hasContentInDirectory(subDirPath);
+					if (hasDeepFiles) {
+						hasSubDirWithDeepFiles = true;
+					}
 				}
 			}
+
+			if (hasSubDirWithDeepFiles && !hasSubDirWithDirectFiles) {
+				// 只有深层文件，当前是页面目录（directory 模式）
+				isPageDir = true;
+				blockType = "directory";
+			}
+			// 如果 hasSubDirWithDirectFiles，继续递归（不设置 isPageDir）
 		}
 
 		if (isPageDir && blockType) {
@@ -401,8 +422,10 @@ export class TaskProgress {
 			if (blockType === "file") {
 				// block 是文件
 				for (const file of componentFiles) {
+					// blockPath 不包含扩展名（与 BlockProcessor 标记时一致）
+					const blockName = path.parse(file.name).name;
 					const blockPath = path
-						.join(relativePath, file.name)
+						.join(relativePath, blockName)
 						.replace(/\\/g, "/");
 					pageStats.total++;
 
@@ -483,13 +506,27 @@ export class TaskProgress {
 	}
 
 	/**
+	 * 检查目录内第一层是否直接有组件文件（不递归）
+	 */
+	private async hasDirectComponentFiles(dirPath: string): Promise<boolean> {
+		try {
+			const entries = await fse.readdir(dirPath, { withFileTypes: true });
+			return entries.some(
+				(e) => e.isFile() && this.isComponentFile(e.name),
+			);
+		} catch {
+			return false;
+		}
+	}
+
+	/**
 	 * 检查 block 是否已完成
 	 *
 	 * 使用自定义检查函数（如果提供），否则使用默认逻辑：
-	 * - file 模式：检查文件是否存在
+	 * - file 模式：检查是否存在带任意组件扩展名的文件（blockPath 不含扩展名）
 	 * - directory 模式：检查目录下是否有组件文件
 	 *
-	 * @param blockPath block 路径（相对于 outputDir）
+	 * @param blockPath block 路径（相对于 outputDir，file 模式下不含扩展名）
 	 * @param blockType block 类型（file 或 directory）
 	 */
 	private async checkBlockComplete(
@@ -508,8 +545,23 @@ export class TaskProgress {
 		const blockFullPath = path.join(this.outputDir, blockPath);
 
 		if (blockType === "file") {
-			// block 是文件，检查文件是否存在
-			return await fse.pathExists(blockFullPath);
+			// block 是文件（blockPath 不含扩展名），检查是否存在带任意组件扩展名的文件
+			const componentExtensions = [
+				".tsx",
+				".ts",
+				".jsx",
+				".js",
+				".vue",
+				".svelte",
+				".html",
+				".css",
+			];
+			for (const ext of componentExtensions) {
+				if (await fse.pathExists(blockFullPath + ext)) {
+					return true;
+				}
+			}
+			return false;
 		} else {
 			// block 是目录，检查目录下是否有组件文件
 			if (!(await fse.pathExists(blockFullPath))) {

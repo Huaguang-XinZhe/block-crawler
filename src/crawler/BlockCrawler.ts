@@ -164,26 +164,38 @@ export class BlockCrawler {
 	 *   // 必须等待登录完成！
 	 *   await page.waitForURL('**' + '/dashboard');
 	 * })
+	 *
+	 * // 用法 4: 直接使用现有 auth.json（不需要登录）
+	 * .auth()
 	 * ```
 	 */
 	// 存储 auth 配置（延迟创建 handler，因为需要 stateDir）
+	// Symbol 表示使用现有认证
+	private static readonly USE_EXISTING_AUTH = Symbol("USE_EXISTING_AUTH");
 	private authConfig:
 		| string
 		| { loginUrl: string; redirectUrl?: string }
 		| ((page: Page) => Promise<void>)
+		| symbol
 		| null = null;
 
+	auth(): this;
 	auth(loginUrl: string): this;
 	auth(options: { loginUrl: string; redirectUrl?: string }): this;
 	auth(handler: (page: Page) => Promise<void>): this;
 	auth(
-		handlerOrUrlOrOptions:
+		handlerOrUrlOrOptions?:
 			| string
 			| { loginUrl: string; redirectUrl?: string }
 			| ((page: Page) => Promise<void>),
 	): this {
-		// 保存配置，延迟到 run 时创建 handler（需要 stateDir）
-		this.authConfig = handlerOrUrlOrOptions;
+		// 如果没有参数，使用现有认证
+		if (handlerOrUrlOrOptions === undefined) {
+			this.authConfig = BlockCrawler.USE_EXISTING_AUTH;
+		} else {
+			// 保存配置，延迟到 run 时创建 handler（需要 stateDir）
+			this.authConfig = handlerOrUrlOrOptions;
+		}
 		return this;
 	}
 
@@ -426,6 +438,10 @@ export class BlockCrawler {
 	 * })
 	 * ```
 	 */
+	// 最简形式：只传 sectionLocator，使用默认自动配置
+	block(sectionLocator: string): this;
+	// 只传 sectionLocator 和 progressiveLocate，使用默认自动配置
+	block(sectionLocator: string, progressiveLocate: boolean): this;
 	block(
 		sectionLocator: string,
 		progressiveLocate: boolean,
@@ -440,7 +456,7 @@ export class BlockCrawler {
 	block(sectionLocator: string, config: BlockAutoConfig): this;
 	block(
 		sectionLocator: string,
-		progressiveLocateOrHandlerOrConfig:
+		progressiveLocateOrHandlerOrConfig?:
 			| boolean
 			| BlockHandler
 			| BlockAutoConfig,
@@ -448,19 +464,30 @@ export class BlockCrawler {
 	): this {
 		this.processingConfig.blockLocator = sectionLocator;
 
+		// 如果没有传第二个参数，使用默认自动配置
+		if (progressiveLocateOrHandlerOrConfig === undefined) {
+			this.processingConfig.progressiveLocate = false;
+			this.processingConfig.blockAutoConfig = {};
+			this.processingConfig._currentConfigStage = "block";
+			return this;
+		}
+
 		// 判断第二个参数的类型
 		if (typeof progressiveLocateOrHandlerOrConfig === "boolean") {
 			// 第二个参数是 progressiveLocate
 			this.processingConfig.progressiveLocate =
 				progressiveLocateOrHandlerOrConfig;
 
-			// 第三个参数是 handler 或 config
+			// 第三个参数是 handler 或 config（如果没有传，使用默认空配置）
 			if (handlerOrConfig) {
 				if (typeof handlerOrConfig === "function") {
 					this.processingConfig.blockHandler = handlerOrConfig;
 				} else {
 					this.processingConfig.blockAutoConfig = handlerOrConfig;
 				}
+			} else {
+				// 没有传第三个参数，使用默认自动配置
+				this.processingConfig.blockAutoConfig = {};
 			}
 		} else {
 			// 第二个参数是 handler 或 config
@@ -525,38 +552,55 @@ export class BlockCrawler {
 			if (this.authConfig && authUrl) {
 				const { generatePathsForUrl } = await import("../config/ConfigManager");
 				const paths = generatePathsForUrl(this.config, authUrl);
+				const { AuthManager } = await import("../auth/AuthManager");
 
-				// 根据 authConfig 创建最终的 authHandler
-				let finalAuthHandler: ((page: Page) => Promise<void>) | undefined;
-
-				if (typeof this.authConfig === "function") {
-					// 用法 3: 自定义处理函数
-					finalAuthHandler = this.authConfig;
-				} else {
-					// 用法 1 & 2: 自动登录
-					const { createAutoAuthHandler } = await import(
-						"../auth/AutoAuthHandler"
-					);
-					const options =
-						typeof this.authConfig === "string"
-							? { loginUrl: this.authConfig }
-							: this.authConfig;
-
-					finalAuthHandler = createAutoAuthHandler(
-						options,
+				// 用法 4: 直接使用现有认证
+				if (this.authConfig === BlockCrawler.USE_EXISTING_AUTH) {
+					const authManager = new AuthManager(
+						this._page,
 						paths.stateDir,
+						undefined,
 						this.config.locale,
 					);
-				}
+					await authManager.applyExistingAuth();
+				} else {
+					// 根据 authConfig 创建最终的 authHandler
+					let finalAuthHandler: ((page: Page) => Promise<void>) | undefined;
+					const authConfig = this.authConfig;
 
-				const { AuthManager } = await import("../auth/AuthManager");
-				const authManager = new AuthManager(
-					this._page,
-					paths.stateDir,
-					finalAuthHandler,
-					this.config.locale,
-				);
-				await authManager.ensureAuth();
+					if (typeof authConfig === "function") {
+						// 用法 3: 自定义处理函数
+						finalAuthHandler = authConfig;
+					} else if (typeof authConfig === "string") {
+						// 用法 1: 只传 loginUrl
+						const { createAutoAuthHandler } = await import(
+							"../auth/AutoAuthHandler"
+						);
+						finalAuthHandler = createAutoAuthHandler(
+							{ loginUrl: authConfig },
+							paths.stateDir,
+							this.config.locale,
+						);
+					} else if (typeof authConfig === "object" && authConfig !== null) {
+						// 用法 2: 传配置对象
+						const { createAutoAuthHandler } = await import(
+							"../auth/AutoAuthHandler"
+						);
+						finalAuthHandler = createAutoAuthHandler(
+							authConfig,
+							paths.stateDir,
+							this.config.locale,
+						);
+					}
+
+					const authManager = new AuthManager(
+						this._page,
+						paths.stateDir,
+						finalAuthHandler,
+						this.config.locale,
+					);
+					await authManager.ensureAuth();
+				}
 			}
 
 			// 步骤 1: 如果配置了收集且 collect.json 不存在，先执行收集
@@ -594,38 +638,55 @@ export class BlockCrawler {
 				this.config,
 				this.collectionConfig.startUrl,
 			);
+			const { AuthManager } = await import("../auth/AuthManager");
 
-			// 根据 authConfig 创建最终的 authHandler
-			let finalAuthHandler: ((page: Page) => Promise<void>) | undefined;
-
-			if (typeof this.authConfig === "function") {
-				// 用法 3: 自定义处理函数
-				finalAuthHandler = this.authConfig;
-			} else {
-				// 用法 1 & 2: 自动登录
-				const { createAutoAuthHandler } = await import(
-					"../auth/AutoAuthHandler"
-				);
-				const options =
-					typeof this.authConfig === "string"
-						? { loginUrl: this.authConfig }
-						: this.authConfig;
-
-				finalAuthHandler = createAutoAuthHandler(
-					options,
+			// 用法 4: 直接使用现有认证
+			if (this.authConfig === BlockCrawler.USE_EXISTING_AUTH) {
+				const authManager = new AuthManager(
+					this._page,
 					paths.stateDir,
+					undefined,
 					this.config.locale,
 				);
-			}
+				await authManager.applyExistingAuth();
+			} else {
+				// 根据 authConfig 创建最终的 authHandler
+				let finalAuthHandler: ((page: Page) => Promise<void>) | undefined;
+				const authConfig = this.authConfig;
 
-			const { AuthManager } = await import("../auth/AuthManager");
-			const authManager = new AuthManager(
-				this._page,
-				paths.stateDir,
-				finalAuthHandler,
-				this.config.locale,
-			);
-			await authManager.ensureAuth();
+				if (typeof authConfig === "function") {
+					// 用法 3: 自定义处理函数
+					finalAuthHandler = authConfig;
+				} else if (typeof authConfig === "string") {
+					// 用法 1: 只传 loginUrl
+					const { createAutoAuthHandler } = await import(
+						"../auth/AutoAuthHandler"
+					);
+					finalAuthHandler = createAutoAuthHandler(
+						{ loginUrl: authConfig },
+						paths.stateDir,
+						this.config.locale,
+					);
+				} else if (typeof authConfig === "object" && authConfig !== null) {
+					// 用法 2: 传配置对象
+					const { createAutoAuthHandler } = await import(
+						"../auth/AutoAuthHandler"
+					);
+					finalAuthHandler = createAutoAuthHandler(
+						authConfig,
+						paths.stateDir,
+						this.config.locale,
+					);
+				}
+
+				const authManager = new AuthManager(
+					this._page,
+					paths.stateDir,
+					finalAuthHandler,
+					this.config.locale,
+				);
+				await authManager.ensureAuth();
+			}
 		}
 
 		// 步骤 1: 执行收集阶段或加载数据

@@ -268,7 +268,6 @@ export class BlockProcessor {
 				this.i18n.t("block.progressiveBatch", {
 					batch: batchNumber,
 					count: currentBatch.length,
-					remaining: 0,
 				}),
 			);
 
@@ -352,8 +351,11 @@ export class BlockProcessor {
 		block: Locator,
 		urlPath: string,
 	): Promise<{ success: boolean; isFree: boolean; blockName?: string }> {
-		// 1. 获取 block 名称
-		const blockName = await this.getBlockName(block);
+		// 0. 滚动 block 到视口顶部，确保懒加载内容渲染
+		await this.scrollToTop(block);
+
+		// 1. 获取 block 名称（带重试）
+		const blockName = await this.getBlockNameWithRetry(block);
 
 		if (!blockName) {
 			this.logger.warn(this.i18n.t("block.nameEmpty"));
@@ -502,6 +504,39 @@ export class BlockProcessor {
 	 */
 	private async getBlockName(block: Locator): Promise<string | null> {
 		return await this.blockNameExtractor.extract(block);
+	}
+
+	/**
+	 * 获取 block 名称（带重试机制）
+	 * 懒加载场景下，DOM 可能需要一点时间渲染
+	 */
+	private async getBlockNameWithRetry(
+		block: Locator,
+		maxRetries = 3,
+		retryDelay = 200,
+	): Promise<string | null> {
+		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			const name = await this.getBlockName(block);
+			if (name) {
+				return name;
+			}
+
+			// 最后一次尝试不需要等待
+			if (attempt < maxRetries) {
+				await block.page().waitForTimeout(retryDelay);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * 滚动元素到视口顶部
+	 * 用于触发懒加载内容的渲染
+	 */
+	private async scrollToTop(element: Locator): Promise<void> {
+		await element.evaluate((el) => {
+			el.scrollIntoView({ block: "start", behavior: "instant" });
+		});
 	}
 
 	/**

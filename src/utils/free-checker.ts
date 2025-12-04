@@ -14,90 +14,97 @@ import { createI18n } from "./i18n";
  */
 
 /**
- * 通用的 Free 检查逻辑
- * @param target Page 或 Locator
- * @param config 配置
- * @param skipFree 跳过配置：
- *   - undefined: 未启用跳过
- *   - "default": 使用默认匹配 /free/i（忽略大小写）
- *   - string: 精确匹配指定文本
- *   - function: 自定义判断逻辑
- * @param errorMessageKey 错误消息的 i18n key
- * @param context 处理上下文（可选，用于缓存策略）
+ * 在浏览器上下文中检测 Block 的 Free 检查策略
+ * 使用 evaluate 封装，减少调试日志中的操作数量
+ *
+ * 策略判断逻辑：
+ * 1. heading 内部子元素 > 1 → "heading"（在 heading 中查找）
+ * 2. heading 父元素只有 heading 一个子元素 → "grandparent"（在爷爷容器中查找）
+ * 3. 其他情况 → "container"（在 heading 父容器中查找）
  */
-async function checkFreeGeneric<T extends Page | Locator>(
-	target: T,
-	config: InternalConfig,
-	skipFree: string | ((target: T) => Promise<boolean>) | undefined,
-	errorMessageKey: "page.freeError" | "block.freeError",
-	context?: ProcessingContext,
-): Promise<boolean> {
-	if (skipFree === undefined) {
-		return false;
-	}
+async function detectFreeCheckStrategy(
+	block: Locator,
+): Promise<"heading" | "container" | "grandparent" | null> {
+	return await block.evaluate((el) => {
+		const heading = el.querySelector("h1, h2, h3, h4, h5, h6");
+		if (!heading) {
+			return null;
+		}
 
-	// 如果是自定义函数，直接使用
-	if (typeof skipFree === "function") {
-		return await skipFree(target);
-	}
+		// 检查 heading 内部子元素数量
+		const headingChildren = Array.from(heading.children);
+		if (headingChildren.length > 1) {
+			// heading 内部有多个元素，直接在 heading 中查找
+			return "heading";
+		}
 
-	// 如果是 Locator（Block），使用智能策略检测
-	let searchTarget: Locator | Page = target;
-	if ("getByRole" in target && context) {
-		const strategy = context.getFreeCheckStrategy();
-
-		if (strategy) {
-			// 使用缓存的策略
-			if (strategy === "heading") {
-				const heading = target.getByRole("heading").first();
-				searchTarget = (await heading.count()) > 0 ? heading : target;
-			} else {
-				// container
-				const heading = target.getByRole("heading").first();
-				searchTarget =
-					(await heading.count()) > 0 ? heading.locator("..") : target;
-			}
-		} else {
-			// 第一次检测：智能判断策略
-			const heading = target.getByRole("heading").first();
-			const headingCount = await heading.count();
-
-			if (headingCount > 0) {
-				const children = await heading.locator("> *").count();
-
-				if (children > 1) {
-					// heading 内部有多个元素，直接在 heading 中查找
-					searchTarget = heading;
-					context.setFreeCheckStrategy("heading");
-				} else {
-					// heading 内部只有一个元素，在容器中查找
-					searchTarget = heading.locator("..");
-					context.setFreeCheckStrategy("container");
-				}
+		// 检查 heading 父元素的子元素数量
+		const parent = heading.parentElement;
+		if (parent) {
+			const siblings = Array.from(parent.children);
+			if (siblings.length === 1) {
+				// 父元素只有 heading 一个子元素，往上找爷爷容器
+				return "grandparent";
 			}
 		}
-	} else if ("getByRole" in target) {
-		// 没有 context 的情况，使用旧逻辑
-		const heading = target.getByRole("heading").first();
-		searchTarget =
-			(await heading.count()) > 0 ? heading.locator("..") : target;
-	}
 
-	const searchText = skipFree === "default" ? /free/i : skipFree;
-	const count = await searchTarget.getByText(searchText).count();
+		// 默认在 heading 父容器中查找
+		return "container";
+	});
+}
 
-	if (count === 0) {
-		return false;
-	}
+/**
+ * 在浏览器上下文中搜索 Free 文本
+ * 使用 evaluate 封装，减少调试日志中的操作数量
+ */
+async function searchFreeText(
+	target: Locator,
+	strategy: "heading" | "container" | "grandparent",
+	searchText: string | RegExp,
+): Promise<number> {
+	const isRegex = searchText instanceof RegExp;
+	const textToSearch = isRegex ? "free" : searchText;
 
-	if (count !== 1) {
-		const i18n = createI18n(config.locale);
-		const textDisplay =
-			skipFree === "default" ? "/free/i（忽略大小写）" : skipFree;
-		throw new Error(i18n.t(errorMessageKey, { count, text: textDisplay }));
-	}
+	return await target.evaluate(
+		(el, { text, regex, strat }) => {
+			const searchRegex = regex ? new RegExp(text, "i") : null;
+			let searchContainer: Element = el;
 
-	return true;
+			const heading = el.querySelector("h1, h2, h3, h4, h5, h6");
+			if (heading) {
+				if (strat === "heading") {
+					searchContainer = heading;
+				} else if (strat === "container") {
+					searchContainer = heading.parentElement || el;
+				} else if (strat === "grandparent") {
+					const parent = heading.parentElement;
+					searchContainer = parent?.parentElement || parent || el;
+				}
+			}
+
+			// 在搜索范围内查找文本
+			const walker = document.createTreeWalker(
+				searchContainer,
+				NodeFilter.SHOW_TEXT,
+				null,
+			);
+
+			let count = 0;
+			let node: Text | null;
+			while ((node = walker.nextNode() as Text | null)) {
+				const content = node.textContent?.trim();
+				if (!content) continue;
+
+				if (regex) {
+					if (searchRegex!.test(content)) count++;
+				} else {
+					if (content.includes(text)) count++;
+				}
+			}
+			return count;
+		},
+		{ text: textToSearch, regex: isRegex, strat: strategy },
+	);
 }
 
 /**
@@ -108,7 +115,30 @@ export async function checkPageFree(
 	config: InternalConfig,
 	skipFree?: string | ((page: Page) => Promise<boolean>),
 ): Promise<boolean> {
-	return await checkFreeGeneric(page, config, skipFree, "page.freeError");
+	if (skipFree === undefined) {
+		return false;
+	}
+
+	// 如果是自定义函数，直接使用
+	if (typeof skipFree === "function") {
+		return await skipFree(page);
+	}
+
+	const searchText = skipFree === "default" ? /free/i : skipFree;
+	const count = await page.getByText(searchText).count();
+
+	if (count === 0) {
+		return false;
+	}
+
+	if (count !== 1) {
+		const i18n = createI18n(config.locale);
+		const textDisplay =
+			skipFree === "default" ? "/free/i（忽略大小写）" : skipFree;
+		throw new Error(i18n.t("page.freeError", { count, text: textDisplay }));
+	}
+
+	return true;
 }
 
 /**
@@ -120,12 +150,58 @@ export async function checkBlockFree(
 	skipFree?: string | ((locator: Locator) => Promise<boolean>),
 	context?: ProcessingContext,
 ): Promise<boolean> {
-	return await checkFreeGeneric(
-		block,
-		config,
-		skipFree,
-		"block.freeError",
-		context,
-	);
+	if (skipFree === undefined) {
+		return false;
+	}
+
+	// 如果是自定义函数，直接使用
+	if (typeof skipFree === "function") {
+		return await skipFree(block);
+	}
+
+	// 获取或检测策略
+	let strategy = context?.getFreeCheckStrategy() ?? null;
+
+	if (!strategy) {
+		// 第一次检测：智能判断策略
+		strategy = await detectFreeCheckStrategy(block);
+		if (strategy && context) {
+			context.setFreeCheckStrategy(strategy);
+		}
+	}
+
+	// 如果没有 heading，回退到整个 block 搜索
+	if (!strategy) {
+		const searchText = skipFree === "default" ? /free/i : skipFree;
+		const count = await block.getByText(searchText).count();
+
+		if (count === 0) return false;
+		if (count !== 1) {
+			const i18n = createI18n(config.locale);
+			const textDisplay =
+				skipFree === "default" ? "/free/i（忽略大小写）" : skipFree;
+			throw new Error(
+				i18n.t("block.freeError", { count, text: textDisplay }),
+			);
+		}
+		return true;
+	}
+
+	// 使用策略搜索
+	const searchText = skipFree === "default" ? /free/i : skipFree;
+	const count = await searchFreeText(block, strategy, searchText);
+
+	if (count === 0) {
+		return false;
+	}
+
+	if (count !== 1) {
+		const i18n = createI18n(config.locale);
+		const textDisplay =
+			skipFree === "default" ? "/free/i（忽略大小写）" : skipFree;
+		throw new Error(i18n.t("block.freeError", { count, text: textDisplay }));
+	}
+
+	return true;
 }
 

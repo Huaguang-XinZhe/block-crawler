@@ -87,7 +87,7 @@ export function createInternalConfig(config: CrawlerConfig): InternalConfig {
 		logLevel: config.logLevel || "info",
 		ignoreMismatch: config.ignoreMismatch ?? false,
 		progress: {
-			enable: config.progress?.enable ?? true,
+			enable: config.progress?.enable ?? false,
 			rebuild: config.progress?.rebuild,
 		},
 	};

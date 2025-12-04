@@ -102,6 +102,8 @@ const messages = {
 		"auth.reuseExisting": "检测到认证文件，自动复用",
 		"auth.performLogin": "未检测到认证文件，开始执行登录",
 		"auth.saved": "认证状态已保存",
+		"auth.fileNotFound":
+			"认证文件不存在: {path}，请先使用 .auth(loginUrl) 进行登录",
 		"auth.autoDetecting": "🔍 正在自动检测登录表单...",
 		"auth.autoDetectingForm": "🔍 检测表单元素...",
 		"auth.autoFillCredentials": "✍️  自动填写登录凭据...",
@@ -193,8 +195,7 @@ const messages = {
 		"block.verifyComplete": "✅ Block 采集验证通过 (共 {count} 个)",
 		"block.processedList": "已处理的 Block:",
 		"block.progressiveMode": "🔄 启用渐进式定位模式 (批次大小: {batchSize})",
-		"block.progressiveBatch":
-			"📦 批次 {batch}: 处理 {count} 个 block (剩余 {remaining} 个)",
+		"block.progressiveBatch": "📦 批次 {batch}: 处理 {count} 个 block",
 		"block.progressiveComplete": "✅ 渐进式定位完成：未发现新的 block",
 		"block.progressiveTotal": "✅ 渐进式处理完成，共处理 {count} 个 block",
 
@@ -341,6 +342,8 @@ const messages = {
 		"auth.reuseExisting": "Auth file detected, reusing automatically",
 		"auth.performLogin": "No auth file detected, performing login",
 		"auth.saved": "Authentication state saved",
+		"auth.fileNotFound":
+			"Auth file not found: {path}, please use .auth(loginUrl) to login first",
 		"auth.autoDetecting": "🔍 Auto-detecting login form...",
 		"auth.autoDetectingForm": "🔍 Detecting form elements...",
 		"auth.autoFillCredentials": "✍️  Auto-filling credentials...",
@@ -441,8 +444,7 @@ const messages = {
 			"\n✅ Block collection verification passed\n   Page: {pagePath}\n   Expected: {expectedCount}\n   Processed: {processedCount}\n",
 		"block.progressiveMode":
 			"🔄 Progressive locate mode enabled (batch size: {batchSize})",
-		"block.progressiveBatch":
-			"📦 Batch {batch}: Processing {count} block(s) ({remaining} remaining)",
+		"block.progressiveBatch": "📦 Batch {batch}: Processing {count} block(s)",
 		"block.progressiveComplete":
 			"✅ Progressive locating complete: No new blocks found",
 		"block.progressiveTotal":

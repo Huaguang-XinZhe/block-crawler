@@ -23,7 +23,7 @@ export class BlockNameExtractor {
 	 * 优先级：
 	 * 1. 配置的 getBlockName 函数
 	 * 2. 配置的 blockNameLocator（非默认值）
-	 * 3. 默认逻辑：getByRole('heading')
+	 * 3. 默认逻辑：在浏览器上下文中智能提取
 	 *
 	 * @throws {Error} 如果结构复杂但未找到 link
 	 */
@@ -45,32 +45,48 @@ export class BlockNameExtractor {
 			}
 		}
 
-		// 3. 默认逻辑：使用 getByRole('heading')
+		// 3. 默认逻辑：使用 evaluate 在浏览器上下文中执行，减少调试日志
 		try {
-			const heading = block.getByRole("heading").first();
-			const count = await heading.count();
-
-			if (count === 0) {
-				return null;
-			}
-
-			// 获取 heading 内部的所有子元素
-			const children = await heading.locator("> *").count();
-
-			// 如果内部子元素 > 1，尝试取 link 文本
-			if (children > 1) {
-				const link = heading.getByRole("link").first();
-				const linkCount = await link.count();
-
-				if (linkCount === 0) {
-					throw new Error(this.i18n.t("block.complexHeading"));
+			const result = await block.evaluate((el) => {
+				// 找到第一个 heading 元素
+				const heading = el.querySelector("h1, h2, h3, h4, h5, h6");
+				if (!heading) {
+					return { success: false, name: null, error: null };
 				}
 
-				return await link.textContent();
+				// 获取 heading 内部的所有元素子节点
+				const children = Array.from(heading.children);
+
+				// 如果内部子元素 > 1，尝试取 link 文本
+				if (children.length > 1) {
+					const link = heading.querySelector("a");
+					if (!link) {
+						return {
+							success: false,
+							name: null,
+							error: "complexHeading",
+						};
+					}
+					return {
+						success: true,
+						name: link.textContent?.trim() || null,
+						error: null,
+					};
+				}
+
+				// 否则直接取 heading 的文本内容
+				return {
+					success: true,
+					name: heading.textContent?.trim() || null,
+					error: null,
+				};
+			});
+
+			if (result.error === "complexHeading") {
+				throw new Error(this.i18n.t("block.complexHeading"));
 			}
 
-			// 否则直接取 heading 的文本内容
-			return await heading.textContent();
+			return result.name;
 		} catch (error) {
 			if (
 				error instanceof Error &&

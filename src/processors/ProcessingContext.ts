@@ -7,7 +7,11 @@ export class ProcessingContext {
 	private variantNamesCache = new Map<string, string[]>();
 
 	/** Free block 检查策略缓存 */
-	private freeCheckStrategy: "heading" | "container" | null = null;
+	private freeCheckStrategy:
+		| "heading"
+		| "container"
+		| "grandparent"
+		| null = null;
 
 	/** Code 元素的角色类型缓存（首次检测后缓存） */
 	private codeRole: "tab" | "button" | null = null;
@@ -32,7 +36,7 @@ export class ProcessingContext {
 	/**
 	 * 获取 Free block 检查策略
 	 */
-	getFreeCheckStrategy(): "heading" | "container" | null {
+	getFreeCheckStrategy(): "heading" | "container" | "grandparent" | null {
 		return this.freeCheckStrategy;
 	}
 
@@ -40,7 +44,9 @@ export class ProcessingContext {
 	 * 设置 Free block 检查策略
 	 * @param strategy 检查策略
 	 */
-	setFreeCheckStrategy(strategy: "heading" | "container"): void {
+	setFreeCheckStrategy(
+		strategy: "heading" | "container" | "grandparent",
+	): void {
 		this.freeCheckStrategy = strategy;
 	}
 
