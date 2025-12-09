@@ -54,6 +54,7 @@
 		"typescript": "^5.9.3"
 	},
 	"dependencies": {
+		"curlconverter": "^4.12.0",
 		"fs-extra": "^11.3.2",
 		"p-limit": "^7.2.0",
 		"prettier": "^3.7.4"
