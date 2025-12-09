@@ -1,5 +1,11 @@
 # block-crawler
 
+## 0.35.2
+
+### Patch Changes
+
+- 修复：当未配置收集阶段但存在 collect.json 时，现在会正确加载已有的收集数据，而不是返回空结果
+
 ## 0.35.1
 
 ### Patch Changes
