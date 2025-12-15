@@ -98,7 +98,8 @@ async function searchFreeText(
 				if (regex) {
 					if (searchRegex!.test(content)) count++;
 				} else {
-					if (content.includes(text)) count++;
+					// 字符串使用精确匹配
+					if (content === text) count++;
 				}
 			}
 			return count;
@@ -124,18 +125,28 @@ export async function checkPageFree(
 		return await skipFree(page);
 	}
 
-	const searchText = skipFree === "default" ? /free/i : skipFree;
-	const count = await page.getByText(searchText).count();
+	// 默认使用正则匹配，字符串使用精确匹配
+	if (skipFree === "default") {
+		const count = await page.getByText(/free/i).count();
+		if (count === 0) return false;
+		if (count !== 1) {
+			const i18n = createI18n(config.locale);
+			throw new Error(
+				i18n.t("page.freeError", { count, text: "/free/i（忽略大小写）" }),
+			);
+		}
+		return true;
+	}
 
+	// 字符串使用精确匹配（exact: true）
+	const count = await page.getByText(skipFree, { exact: true }).count();
 	if (count === 0) {
 		return false;
 	}
 
 	if (count !== 1) {
 		const i18n = createI18n(config.locale);
-		const textDisplay =
-			skipFree === "default" ? "/free/i（忽略大小写）" : skipFree;
-		throw new Error(i18n.t("page.freeError", { count, text: textDisplay }));
+		throw new Error(i18n.t("page.freeError", { count, text: skipFree }));
 	}
 
 	return true;
@@ -172,17 +183,18 @@ export async function checkBlockFree(
 
 	// 如果没有 heading，回退到整个 block 搜索
 	if (!strategy) {
-		const searchText = skipFree === "default" ? /free/i : skipFree;
-		const count = await block.getByText(searchText).count();
+		// 默认使用正则匹配，字符串使用精确匹配
+		const count =
+			skipFree === "default"
+				? await block.getByText(/free/i).count()
+				: await block.getByText(skipFree, { exact: true }).count();
 
 		if (count === 0) return false;
 		if (count !== 1) {
 			const i18n = createI18n(config.locale);
 			const textDisplay =
 				skipFree === "default" ? "/free/i（忽略大小写）" : skipFree;
-			throw new Error(
-				i18n.t("block.freeError", { count, text: textDisplay }),
-			);
+			throw new Error(i18n.t("block.freeError", { count, text: textDisplay }));
 		}
 		return true;
 	}
@@ -204,4 +216,3 @@ export async function checkBlockFree(
 
 	return true;
 }
-

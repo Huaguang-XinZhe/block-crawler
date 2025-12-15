@@ -70,6 +70,8 @@ export class ProcessingMode {
 				processingConfig.blockLocator || null,
 				processingConfig.blockHandler || null,
 				processingConfig.blockAutoConfig || null,
+				processingConfig.conditionalBlockConfigs || null,
+				processingConfig.blockSectionConfigs || null,
 				processingConfig.pageHandler || null,
 				null,
 				{

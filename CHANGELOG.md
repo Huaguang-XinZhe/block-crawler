@@ -1,5 +1,61 @@
 # block-crawler
 
+## 0.36.0
+
+### Minor Changes
+
+- ## 扩展 `block()` 方法支持条件配置
+
+  ### 新增功能
+  - **条件块配置**：`block()` 方法现在支持根据不同的 `Locator` 使用不同的 `BlockAutoConfig`
+    - 新增 `ConditionalBlockConfig` 类型，支持 `when` 条件匹配（100ms 超时）
+    - 匹配成功后直接点击 `when` 元素
+    - 支持传入条件配置数组，系统会自动匹配第一个符合条件的配置
+  - **代码区域限定**：`ConditionalBlockConfig` 新增 `codeRegion` 选项
+    - 指定在 block 的哪个子区域内提取代码，避免超匹配
+    - `tabContainer` 和 `pre` 元素都在该区域内查找
+  - **跳过前置检查**：`ConditionalBlockConfig` 新增 `skipPreChecks` 选项
+    - 设为 `true` 时跳过：获取 blockName、进度检查、skipFree 检查
+    - 适用于非单个组件的场景（如多 Tab 代码提取）
+  - **输出子目录支持**：`BlockAutoConfig` 新增 `outputSubdir` 选项，允许指定输出到 `output/域名/子目录/` 下
+
+  ### 类型变更
+  - **`fileTabs` → `tabContainer`**：`BlockAutoConfig.fileTabs` 重命名为 `tabContainer`
+    - 类型：`(region: Locator) => Locator`，返回 Tab 容器的 Locator
+    - 内部自动调用 `container.getByRole(tabRole)` 获取所有 Tab 元素
+  - **新增 `tabRole`**：`BlockAutoConfig` 新增可选属性 `tabRole`
+    - 类型：`'tab' | 'button'`，默认 `'tab'`
+    - 用于指定 Tab 元素的角色（某些网站使用 `button` 作为 tab）
+
+  ### 行为改进
+  - **路径格式 Tab 名称**：支持路径格式的 Tab 名称（如 `"base/text-editor/text-editor.tsx"`），直接复用完整路径作为输出路径
+
+  ### 使用示例
+
+  ```typescript
+  // 条件配置示例
+  await crawler.block("[data-preview]", [
+    {
+      // 匹配 Code tab，点击后在 codeRegion 内提取代码
+      when: (block) => block.getByRole("tab", { name: "Code" }),
+      codeRegion: (block) => block.locator("[data-code-panel]"),
+      config: {
+        tabContainer: (region) => region.getByRole("tablist"), // Tab 容器，内部自动 getByRole('tab')
+        outputSubdir: "components",
+      },
+    },
+    {
+      // 非组件场景：跳过所有前置检查
+      when: (block) => block.getByRole("tab", { name: "Manual" }),
+      skipPreChecks: true,
+      config: {
+        tabContainer: (region) => region.getByRole("tablist"), // Tab 容器，内部自动 getByRole('tab')
+        outputSubdir: "pro-components",
+      },
+    },
+  ]);
+  ```
+
 ## 0.35.2
 
 ### Patch Changes

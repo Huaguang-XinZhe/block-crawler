@@ -7,11 +7,8 @@ export class ProcessingContext {
 	private variantNamesCache = new Map<string, string[]>();
 
 	/** Free block 检查策略缓存 */
-	private freeCheckStrategy:
-		| "heading"
-		| "container"
-		| "grandparent"
-		| null = null;
+	private freeCheckStrategy: "heading" | "container" | "grandparent" | null =
+		null;
 
 	/** Code 元素的角色类型缓存（首次检测后缓存） */
 	private codeRole: "tab" | "button" | null = null;

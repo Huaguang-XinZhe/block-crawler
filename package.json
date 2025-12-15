@@ -1,6 +1,6 @@
 {
 	"name": "@huaguang/block-crawler",
-	"version": "0.35.2",
+	"version": "0.36.0",
 	"description": "基于 Playwright 的通用 Block 爬虫框架，支持受限并发、进度恢复、单页面或单 Block 处理模式",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -39,9 +39,9 @@
 	],
 	"author": "mufeng",
 	"license": "ISC",
-	"packageManager": "pnpm@10.21.0",
+	"packageManager": "pnpm@10.25.0",
 	"devDependencies": {
-		"@biomejs/biome": "2.3.6",
+		"@biomejs/biome": "2.3.8",
 		"@changesets/cli": "^2.29.7",
 		"@huaguang/block-crawler": "link:./",
 		"@playwright/test": "^1.56.1",

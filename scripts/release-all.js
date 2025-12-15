@@ -21,24 +21,24 @@ const __dirname = dirname(__filename);
 const rootDir = join(__dirname, "..");
 
 function exec(command, options = {}) {
-  console.log(`\n📍 执行: ${command}\n`);
-  try {
-    execSync(command, {
-      cwd: rootDir,
-      stdio: "inherit",
-      ...options,
-    });
-  } catch (_error) {
-    console.error(`\n❌ 命令执行失败: ${command}`);
-    process.exit(1);
-  }
+	console.log(`\n📍 执行: ${command}\n`);
+	try {
+		execSync(command, {
+			cwd: rootDir,
+			stdio: "inherit",
+			...options,
+		});
+	} catch (_error) {
+		console.error(`\n❌ 命令执行失败: ${command}`);
+		process.exit(1);
+	}
 }
 
 function getPackageVersion() {
-  const packageJson = JSON.parse(
-    readFileSync(join(rootDir, "package.json"), "utf-8")
-  );
-  return packageJson.version;
+	const packageJson = JSON.parse(
+		readFileSync(join(rootDir, "package.json"), "utf-8"),
+	);
+	return packageJson.version;
 }
 
 console.log("🚀 开始自动化发布流程...\n");
@@ -63,7 +63,7 @@ exec("pnpm release");
 console.log("\n💾 步骤 4: Git 提交");
 exec("git add -A");
 exec(
-  `git commit -m "chore: release version ${newVersion}\n\n- chore: 应用 changesets 更新版本号到 ${newVersion}\n- docs: 更新 CHANGELOG.md\n- chore: 更新 devDependencies 中的 block-crawler 到 ${newVersion}\n- chore: 删除已应用的 changeset 文件"`
+	`git commit -m "chore: release version ${newVersion}\n\n- chore: 应用 changesets 更新版本号到 ${newVersion}\n- docs: 更新 CHANGELOG.md\n- chore: 更新 devDependencies 中的 block-crawler 到 ${newVersion}\n- chore: 删除已应用的 changeset 文件"`,
 );
 
 // 步骤 5: 推送到远程

@@ -5,7 +5,9 @@ import type {
 	BeforeContext,
 	BlockAutoConfig,
 	BlockHandler,
+	BlockSectionConfig,
 	CollectResult,
+	ConditionalBlockConfig,
 	PageHandler,
 } from "../types";
 import { createI18n } from "../utils/i18n";
@@ -96,6 +98,8 @@ export class ExecutionOrchestrator {
 		blockSectionLocator: string | null,
 		blockHandler: BlockHandler | null,
 		blockAutoConfig: BlockAutoConfig | null,
+		conditionalBlockConfigs: ConditionalBlockConfig[] | null,
+		blockSectionConfigs: BlockSectionConfig[] | null,
 		pageHandler: PageHandler | null,
 		beforeProcessBlocks: ((context: BeforeContext) => Promise<void>) | null,
 		options?: {
@@ -117,12 +121,16 @@ export class ExecutionOrchestrator {
 			}),
 		);
 		console.log(
-			this.context.i18n.t("crawler.outputDir", { dir: this.context.outputDir.replace(/\\/g, '/') }),
+			this.context.i18n.t("crawler.outputDir", {
+				dir: this.context.outputDir.replace(/\\/g, "/"),
+			}),
 		);
 
-		const mode = blockSectionLocator
-			? this.context.i18n.t("crawler.modeBlock")
-			: this.context.i18n.t("crawler.modePage");
+		const mode =
+			blockSectionLocator ||
+			(blockSectionConfigs && blockSectionConfigs.length > 0)
+				? this.context.i18n.t("crawler.modeBlock")
+				: this.context.i18n.t("crawler.modePage");
 		console.log(this.context.i18n.t("crawler.mode", { mode }));
 
 		// 初始化上下文
@@ -149,6 +157,8 @@ export class ExecutionOrchestrator {
 				blockSectionLocator,
 				blockHandler,
 				blockAutoConfig,
+				conditionalBlockConfigs,
+				blockSectionConfigs,
 				pageHandler,
 				beforeProcessBlocks,
 				waitUntil: options?.waitUntil,

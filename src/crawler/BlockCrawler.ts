@@ -18,7 +18,11 @@ import type {
 	PageConfig,
 	PageHandler,
 } from "../types";
-import type { BlockAutoConfig } from "../types/handlers";
+import type {
+	BlockAutoConfig,
+	BlockSectionConfig,
+	ConditionalBlockConfig,
+} from "../types/handlers";
 import { createI18n, type I18n } from "../utils/i18n";
 import { CollectionMode } from "./modes/CollectionMode";
 import { ProcessingMode } from "./modes/ProcessingMode";
@@ -393,9 +397,10 @@ export class BlockCrawler {
 	/**
 	 * 设置 Block 级处理器（在单个 block 执行）
 	 *
-	 * 支持两种用法：
+	 * 支持多种用法：
 	 * 1. 传统方式：传入 handler 函数
 	 * 2. 自动处理：传入配置对象，自动处理文件 Tab 遍历、代码提取和变种切换
+	 * 3. 多 Block Section 配置：传入配置数组，每个配置有自己的 sectionLocator
 	 *
 	 * @param sectionLocator Block 定位符
 	 * @param progressiveLocateOrHandlerOrConfig 渐进式定位（可选）或 handler 或配置对象
@@ -408,36 +413,35 @@ export class BlockCrawler {
 	 *   // 自定义处理逻辑
 	 * })
 	 *
-	 * // 自动处理方式（无变种）
+	 * // 自动处理方式
 	 * .block('selector', {
-	 *   fileTabs: '//div[2]/div[2]/div[1]/div',
-	 *   // extractCode 使用默认（从 pre 获取 textContent）
+	 *   tabContainer: (block) => block.getByRole('tablist'),  // Tab 容器，内部自动 getByRole('tab')
+	 *   outputSubdir: "components"  // 输出到 output/域名/components/
 	 * })
 	 *
-	 * // 自动处理方式（带变种）
-	 * .block('selector', {
-	 *   fileTabs: (block) => block.getByRole("tablist").getByRole("tab").all(),
-	 *   extractCode: customExtractor,
-	 *   variants: [
-	 *     {
-	 *       buttonLocator: (block) => block.getByRole("button", { name: "Change theme" }),
-	 *       nameMapping: { "TypeScript": "ts", "JavaScript": "js" },
-	 *       waitTime: 500
+	 * // 多 Block Section 配置方式（每个配置有自己的 sectionLocator）
+	 * .block([
+	 *   {
+	 *     sectionLocator: "//main/div/div[2]/div",  // 第一种 block 类型
+	 *     clickLocator: (block) => block.getByRole("tab", { name: "Manual" }),  // 可选：点击进入代码区域
+	 *     codeRegion: (block) => block.locator('[data-code-panel]'),  // 可选：指定代码提取区域
+	 *     config: {
+	 *       tabContainer: (region) => region.getByRole('tablist'),  // Tab 容器
+	 *       outputSubdir: "pro-components"
+	 *     },
+	 *     skipPreChecks: true  // 可选：跳过 blockName/进度/Free 检查
+	 *   },
+	 *   {
+	 *     sectionLocator: "//main/section/div",  // 第二种 block 类型
+	 *     config: {
+	 *       extractCode: extractCodeFromPre
 	 *     }
-	 *   ]
-	 * })
-	 *
-	 * // 启用渐进式定位（适用于渐进式加载的页面）
-	 * .block('selector', true, {
-	 *   fileTabs: '//div[2]/div[2]/div[1]/div',
-	 * })
-	 *
-	 * // 渐进式定位 + 自定义处理
-	 * .block('selector', true, async ({ block, safeOutput }) => {
-	 *   // 自定义处理逻辑
-	 * })
+	 *   }
+	 * ])
 	 * ```
 	 */
+	// 新的多 Block Section 配置形式
+	block(configs: BlockSectionConfig[]): this;
 	// 最简形式：只传 sectionLocator，使用默认自动配置
 	block(sectionLocator: string): this;
 	// 只传 sectionLocator 和 progressiveLocate，使用默认自动配置
@@ -452,16 +456,39 @@ export class BlockCrawler {
 		progressiveLocate: boolean,
 		config: BlockAutoConfig,
 	): this;
-	block(sectionLocator: string, handler: BlockHandler): this;
-	block(sectionLocator: string, config: BlockAutoConfig): this;
+	/** @deprecated 请使用 BlockSectionConfig[] 形式 */
 	block(
 		sectionLocator: string,
+		progressiveLocate: boolean,
+		configs: ConditionalBlockConfig[],
+	): this;
+	block(sectionLocator: string, handler: BlockHandler): this;
+	block(sectionLocator: string, config: BlockAutoConfig): this;
+	/** @deprecated 请使用 BlockSectionConfig[] 形式 */
+	block(sectionLocator: string, configs: ConditionalBlockConfig[]): this;
+	block(
+		sectionLocatorOrConfigs: string | BlockSectionConfig[],
 		progressiveLocateOrHandlerOrConfig?:
 			| boolean
 			| BlockHandler
-			| BlockAutoConfig,
-		handlerOrConfig?: BlockHandler | BlockAutoConfig,
+			| BlockAutoConfig
+			| ConditionalBlockConfig[],
+		handlerOrConfig?: BlockHandler | BlockAutoConfig | ConditionalBlockConfig[],
 	): this {
+		// 新的多 Block Section 配置形式
+		if (Array.isArray(sectionLocatorOrConfigs)) {
+			// 检查是否是 BlockSectionConfig[]（有 sectionLocator 属性）
+			const firstConfig = sectionLocatorOrConfigs[0];
+			if (firstConfig && "sectionLocator" in firstConfig) {
+				this.processingConfig.blockSectionConfigs =
+					sectionLocatorOrConfigs as BlockSectionConfig[];
+				this.processingConfig._currentConfigStage = "block";
+				return this;
+			}
+		}
+
+		// 兼容旧的 API（sectionLocator 是字符串）
+		const sectionLocator = sectionLocatorOrConfigs as string;
 		this.processingConfig.blockLocator = sectionLocator;
 
 		// 如果没有传第二个参数，使用默认自动配置
@@ -478,10 +505,13 @@ export class BlockCrawler {
 			this.processingConfig.progressiveLocate =
 				progressiveLocateOrHandlerOrConfig;
 
-			// 第三个参数是 handler 或 config（如果没有传，使用默认空配置）
+			// 第三个参数是 handler 或 config 或 条件配置数组（如果没有传，使用默认空配置）
 			if (handlerOrConfig) {
 				if (typeof handlerOrConfig === "function") {
 					this.processingConfig.blockHandler = handlerOrConfig;
+				} else if (Array.isArray(handlerOrConfig)) {
+					// 条件配置数组
+					this.processingConfig.conditionalBlockConfigs = handlerOrConfig;
 				} else {
 					this.processingConfig.blockAutoConfig = handlerOrConfig;
 				}
@@ -489,6 +519,11 @@ export class BlockCrawler {
 				// 没有传第三个参数，使用默认自动配置
 				this.processingConfig.blockAutoConfig = {};
 			}
+		} else if (Array.isArray(progressiveLocateOrHandlerOrConfig)) {
+			// 第二个参数是条件配置数组
+			this.processingConfig.progressiveLocate = false;
+			this.processingConfig.conditionalBlockConfigs =
+				progressiveLocateOrHandlerOrConfig;
 		} else {
 			// 第二个参数是 handler 或 config
 			this.processingConfig.progressiveLocate = false;
@@ -705,7 +740,8 @@ export class BlockCrawler {
 		if (
 			this.processingConfig.pageHandler ||
 			this.processingConfig.blockHandler ||
-			this.processingConfig.blockAutoConfig
+			this.processingConfig.blockAutoConfig ||
+			this.processingConfig.conditionalBlockConfigs
 		) {
 			if (!collectResult) {
 				throw new Error(

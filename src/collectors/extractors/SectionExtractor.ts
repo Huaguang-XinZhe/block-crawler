@@ -47,7 +47,7 @@ export class SectionExtractor {
 
 	/**
 	 * 处理 tabs 模式：需要点击 tab 并获取对应的 section
-	 * 
+	 *
 	 * 注意：这个方法只返回 section locators，不应该点击 tab
 	 * tab 的点击应该由 LinkCollector 在提取 links 之前完成
 	 */

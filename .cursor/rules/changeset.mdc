@@ -10,6 +10,7 @@ alwaysApply: false
 后续步骤：
 - 检查国际化（调用 `pnpm run i18n`）
 - 检查类型问题（`tsc --noEmit`）
+- 构建（`pnpm build`）
 - Git 提交
 
 

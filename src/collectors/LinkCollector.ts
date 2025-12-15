@@ -163,7 +163,7 @@ export class LinkCollector {
 
 	/**
 	 * 执行 tabs 模式的收集
-	 * 
+	 *
 	 * 流程：
 	 * 1. 获取 tab list 和所有 tabs
 	 * 2. 获取所有 section locators（不点击 tab）

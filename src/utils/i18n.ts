@@ -172,6 +172,9 @@ const messages = {
 
 		// Block 处理
 		"block.found": "📦 找到 {count} 个 Block",
+		"block.sectionFound": "📦 section 定位到 {count} 个 Block: {locator}",
+		"block.clickLocatorNotFound":
+			"⏭️  clickLocator 未找到或不可见，跳过该 block",
 		"block.processing": "🔄 [{current}/{total}] 正在处理 Block: {name}",
 		"block.skip": "⏭️  跳过已完成的 Block: {name}",
 		"block.skipFree": "⏭️  跳过 Free Block: {name}",
@@ -198,6 +201,7 @@ const messages = {
 		"block.progressiveBatch": "📦 批次 {batch}: 处理 {count} 个 block",
 		"block.progressiveComplete": "✅ 渐进式定位完成：未发现新的 block",
 		"block.progressiveTotal": "✅ 渐进式处理完成，共处理 {count} 个 block",
+		"block.noMatchingConfig": "⚠️ 没有匹配的条件配置: {name}",
 
 		// Mismatch 记录
 		"mismatch.noRecords": "✅ 无组件数不一致记录",
@@ -416,6 +420,9 @@ const messages = {
 
 		// Block processing
 		"block.found": "📦 Found {count} blocks",
+		"block.sectionFound": "📦 section located {count} block(s): {locator}",
+		"block.clickLocatorNotFound":
+			"⏭️  clickLocator not found/visible, skip this block",
 		"block.processing": "🔄 [{current}/{total}] Processing block: {name}",
 		"block.skip": "⏭️  Skipping completed block: {name}",
 		"block.skipFree": "⏭️  Skipping free block: {name}",
@@ -449,6 +456,8 @@ const messages = {
 			"✅ Progressive locating complete: No new blocks found",
 		"block.progressiveTotal":
 			"✅ Progressive processing complete, processed {count} block(s) in total",
+		"block.noMatchingConfig":
+			"⚠️ No matching conditional config found for: {name}",
 
 		// Mismatch records
 		"mismatch.noRecords": "✅ No block count mismatch records",

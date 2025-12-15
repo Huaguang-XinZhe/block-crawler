@@ -3,7 +3,9 @@ import type {
 	BeforeContext,
 	BlockAutoConfig,
 	BlockHandler,
+	BlockSectionConfig,
 	CollectResult,
+	ConditionalBlockConfig,
 	PageHandler,
 } from "../types";
 import type { CollectionLink } from "../types/meta";
@@ -40,6 +42,8 @@ export class ConcurrentExecutor {
 			blockSectionLocator: string | null;
 			blockHandler: BlockHandler | null;
 			blockAutoConfig: BlockAutoConfig | null;
+			conditionalBlockConfigs: ConditionalBlockConfig[] | null;
+			blockSectionConfigs: BlockSectionConfig[] | null;
 			pageHandler: PageHandler | null;
 			beforeProcessBlocks: ((context: BeforeContext) => Promise<void>) | null;
 			waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
@@ -98,7 +102,9 @@ export class ConcurrentExecutor {
 		// 输出跳过统计
 		if (skippedCompleted > 0) {
 			console.log(
-				this.context.i18n.t("crawler.skippedCompleted", { count: skippedCompleted }),
+				this.context.i18n.t("crawler.skippedCompleted", {
+					count: skippedCompleted,
+				}),
 			);
 		}
 		if (skippedFree > 0) {
@@ -124,24 +130,19 @@ export class ConcurrentExecutor {
 							: linkObj.link;
 					const logger = createLogger(displayPath);
 
-				try {
-					await this.linkExecutor.execute(
-						page,
-						linkObj.link,
-						index === 0,
-						{
+					try {
+						await this.linkExecutor.execute(page, linkObj.link, index === 0, {
 							...options,
 							expectedBlockCount: linkObj.blockCount, // 传递预期组件数
-						},
-					);
-					this.completed++;
-					const progress = `${this.completed + this.failed}/${this.total}`;
-					logger.log(
-						this.context.i18n.t("crawler.linkComplete", {
-							progress,
-						}),
-					);
-				} catch (error) {
+						});
+						this.completed++;
+						const progress = `${this.completed + this.failed}/${this.total}`;
+						logger.log(
+							this.context.i18n.t("crawler.linkComplete", {
+								progress,
+							}),
+						);
+					} catch (error) {
 						// 检查是否是用户主动停止（Ctrl+C）
 						const errorMessage =
 							error instanceof Error ? error.message : String(error);

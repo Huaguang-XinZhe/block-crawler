@@ -2,20 +2,20 @@ import { createI18n, type Locale } from "./i18n";
 
 /**
  * 信号处理器
- * 
+ *
  * 职责：
  * - 统一处理 SIGINT/SIGTERM 信号
  * - 执行清理回调
  * - 防止重复处理
  * - 确保优雅退出
- * 
+ *
  * @example
  * ```typescript
  * const handler = new SignalHandler(locale, () => {
  *   // 清理逻辑
  *   this.orchestrator?.cleanupSync();
  * });
- * 
+ *
  * handler.setup();
  * // ... 执行任务
  * handler.cleanup(); // 在 finally 中调用
@@ -113,4 +113,3 @@ export class SignalHandler {
 		this.remove();
 	}
 }
-

@@ -20,8 +20,8 @@ test("flyonui", async ({ page }) => {
 		// 	autoScroll: true,
 		// })
 		.block('//main/div/div[3]/div/div/div[contains(@class, "flex")]', true, {
-			fileTabs: (block) =>
-				block.locator("//div[2]/div[2]/div[1]/div").getByRole("button").all(),
+			tabContainer: (block) => block.locator("//div[2]/div[2]/div[1]/div"), // 容器 Locator
+			tabRole: "button", // 该网站使用 button 作为 tab
 			// extractCode 使用默认（从 pre 获取 textContent）
 		})
 		// 测试默认匹配（忽略大小写的 "free"）

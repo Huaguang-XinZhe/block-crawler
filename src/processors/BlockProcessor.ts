@@ -10,7 +10,10 @@ import type {
 	BlockAutoConfig,
 	BlockContext,
 	BlockHandler,
+	BlockSectionConfig,
+	ConditionalBlockConfig,
 } from "../types";
+import type { ClickAndVerify } from "../types/actions";
 import { createClickAndVerify, createClickCode } from "../utils/click-actions";
 import { isDebugMode } from "../utils/debug";
 import { checkBlockFree as checkBlockFreeUtil } from "../utils/free-checker";
@@ -48,10 +51,12 @@ export class BlockProcessor {
 		private extendedConfig: ExtendedExecutionConfig = {},
 		private freeRecorder?: FreeRecorder,
 		private mismatchRecorder?: MismatchRecorder,
-		private expectedBlockCount?: number, // 新增：预期的组件数
+		private expectedBlockCount?: number, // 预期的组件数
 		logger?: IContextLogger,
-		private blockAutoConfig?: BlockAutoConfig, // 新增：自动处理配置
-		private progressiveLocate?: boolean, // 新增：渐进式定位
+		private blockAutoConfig?: BlockAutoConfig, // 自动处理配置
+		private progressiveLocate?: boolean, // 渐进式定位
+		private conditionalBlockConfigs?: ConditionalBlockConfig[], // 条件配置数组（已废弃）
+		private blockSectionConfigs?: BlockSectionConfig[], // 多 Block Section 配置
 	) {
 		this.i18n = createI18n(config.locale);
 		this.blockNameExtractor = new BlockNameExtractor(config, extendedConfig);
@@ -80,6 +85,11 @@ export class BlockProcessor {
 			await this.beforeProcessBlocks(beforeContext);
 		}
 
+		// 新的多 Block Section 配置模式
+		if (this.blockSectionConfigs && this.blockSectionConfigs.length > 0) {
+			return await this.processMultipleBlockSections(page, pagePath);
+		}
+
 		// 检查是否启用渐进式定位
 		const isProgressiveMode = !!this.progressiveLocate;
 
@@ -89,6 +99,182 @@ export class BlockProcessor {
 		} else {
 			// 使用传统的一次性定位模式
 			return await this.processBlocksTraditional(page, pagePath);
+		}
+	}
+
+	/**
+	 * 处理多个 Block Section 配置
+	 * 遍历每个配置，分别定位和处理
+	 */
+	private async processMultipleBlockSections(
+		page: Page,
+		pagePath: string,
+	): Promise<{
+		totalCount: number;
+		freeBlocks: string[];
+	}> {
+		let totalCompletedCount = 0;
+		const allFreeBlocks: string[] = [];
+		const normalizedUrlPath = this.normalizePagePath(pagePath);
+		const clickAndVerify = createClickAndVerify(this.config.locale);
+
+		for (const sectionConfig of this.blockSectionConfigs!) {
+			// 获取当前 sectionLocator 定位到的所有 block
+			const blocks = await page.locator(sectionConfig.sectionLocator).all();
+			const blockCount = blocks.length;
+
+			// 记录日志：每个 sectionLocator 定位到的区块数量
+			this.logger.log(
+				this.i18n.t("block.sectionFound", {
+					locator: sectionConfig.sectionLocator,
+					count: blockCount,
+				}),
+			);
+
+			if (blockCount === 0) {
+				continue;
+			}
+
+			// 处理每个 block
+			for (const block of blocks) {
+				const result = await this.processBlockWithSectionConfig(
+					page,
+					block,
+					sectionConfig,
+					clickAndVerify,
+					normalizedUrlPath,
+				);
+
+				if (result.success) {
+					totalCompletedCount++;
+				}
+				if (result.isFree && result.blockName) {
+					allFreeBlocks.push(result.blockName);
+				}
+			}
+		}
+
+		// 如果所有 block 都已完成，标记页面为完成
+		if (totalCompletedCount > 0) {
+			this.taskProgress?.markPageComplete(normalizedUrlPath);
+		}
+
+		return {
+			totalCount: totalCompletedCount,
+			freeBlocks: allFreeBlocks,
+		};
+	}
+
+	/**
+	 * 使用 BlockSectionConfig 处理单个 Block
+	 */
+	private async processBlockWithSectionConfig(
+		page: Page,
+		block: Locator,
+		sectionConfig: BlockSectionConfig,
+		clickAndVerify: ClickAndVerify,
+		normalizedUrlPath: string,
+	): Promise<{ success: boolean; isFree: boolean; blockName?: string }> {
+		// 滚动 block 到视口顶部
+		await this.scrollToTop(block);
+
+		// clickCode（智能检测 tab/button，带重试与验证）
+		const clickCode = createClickCode(block, clickAndVerify, this.context);
+
+		// 预处理（可选）：允许把 clickLocator/codeRegion 这类“步骤逻辑”收敛到一个地方
+		let preparedCodeRegion: Locator | undefined;
+		let skipDefaultClick = false;
+		if (sectionConfig.prepare) {
+			const result = await sectionConfig.prepare({
+				currentPage: page,
+				block,
+				clickAndVerify,
+				clickCode,
+			});
+			if (result?.codeRegion) preparedCodeRegion = result.codeRegion;
+			if (result?.skipDefaultClick) skipDefaultClick = true;
+		}
+
+		// 如果有 clickLocator，先点击；否则默认 clickCode()
+		if (sectionConfig.clickLocator) {
+			const clickTarget = sectionConfig.clickLocator(block);
+			try {
+				// 使用 100ms 超时快速判断是否存在
+				await clickTarget.waitFor({ state: "visible", timeout: 100 });
+				await clickTarget.click();
+			} catch {
+				// 元素不存在，跳过此 block
+				this.logger.log(this.i18n.t("block.clickLocatorNotFound"));
+				return { success: false, isFree: false };
+			}
+		} else if (!skipDefaultClick) {
+			await clickCode();
+		}
+
+		// 确定代码区域：prepare 返回优先，其次用旧的 codeRegion（兼容）
+		const codeRegion =
+			preparedCodeRegion ||
+			(sectionConfig.codeRegion ? sectionConfig.codeRegion(block) : undefined);
+
+		// 解析提取配置：extractConfig 优先，兼容旧的 config
+		const extractConfig = sectionConfig.extractConfig || sectionConfig.config;
+		if (!extractConfig) {
+			throw new Error(
+				"BlockSectionConfig 缺少 extractConfig（或旧字段 config）",
+			);
+		}
+
+		// 如果 skipPreChecks，跳过 blockName/进度/Free 检查
+		if (sectionConfig.skipPreChecks) {
+			try {
+				const autoProcessor = new AutoFileProcessor(
+					this.config,
+					extractConfig,
+					this.outputDir,
+					"", // blockPath 为空
+					"", // blockName 为空
+					this.context,
+					codeRegion,
+				);
+
+				await autoProcessor.process(block, page);
+				return { success: true, isFree: false };
+			} catch (error) {
+				return this.handleProcessingError(page, error, "");
+			}
+		}
+
+		// 执行前置检查
+		const preCheckResult = await this.performPreChecks(
+			page,
+			block,
+			normalizedUrlPath,
+		);
+		if (!preCheckResult.shouldProcess) {
+			return preCheckResult.result!;
+		}
+
+		try {
+			const autoProcessor = new AutoFileProcessor(
+				this.config,
+				extractConfig,
+				this.outputDir,
+				preCheckResult.blockPath!,
+				preCheckResult.blockName!,
+				this.context,
+				codeRegion,
+			);
+
+			await autoProcessor.process(block, page);
+			this.taskProgress?.markBlockComplete(preCheckResult.blockPath!);
+
+			return {
+				success: true,
+				isFree: false,
+				blockName: preCheckResult.blockName,
+			};
+		} catch (error) {
+			return this.handleProcessingError(page, error, preCheckResult.blockName!);
 		}
 	}
 
@@ -341,10 +527,12 @@ export class BlockProcessor {
 	/**
 	 * 处理单个 Block
 	 * 执行顺序：
-	 * 1. 获取 blockName
-	 * 2. 检查是否已完成（避免不必要的 DOM 查询）
-	 * 3. 检查是否为 Free（需要 DOM 查询）
-	 * 4. 执行自定义处理逻辑
+	 * 1. 滚动到视口
+	 * 2. 如果有条件配置，先匹配（可能跳过前置检查）
+	 * 3. 获取 blockName（除非 skipPreChecks）
+	 * 4. 检查是否已完成（除非 skipPreChecks）
+	 * 5. 检查是否为 Free（除非 skipPreChecks）
+	 * 6. 执行自定义处理逻辑
 	 */
 	private async processSingleBlock(
 		page: Page,
@@ -354,42 +542,238 @@ export class BlockProcessor {
 		// 0. 滚动 block 到视口顶部，确保懒加载内容渲染
 		await this.scrollToTop(block);
 
-		// 1. 获取 block 名称（带重试）
+		const clickAndVerify = createClickAndVerify(this.config.locale);
+		const normalizedUrlPath = this.normalizePagePath(urlPath);
+
+		// 1. 如果有条件配置，先匹配（可能跳过前置检查）
+		if (
+			this.conditionalBlockConfigs &&
+			this.conditionalBlockConfigs.length > 0
+		) {
+			const matched = await AutoFileProcessor.matchConditionalConfig(
+				block,
+				this.conditionalBlockConfigs,
+			);
+
+			if (matched) {
+				// 如果 skipPreChecks，直接处理，跳过 blockName/进度/Free 检查
+				if (matched.skipPreChecks) {
+					return this.processBlockWithConfig(
+						page,
+						block,
+						matched,
+						clickAndVerify,
+						normalizedUrlPath,
+						"", // blockPath 为空
+						"", // blockName 为空
+					);
+				}
+
+				// 否则继续执行前置检查，但记住匹配结果
+				const preCheckResult = await this.performPreChecks(
+					page,
+					block,
+					normalizedUrlPath,
+				);
+				if (!preCheckResult.shouldProcess) {
+					return preCheckResult.result!;
+				}
+
+				return this.processBlockWithConfig(
+					page,
+					block,
+					matched,
+					clickAndVerify,
+					normalizedUrlPath,
+					preCheckResult.blockPath!,
+					preCheckResult.blockName!,
+				);
+			}
+
+			// 没有匹配的条件配置，执行前置检查后记录警告
+			const preCheckResult = await this.performPreChecks(
+				page,
+				block,
+				normalizedUrlPath,
+			);
+			if (!preCheckResult.shouldProcess) {
+				return preCheckResult.result!;
+			}
+
+			this.logger.warn(
+				this.i18n.t("block.noMatchingConfig", {
+					name: preCheckResult.blockName!,
+				}),
+			);
+			return {
+				success: true,
+				isFree: false,
+				blockName: preCheckResult.blockName,
+			};
+		}
+
+		// 2. 没有条件配置，执行正常的前置检查
+		const preCheckResult = await this.performPreChecks(
+			page,
+			block,
+			normalizedUrlPath,
+		);
+		if (!preCheckResult.shouldProcess) {
+			return preCheckResult.result!;
+		}
+
+		const { blockPath, blockName } = preCheckResult;
+		const context = this.createBlockContext(
+			page,
+			block,
+			blockPath!,
+			blockName!,
+			clickAndVerify,
+		);
+
+		try {
+			// 如果配置了单个自动处理配置，使用 AutoFileProcessor
+			if (this.blockAutoConfig) {
+				await context.clickCode();
+
+				const autoProcessor = new AutoFileProcessor(
+					this.config,
+					this.blockAutoConfig,
+					this.outputDir,
+					blockPath!,
+					blockName!,
+					this.context,
+				);
+
+				await autoProcessor.process(block, page);
+			}
+			// 传统方式：使用 blockHandler
+			else if (this.blockHandler) {
+				await this.blockHandler(context);
+			}
+
+			this.taskProgress?.markBlockComplete(blockPath!);
+			return { success: true, isFree: false, blockName };
+		} catch (error) {
+			return this.handleProcessingError(page, error, blockName!);
+		}
+	}
+
+	/**
+	 * 执行前置检查（获取 blockName、进度检查、Free 检查）
+	 */
+	private async performPreChecks(
+		page: Page,
+		block: Locator,
+		normalizedUrlPath: string,
+	): Promise<{
+		shouldProcess: boolean;
+		blockName?: string;
+		blockPath?: string;
+		result?: { success: boolean; isFree: boolean; blockName?: string };
+	}> {
+		// 获取 block 名称（带重试）
 		const blockName = await this.getBlockNameWithRetry(block);
 
 		if (!blockName) {
 			this.logger.warn(this.i18n.t("block.nameEmpty"));
-			// 打印当前 block 的 html
 			const html = await block.innerHTML();
 			this.logger.log(`html: ${html}`);
 			await page.pause();
-			return { success: false, isFree: false };
+			return {
+				shouldProcess: false,
+				result: { success: false, isFree: false },
+			};
 		}
 
-		// 构建 blockPath
-		const normalizedUrlPath = this.normalizePagePath(urlPath);
 		const blockPath = `${normalizedUrlPath}/${blockName}`;
 
-		// 2. 检查是否已完成（优先检查，避免不必要的 DOM 查询）
+		// 检查是否已完成
 		if (this.taskProgress?.isBlockComplete(blockPath)) {
 			this.logger.log(this.i18n.t("block.skip", { name: blockName }));
-			return { success: true, isFree: false, blockName };
+			return {
+				shouldProcess: false,
+				result: { success: true, isFree: false, blockName },
+			};
 		}
 
-		// 3. 检查是否为 Free Block（需要 DOM 查询，所以放在完成状态检查之后）
+		// 检查是否为 Free Block
 		const isFree = await this.isBlockFree(block);
 		if (isFree) {
 			this.logger.log(this.i18n.t("block.skipFree", { name: blockName }));
-			// 如果是 Free Block，立即记录到 freeRecorder（传递完整路径）
-			if (this.freeRecorder && blockName) {
+			if (this.freeRecorder) {
 				this.freeRecorder.addFreeBlock(blockPath, normalizedUrlPath);
 			}
-			// 如果是 Free Block，直接跳过处理
-			return { success: true, isFree: true, blockName };
+			return {
+				shouldProcess: false,
+				result: { success: true, isFree: true, blockName },
+			};
 		}
 
-		const clickAndVerify = createClickAndVerify(this.config.locale);
-		const context: BlockContext = {
+		return { shouldProcess: true, blockName, blockPath };
+	}
+
+	/**
+	 * 使用匹配的配置处理 Block
+	 */
+	private async processBlockWithConfig(
+		page: Page,
+		block: Locator,
+		matched: {
+			config: BlockAutoConfig;
+			whenLocator: Locator;
+			codeRegion?: Locator;
+			skipPreChecks?: boolean;
+		},
+		clickAndVerify: ClickAndVerify,
+		normalizedUrlPath: string,
+		blockPath: string,
+		blockName: string,
+	): Promise<{ success: boolean; isFree: boolean; blockName?: string }> {
+		try {
+			// 点击匹配到的 when 元素
+			await matched.whenLocator.click();
+
+			// 使用匹配的配置创建自动文件处理器（传入 codeRegion）
+			const autoProcessor = new AutoFileProcessor(
+				this.config,
+				matched.config,
+				this.outputDir,
+				blockPath,
+				blockName,
+				this.context,
+				matched.codeRegion,
+			);
+
+			// 处理文件和变种
+			await autoProcessor.process(block, page);
+
+			// 只有在有 blockPath 时才标记完成
+			if (blockPath) {
+				this.taskProgress?.markBlockComplete(blockPath);
+			}
+
+			return {
+				success: true,
+				isFree: false,
+				blockName: blockName || undefined,
+			};
+		} catch (error) {
+			return this.handleProcessingError(page, error, blockName);
+		}
+	}
+
+	/**
+	 * 创建 BlockContext
+	 */
+	private createBlockContext(
+		page: Page,
+		block: Locator,
+		blockPath: string,
+		blockName: string,
+		clickAndVerify: ClickAndVerify,
+	): BlockContext {
+		return {
 			currentPage: page,
 			block,
 			blockPath,
@@ -404,82 +788,69 @@ export class BlockProcessor {
 			clickAndVerify,
 			clickCode: createClickCode(block, clickAndVerify, this.context),
 		};
+	}
 
-		try {
-			// 如果配置了自动处理，使用 AutoFileProcessor
-			if (this.blockAutoConfig) {
-				// 自动点击 Code 按钮
-				await context.clickCode();
+	/**
+	 * 处理错误
+	 */
+	private async handleProcessingError(
+		page: Page,
+		error: unknown,
+		blockName: string,
+	): Promise<{ success: boolean; isFree: boolean; blockName?: string }> {
+		// 检测是否是进程终止导致的错误（Ctrl+C）
+		const isTerminationError =
+			error instanceof Error &&
+			(error.message.includes("Test ended") ||
+				error.message.includes("Browser closed") ||
+				error.message.includes("Target closed"));
 
-				// 创建自动文件处理器
-				const autoProcessor = new AutoFileProcessor(
-					this.config,
-					this.blockAutoConfig,
-					this.outputDir,
-					blockPath,
-					blockName,
-					this.context,
-				);
-
-				// 处理文件和变种
-				await autoProcessor.process(block, page);
-			} else if (this.blockHandler) {
-				// 只有非 Free Block 才调用 blockHandler（传统方式）
-				await this.blockHandler(context);
-			}
-
-			this.taskProgress?.markBlockComplete(blockPath);
-			return { success: true, isFree: false, blockName };
-		} catch (error) {
-			// 检测是否是进程终止导致的错误（Ctrl+C）
-			const isTerminationError =
-				error instanceof Error &&
-				(error.message.includes("Test ended") ||
-					error.message.includes("Browser closed") ||
-					error.message.includes("Target closed"));
-
-			// 如果是终止导致的错误，直接返回，不显示任何错误信息
-			if (isTerminationError) {
-				return { success: false, isFree: false, blockName };
-			}
-
-			// 导入 ProcessingMode 来检查终止状态（仅在非测试模式下）
-			try {
-				const { ProcessingMode } = await import(
-					"../crawler/modes/ProcessingMode"
-				);
-				const isTerminating = ProcessingMode.isProcessTerminating();
-				if (isTerminating) {
-					return { success: false, isFree: false, blockName };
-				}
-			} catch {
-				// 如果无法导入 ProcessingMode（如测试模式），继续处理错误
-			}
-
-			// 如果开启了 pauseOnError，暂停页面方便检查
-			if (this.config.pauseOnError) {
-				const debugMode = isDebugMode();
-				const messageKey = debugMode
-					? "error.pauseOnErrorDebug"
-					: "error.pauseOnErrorNonDebug";
-
-				this.logger.error(
-					this.i18n.t(messageKey, {
-						type: "Block",
-						name: blockName,
-						path: "",
-						error: error instanceof Error ? error.message : String(error),
-					}),
-				);
-
-				// 只在 debug 模式下暂停
-				if (debugMode) {
-					await page.pause();
-				}
-			}
-
-			return { success: false, isFree: false, blockName };
+		if (isTerminationError) {
+			return {
+				success: false,
+				isFree: false,
+				blockName: blockName || undefined,
+			};
 		}
+
+		// 导入 ProcessingMode 来检查终止状态
+		try {
+			const { ProcessingMode } = await import(
+				"../crawler/modes/ProcessingMode"
+			);
+			if (ProcessingMode.isProcessTerminating()) {
+				return {
+					success: false,
+					isFree: false,
+					blockName: blockName || undefined,
+				};
+			}
+		} catch {
+			// 如果无法导入 ProcessingMode（如测试模式），继续处理错误
+		}
+
+		// 如果开启了 pauseOnError，暂停页面方便检查
+		if (this.config.pauseOnError) {
+			const debugMode = isDebugMode();
+			const messageKey = debugMode
+				? "error.pauseOnErrorDebug"
+				: "error.pauseOnErrorNonDebug";
+
+			this.logger.error(
+				this.i18n.t(messageKey, {
+					type: "Block",
+					name: blockName || "unknown",
+					path: "",
+					error: error instanceof Error ? error.message : String(error),
+				}),
+			);
+
+			if (debugMode) {
+				await page.pause();
+			}
+		}
+
+		return { success: false, isFree: false, blockName: blockName || undefined };
 	}
 
 	/**

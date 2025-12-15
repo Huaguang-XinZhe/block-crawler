@@ -1,11 +1,15 @@
-import { BlockCrawler } from "@huaguang/block-crawler";
 import { type Locator, test } from "@playwright/test";
+import { BlockCrawler } from "../src";
 
 test("untitledui", async ({ page }) => {
-	test.setTimeout(2 * 60 * 1000); // 2 分钟
+	test.setTimeout(3 * 60 * 1000); // 3 分钟
 
 	const crawler = new BlockCrawler(page, {
 		startUrl: "https://www.untitledui.com/react/components",
+		ignoreMismatch: true,
+		progress: {
+			enable: true,
+		},
 	});
 
 	await crawler
@@ -16,7 +20,7 @@ test("untitledui", async ({ page }) => {
 		.inject(["custom-script.js"])
 		// .open("networkidle")
 		.open(
-			"https://www.untitledui.com/react/components/text-editors",
+			// "https://www.untitledui.com/react/components/command-menus",
 			"networkidle",
 		)
 		.page(async ({ currentPage, clickAndVerify }) => {
@@ -29,9 +33,31 @@ test("untitledui", async ({ page }) => {
 			}
 		})
 		.skipFree("FREE")
-		.block("[data-preview]", {
-			extractCode: extractCodeFromPre,
-		})
+		.block([
+			{
+				sectionLocator: '[class="flex flex-col w-full mt-8"]',
+				prepare: async ({ block, clickAndVerify }) => {
+					await clickAndVerify(
+						block.getByRole("tab", { name: "Manual", exact: true }),
+					);
+					return {
+						codeRegion: block.getByRole("tablist").last().locator(".."),
+						skipDefaultClick: true, // 已经切到 Manual，不要再默认点 Code
+					};
+				},
+				extractConfig: {
+					tabContainer: (region) => region.getByRole("tablist"), // 容器 Locator，内部自动 getByRole('tab')
+					outputSubdir: "pro-components",
+				},
+				skipPreChecks: true,
+			},
+			{
+				sectionLocator: "[data-preview]",
+				extractConfig: {
+					extractCode: extractCodeFromPre,
+				},
+			},
+		])
 		.run();
 });
 

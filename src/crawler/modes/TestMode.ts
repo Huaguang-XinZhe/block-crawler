@@ -154,7 +154,46 @@ export class TestMode {
 
 			// 执行 block handler（如果配置了）
 			if (
-				(processingConfig.blockHandler || processingConfig.blockAutoConfig) &&
+				processingConfig.blockSectionConfigs &&
+				processingConfig.blockSectionConfigs.length > 0
+			) {
+				// 多 section 配置模式：不依赖 blockLocator
+				const extendedConfig: ExtendedExecutionConfig = {
+					getBlockName: processingConfig.getBlockName,
+					blockNameLocator: processingConfig.blockNameLocator,
+					getAllBlocks: processingConfig.getAllBlocks,
+					scriptInjection: processingConfig.scriptInjection,
+					blockSkipFree: processingConfig.blockSkipFreeText,
+				};
+
+				const blockProcessor = new BlockProcessor(
+					this.config,
+					outputDir,
+					"", // 多 section 模式不使用单一 blockLocator
+					null, // handler 由 BlockSectionConfig.config 驱动
+					this.taskProgress,
+					undefined,
+					this.mappingManager,
+					false,
+					extendedConfig,
+					undefined,
+					undefined,
+					undefined,
+					undefined,
+					undefined,
+					processingConfig.progressiveLocate,
+					undefined,
+					processingConfig.blockSectionConfigs,
+				);
+
+				await blockProcessor.processBlocksInPage(
+					this.page,
+					processingConfig.testUrl,
+				);
+			} else if (
+				(processingConfig.blockHandler ||
+					processingConfig.blockAutoConfig ||
+					processingConfig.conditionalBlockConfigs) &&
 				processingConfig.blockLocator
 			) {
 				// 准备 ExtendedExecutionConfig
@@ -183,6 +222,8 @@ export class TestMode {
 					undefined, // logger
 					processingConfig.blockAutoConfig, // blockAutoConfig
 					processingConfig.progressiveLocate, // progressiveLocate
+					processingConfig.conditionalBlockConfigs, // conditionalBlockConfigs
+					undefined, // blockSectionConfigs
 				);
 
 				await blockProcessor.processBlocksInPage(

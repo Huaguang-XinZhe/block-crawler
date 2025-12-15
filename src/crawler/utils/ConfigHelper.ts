@@ -8,7 +8,11 @@ import type {
 	SectionConfig,
 	TabSectionLocator,
 } from "../../collectors/types";
-import type { BlockAutoConfig } from "../../types/handlers";
+import type {
+	BlockAutoConfig,
+	BlockSectionConfig,
+	ConditionalBlockConfig,
+} from "../../types/handlers";
 import type { Locale } from "../../utils/i18n";
 
 /**
@@ -41,8 +45,13 @@ export interface ProcessingConfig {
 	pageHandler?: any;
 	blockLocator?: string;
 	blockHandler?: any;
-	// Block 自动处理配置
+	// Block 自动处理配置（单个配置或条件配置数组）
 	blockAutoConfig?: BlockAutoConfig;
+	// 条件 Block 配置数组（根据不同 Locator 使用不同配置）
+	/** @deprecated 请使用 blockSectionConfigs */
+	conditionalBlockConfigs?: ConditionalBlockConfig[];
+	// 多 Block Section 配置数组（每个配置有自己的 sectionLocator）
+	blockSectionConfigs?: BlockSectionConfig[];
 	// 渐进式定位（批次大小固定为 3）
 	progressiveLocate?: boolean;
 	// 页面级 skipFree: undefined = 未设置, "default" = 使用默认匹配(/free/i), string = 精确匹配

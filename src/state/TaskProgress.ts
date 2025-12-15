@@ -390,15 +390,13 @@ export class TaskProgress {
 
 			for (const dir of dirs) {
 				const subDirPath = path.join(fullPath, dir.name);
-				const hasDirectFiles =
-					await this.hasDirectComponentFiles(subDirPath);
+				const hasDirectFiles = await this.hasDirectComponentFiles(subDirPath);
 				if (hasDirectFiles) {
 					// 子目录直接有组件文件，它自己是页面目录
 					hasSubDirWithDirectFiles = true;
 				} else {
 					// 检查子目录是否有更深层的组件文件
-					const hasDeepFiles =
-						await this.hasContentInDirectory(subDirPath);
+					const hasDeepFiles = await this.hasContentInDirectory(subDirPath);
 					if (hasDeepFiles) {
 						hasSubDirWithDeepFiles = true;
 					}
@@ -511,9 +509,7 @@ export class TaskProgress {
 	private async hasDirectComponentFiles(dirPath: string): Promise<boolean> {
 		try {
 			const entries = await fse.readdir(dirPath, { withFileTypes: true });
-			return entries.some(
-				(e) => e.isFile() && this.isComponentFile(e.name),
-			);
+			return entries.some((e) => e.isFile() && this.isComponentFile(e.name));
 		} catch {
 			return false;
 		}
@@ -682,7 +678,9 @@ export class TaskProgress {
 			// 标记为已保存
 			this.isDirty = false;
 		} catch (error) {
-			console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
+			console.error(
+				`❌ ${error instanceof Error ? error.message : String(error)}`,
+			);
 		}
 	}
 

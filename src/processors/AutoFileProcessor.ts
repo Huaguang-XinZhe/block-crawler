@@ -1,16 +1,22 @@
+import path from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import fse from "fs-extra";
-import type { LocatorOrCustom, LocatorsOrCustom } from "../collectors/types";
+import type { LocatorOrCustom } from "../collectors/types";
 import type { InternalConfig } from "../config/ConfigManager";
 import type {
 	BlockAutoConfig,
 	CodeExtractor,
-	VariantConfig,
+	ConditionalBlockConfig,
 } from "../types/handlers";
 import { defaultCodeExtractor } from "../utils/default-code-extractor";
 import { createI18n, type I18n } from "../utils/i18n";
 import { resolveTabName } from "../utils/safe-output";
 import type { ProcessingContext } from "./ProcessingContext";
+
+/**
+ * 条件配置匹配的超时时间（毫秒）
+ */
+const CONDITION_MATCH_TIMEOUT = 100;
 
 /**
  * 自动文件处理器
@@ -19,6 +25,7 @@ import type { ProcessingContext } from "./ProcessingContext";
 export class AutoFileProcessor {
 	private i18n: I18n;
 	private extractCode: CodeExtractor;
+	private effectiveOutputDir: string;
 
 	constructor(
 		private config: InternalConfig,
@@ -27,32 +34,96 @@ export class AutoFileProcessor {
 		private blockPath: string,
 		private blockName: string,
 		private context: ProcessingContext,
+		private codeRegion?: Locator,
 	) {
 		this.i18n = createI18n(config.locale);
 		this.extractCode = autoConfig.extractCode || defaultCodeExtractor;
+		// 如果配置了 outputSubdir，则使用子目录
+		this.effectiveOutputDir = autoConfig.outputSubdir
+			? path.join(outputDir, autoConfig.outputSubdir)
+			: outputDir;
+	}
+
+	/**
+	 * 根据条件配置快速匹配合适的配置
+	 *
+	 * @param block Block 元素
+	 * @param conditionalConfigs 条件配置数组
+	 * @returns 匹配的配置或 undefined
+	 */
+	static async matchConditionalConfig(
+		block: Locator,
+		conditionalConfigs: ConditionalBlockConfig[],
+	): Promise<
+		| {
+				config: BlockAutoConfig;
+				whenLocator: Locator;
+				codeRegion?: Locator;
+				skipPreChecks?: boolean;
+		  }
+		| undefined
+	> {
+		for (const conditionalConfig of conditionalConfigs) {
+			try {
+				// 获取条件 Locator
+				const conditionLocator = conditionalConfig.when(block);
+
+				// 使用短超时快速判断是否可见
+				const isVisible = await conditionLocator.isVisible({
+					timeout: CONDITION_MATCH_TIMEOUT,
+				});
+
+				if (isVisible) {
+					// 匹配成功，返回配置和 whenLocator（用于点击）
+					const codeRegionLocator = conditionalConfig.codeRegion
+						? conditionalConfig.codeRegion(block)
+						: undefined;
+
+					return {
+						config: conditionalConfig.config,
+						whenLocator: conditionLocator,
+						codeRegion: codeRegionLocator,
+						skipPreChecks: conditionalConfig.skipPreChecks,
+					};
+				}
+			} catch {
+				// 超时或其他错误，继续尝试下一个配置
+				continue;
+			}
+		}
+
+		// 没有匹配的配置
+		return undefined;
 	}
 
 	/**
 	 * 处理 Block 的所有文件和变种
 	 */
 	async process(block: Locator, currentPage: Page): Promise<void> {
+		// 使用 codeRegion 或 block 作为代码提取范围
+		const region = this.codeRegion || block;
+
 		// 如果配置了变种，遍历所有变种
 		if (this.autoConfig.variants && this.autoConfig.variants.length > 0) {
-			await this.processWithVariants(block, currentPage);
-		} else if (this.autoConfig.fileTabs) {
-			// 如果配置了 fileTabs，处理多文件
-			await this.processFileTabs(block, currentPage);
+			await this.processWithVariants(block, region, currentPage);
+		} else if (this.autoConfig.tabContainer) {
+			// 如果配置了 tabContainer，处理多文件
+			await this.processFileTabs(block, region, currentPage);
 		} else {
-			// 没有 fileTabs，处理单个文件（输出到 blockName.extension）
-			await this.processSingleFile(block);
+			// 没有 tabContainer，处理单个文件（输出到 blockName.extension）
+			await this.processSingleFile(block, region);
 		}
 	}
 
 	/**
 	 * 处理带变种的文件
+	 * @param block 用于滚动和定位按钮
+	 * @param region 代码提取区域（可能是 codeRegion 或 block）
+	 * @param currentPage 当前页面
 	 */
 	private async processWithVariants(
 		block: Locator,
+		region: Locator,
 		currentPage: Page,
 	): Promise<void> {
 		const variants = this.autoConfig.variants!;
@@ -121,60 +192,68 @@ export class AutoFileProcessor {
 				}
 
 				// 处理该变种下的所有文件
-				if (this.autoConfig.fileTabs) {
-					await this.processFileTabs(block, currentPage, variantName);
+				if (this.autoConfig.tabContainer) {
+					await this.processFileTabs(block, region, currentPage, variantName);
 				}
 			}
 		}
 	}
 
 	/**
-	 * 处理单个文件（没有 fileTabs 的场景）
+	 * 处理单个文件（没有 tabContainer 的场景）
 	 * 输出到 blockName.extension（而非 目录/index.extension）
+	 * @param block 用于滚动
+	 * @param region 代码提取区域（可能是 codeRegion 或 block）
 	 */
-	private async processSingleFile(block: Locator): Promise<void> {
+	private async processSingleFile(
+		block: Locator,
+		region: Locator,
+	): Promise<void> {
 		// 先滚动 block 到视口顶部，触发懒加载
 		await this.scrollToTop(block);
 
-		// 定位 pre 元素
-		const preLocator = block.locator("pre");
-		const preCount = await preLocator.count();
-
-		// 如果有多个 pre 元素，取最后一个
-		const pre = preCount > 1 ? preLocator.last() : preLocator;
+		// 在 region 中定位 pre 元素
+		// 默认取最后一个（页面上常见同时存在复制用 pre + 展示用 pre）
+		const pre = region.locator("pre").last();
 
 		// 提取代码
 		const code = await this.extractCode(pre);
 
-		// 没有 fileTabs 时，直接输出到 blockName.tsx
+		// 没有 tabContainer 时，直接输出到 blockName.tsx
 		const fileName = `${this.blockName}.tsx`;
 
-		// 构建输出路径（不再嵌套目录）
-		const outputPath = `${this.outputDir}/${this.blockPath}.tsx`;
+		// 构建输出路径（使用 effectiveOutputDir，不再嵌套目录）
+		const outputPath = `${this.effectiveOutputDir}/${this.blockPath}.tsx`;
 
 		// 输出文件
 		await fse.outputFile(outputPath, code);
-		console.log(`   📝 [${this.blockName}] ${fileName}`);
+		// 日志格式：有 blockName 显示 [blockName]，没有则省略
+		const blockLabel = this.blockName ? `[${this.blockName}] ` : "";
+		console.log(`   📝 ${blockLabel}${fileName}`);
 	}
 
 	/**
 	 * 处理文件 Tabs
+	 * @param block 用于滚动
+	 * @param region 代码提取区域（用于获取 tabContainer）
+	 * @param currentPage 当前页面
+	 * @param variantName 变种名称（可选）
 	 */
 	private async processFileTabs(
 		block: Locator,
+		region: Locator,
 		currentPage: Page,
 		variantName?: string,
 	): Promise<void> {
-		if (!this.autoConfig.fileTabs) return;
+		if (!this.autoConfig.tabContainer) return;
 
 		// 先滚动 block 到视口顶部，触发懒加载
 		await this.scrollToTop(block);
 
-		// 获取所有文件 Tab
-		const fileTabs = await this.resolveLocators(
-			this.autoConfig.fileTabs,
-			block,
-		);
+		// 从容器中获取所有文件 Tab（自动调用 getByRole(tabRole)）
+		const container = this.autoConfig.tabContainer(region);
+		const tabRole = this.autoConfig.tabRole || "tab";
+		const fileTabs = await container.getByRole(tabRole).all();
 
 		// 遍历所有文件 Tab
 		for (let i = 0; i < fileTabs.length; i++) {
@@ -185,34 +264,37 @@ export class AutoFileProcessor {
 				await fileTab.click();
 			}
 
-			// 获取 Tab 名称
+			// 获取 Tab 名称（支持路径格式，如 "base/text-editor/text-editor.tsx"）
 			const tabName = (await fileTab.textContent())?.trim();
 			if (!tabName) {
 				console.warn("⚠️ tabName is null");
 				continue;
 			}
 
-			// 智能解析文件名：语言名 → index.ext，文件名 → 直接使用
+			// 智能解析：如果是路径格式或文件名，直接使用；如果是语言名，转为 index.ext
 			const tabResult = resolveTabName(tabName);
-			const fileName = tabResult.isFilename
-				? tabResult.filename!
+			// 路径格式或文件名直接使用原始 tabName，语言名转为 index.ext
+			const filePath = tabResult.isFilename
+				? tabName // 直接使用原始路径/文件名
 				: `index${tabResult.extension}`;
 
-			// 定位 pre 元素
-			const pre = block.locator("pre");
+			// 在 region 中定位 pre 元素（默认取最后一个，避免 strict mode violation）
+			const pre = region.locator("pre").last();
 
 			// 提取代码
 			const code = await this.extractCode(pre);
 
-			// 构建输出路径
+			// 构建输出路径（使用 effectiveOutputDir，直接复用 tab 名称作为路径）
 			const outputPath = variantName
-				? `${this.outputDir}/${this.blockPath}/${variantName}/${fileName}`
-				: `${this.outputDir}/${this.blockPath}/${fileName}`;
+				? `${this.effectiveOutputDir}/${variantName}/${filePath}`
+				: `${this.effectiveOutputDir}/${filePath}`;
 
 			// 输出文件
 			await fse.outputFile(outputPath, code);
+			// 日志格式：有 blockName 显示 [blockName]，没有则省略
+			const blockLabel = this.blockName ? `[${this.blockName}] ` : "";
 			console.log(
-				`   📝 [${this.blockName}] ${variantName ? `${variantName}/` : ""}${fileName}`,
+				`   📝 ${blockLabel}${variantName ? `${variantName}/` : ""}${filePath}`,
 			);
 		}
 	}
@@ -231,19 +313,6 @@ export class AutoFileProcessor {
 	}
 
 	/**
-	 * 解析多个定位符
-	 */
-	private async resolveLocators(
-		locatorsOrCustom: LocatorsOrCustom<Locator>,
-		parent: Locator,
-	): Promise<Locator[]> {
-		if (typeof locatorsOrCustom === "string") {
-			return await parent.locator(locatorsOrCustom).all();
-		}
-		return await locatorsOrCustom(parent);
-	}
-
-	/**
 	 * 滚动元素到视口顶部
 	 * 用于触发懒加载：将 block 滚动到顶部，确保 pre 区域进入视口
 	 */
@@ -254,5 +323,4 @@ export class AutoFileProcessor {
 		// // 等待懒加载完成
 		// await element.page().waitForTimeout(200);
 	}
-
 }

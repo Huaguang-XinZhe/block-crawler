@@ -5,6 +5,8 @@ import type {
 	BeforeContext,
 	BlockAutoConfig,
 	BlockHandler,
+	BlockSectionConfig,
+	ConditionalBlockConfig,
 	PageHandler,
 } from "../types";
 import {
@@ -36,6 +38,8 @@ export class LinkExecutor {
 			blockSectionLocator: string | null;
 			blockHandler: BlockHandler | null;
 			blockAutoConfig: BlockAutoConfig | null;
+			conditionalBlockConfigs: ConditionalBlockConfig[] | null; // 条件配置数组
+			blockSectionConfigs: BlockSectionConfig[] | null; // 多 section 配置
 			pageHandler: PageHandler | null;
 			beforeProcessBlocks: ((context: BeforeContext) => Promise<void>) | null;
 			waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
@@ -43,8 +47,8 @@ export class LinkExecutor {
 			afterOpenScripts?: string[];
 			verifyBlockCompletion?: boolean;
 			autoScroll?: boolean | AutoScrollConfig;
-			expectedBlockCount?: number; // 新增：预期的组件数
-			progressiveLocate?: boolean; // 新增：渐进式定位
+			expectedBlockCount?: number; // 预期的组件数
+			progressiveLocate?: boolean; // 渐进式定位
 		},
 	): Promise<void> {
 		const domain = new URL(this.context.baseUrl).hostname;
@@ -117,8 +121,28 @@ export class LinkExecutor {
 
 			// 再执行 Block 级处理器（如果配置了）
 			if (
+				options.blockSectionConfigs &&
+				options.blockSectionConfigs.length > 0
+			) {
+				await this.processBlocks(
+					newPage,
+					relativeLink,
+					null,
+					null,
+					null,
+					null,
+					options.blockSectionConfigs,
+					options.beforeProcessBlocks,
+					options.verifyBlockCompletion ?? true,
+					options.expectedBlockCount,
+					options.progressiveLocate ?? false,
+					logger,
+				);
+			} else if (
 				options.blockSectionLocator &&
-				(options.blockHandler || options.blockAutoConfig)
+				(options.blockHandler ||
+					options.blockAutoConfig ||
+					options.conditionalBlockConfigs)
 			) {
 				await this.processBlocks(
 					newPage,
@@ -126,6 +150,8 @@ export class LinkExecutor {
 					options.blockSectionLocator,
 					options.blockHandler,
 					options.blockAutoConfig,
+					options.conditionalBlockConfigs,
+					null,
 					options.beforeProcessBlocks,
 					options.verifyBlockCompletion ?? true,
 					options.expectedBlockCount, // 传递预期组件数
@@ -220,9 +246,11 @@ export class LinkExecutor {
 	private async processBlocks(
 		page: Page,
 		relativeLink: string,
-		blockSectionLocator: string,
+		blockSectionLocator: string | null,
 		blockHandler: BlockHandler | null,
 		blockAutoConfig: BlockAutoConfig | null,
+		conditionalBlockConfigs: ConditionalBlockConfig[] | null,
+		blockSectionConfigs: BlockSectionConfig[] | null,
 		beforeProcessBlocks: ((context: BeforeContext) => Promise<void>) | null,
 		verifyBlockCompletion: boolean,
 		expectedBlockCount: number | undefined,
@@ -232,7 +260,7 @@ export class LinkExecutor {
 		const blockProcessor = new BlockProcessor(
 			this.context.config,
 			this.context.outputDir,
-			blockSectionLocator,
+			blockSectionLocator || "",
 			blockHandler,
 			this.context.taskProgress,
 			beforeProcessBlocks,
@@ -245,6 +273,8 @@ export class LinkExecutor {
 			logger,
 			blockAutoConfig ?? undefined,
 			progressiveLocate,
+			conditionalBlockConfigs ?? undefined,
+			blockSectionConfigs ?? undefined,
 		);
 
 		await blockProcessor.processBlocksInPage(page, relativeLink);
