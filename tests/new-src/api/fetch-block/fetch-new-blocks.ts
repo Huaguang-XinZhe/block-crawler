@@ -4,10 +4,9 @@
  * 自动从 changelog 页面获取新区块列表并拉取代码
  */
 
-import type { Page, Locator } from "@playwright/test";
-import { fetchBlockCodes, type FetchOptions } from "./curl-fetcher";
-
-// ===================== 类型定义 =====================
+import type { Locator, Page } from "@playwright/test";
+import { fetchBlockCodes } from "./fetch-block-codes";
+import type { FetchOptions } from "./types";
 
 export interface NewBlocksFetcherOptions {
 	/** 域名，如 www.shadcnblocks.com */
@@ -23,20 +22,6 @@ export interface NewBlocksFetcherOptions {
 		output?: Omit<FetchOptions["output"], "newBlocks">;
 	};
 }
-
-// ===================== 内部工具 =====================
-
-/** 获取链接文本列表 */
-async function getLinkTexts(links: Locator[]): Promise<string[]> {
-	const tasks = links.map(async (link) => {
-		const text = await link.textContent();
-		return text;
-	});
-	const texts = await Promise.all(tasks);
-	return texts.filter((text): text is string => text !== null);
-}
-
-// ===================== 主入口 =====================
 
 /**
  * 拉取新区块代码
@@ -87,4 +72,14 @@ export async function fetchNewBlocks(
 			newBlocks: true,
 		},
 	});
+}
+
+/** 获取链接文本列表 */
+async function getLinkTexts(links: Locator[]): Promise<string[]> {
+	const tasks = links.map(async (link) => {
+		const text = await link.textContent();
+		return text;
+	});
+	const texts = await Promise.all(tasks);
+	return texts.filter((text): text is string => text !== null);
 }

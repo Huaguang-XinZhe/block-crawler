@@ -1,13 +1,4 @@
 /**
- * 通用工具函数
- */
-
-/** 首字母大写 */
-export function capitalize(str: string): string {
-	return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-/**
  * 从 JSON 对象中根据路径提取值
  * @param obj - JSON 对象
  * @param pathStr - 路径，如 .files[0].content 或 files[0].content
@@ -34,13 +25,6 @@ export function getValueByPath(obj: unknown, pathStr: string): unknown {
 	return result;
 }
 
-/** 将 cookies 对象转为 Cookie 字符串 */
-export function cookiesToString(cookies: Record<string, string>): string {
-	return Object.entries(cookies)
-		.map(([key, value]) => `${key}=${value}`)
-		.join("; ");
-}
-
 /**
  * 出错时重试一次，可在重试前执行自定义逻辑
  * @param action - 主要执行的操作
@@ -56,4 +40,16 @@ export async function retryOnce<T>(
 		await onError?.();
 		return await action();
 	}
+}
+
+/** 首字母大写 */
+export function capitalize(str: string): string {
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/** 将 cookies 对象转为 Cookie 字符串 */
+export function cookiesToString(cookies: Record<string, string>): string {
+	return Object.entries(cookies)
+		.map(([key, value]) => `${key}=${value}`)
+		.join("; ");
 }

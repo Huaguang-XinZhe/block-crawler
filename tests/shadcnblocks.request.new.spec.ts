@@ -1,5 +1,5 @@
 import { test } from "@playwright/test";
-import { fetchNewBlocks } from "./utils/new-blocks-fetcher";
+import { fetchNewBlocks } from "./new-src/api/fetch-new-blocks";
 
 test("shadcnblocks.request.new", async ({ page }) => {
 	test.setTimeout(2 * 60 * 1000); // 2 分钟

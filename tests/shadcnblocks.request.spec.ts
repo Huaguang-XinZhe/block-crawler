@@ -1,96 +1,10 @@
-import { test, Locator } from "@playwright/test";
-import { BlockNameCollector } from "./utils/block-name-collector";
-import { fetchBlockCodes, fetchBlockDebug } from "./utils/curl-fetcher";
-import { retryOnce } from "./utils/utils";
-
-interface ForEachBlockOptions {
-	/** blockName 获取配置 */
-	blockName?: {
-		/** 定位器（相对于 block），默认使用 getByRole('heading') */
-		locator?: Locator;
-		/** 超时时间（毫秒），默认 1000 */
-		timeout?: number;
-	};
-	/** 渐进式定位：处理完当前批次后检查新增，直到没有新增为止。默认 true */
-	progressive?: boolean;
-}
-
-/**
- * 遍历 blocks 并执行处理逻辑，自动获取 blockName
- * @param blocksLocator - blocks 的 Locator
- * @param handler - 处理函数，接收 block 和 blockName
- * @param options - 可选配置
- */
-async function forEachBlock(
-	blocksLocator: Locator,
-	handler: (block: Locator, blockName: string | null) => Promise<void>,
-	options?: ForEachBlockOptions,
-) {
-	const { blockName = {}, progressive = true } = options ?? {};
-	const { locator: blockNameLocator, timeout = 1000 } = blockName;
-
-	// 获取 blockName 的辅助函数
-	const getBlockName = (block: Locator) => {
-		const nameLocator = blockNameLocator ?? block.getByRole("heading");
-		return retryOnce(
-			() => nameLocator.textContent({ timeout }),
-			() =>
-				block.evaluate((el) =>
-					el.scrollIntoView({ behavior: "auto", block: "start" }),
-				),
-		);
-	};
-
-	if (!progressive) {
-		// 只定位一次
-		const blocks = await blocksLocator.all();
-		for (const block of blocks) {
-			const blockName = await getBlockName(block);
-			await handler(block, blockName);
-		}
-	} else {
-		// 渐进式定位：处理完当前批次后，检查是否有新增
-		let processedCount = 0;
-		while (true) {
-			const allBlocks = await blocksLocator.all();
-			const newBlocks = allBlocks.slice(processedCount);
-			if (newBlocks.length === 0) break;
-
-			console.log(
-				`发现 ${newBlocks.length} 个新 block，总计 ${allBlocks.length}`,
-			);
-			for (const block of newBlocks) {
-				const blockName = await getBlockName(block);
-				await handler(block, blockName);
-			}
-			processedCount = allBlocks.length;
-		}
-	}
-}
-
-/**
- * 遍历下拉菜单中的指定选项，依次选中并执行自定义处理逻辑
- * @param menu - 下拉菜单的 Locator
- * @param options - 需要处理的选项文本列表
- * @param handler - 每个选项被选中后的处理函数
- */
-async function forEachMenuOption(
-	menu: Locator,
-	options: string[],
-	handler: (optionName: string) => Promise<void>,
-) {
-	const page = menu.page();
-	for (const optionName of options) {
-		// 打开菜单
-		await menu.click();
-		// 直接通过文本定位并点击选项（无需遍历）
-		await page.getByRole("option", { name: optionName }).click();
-		// 执行自定义处理逻辑
-		await handler(optionName);
-	}
-}
-
-// ===================== 使用示例 =====================
+import { test } from "@playwright/test";
+import {
+	fetchBlockCodes,
+	forEachBlock,
+	forEachMenuOption,
+} from "./new-src/api";
+import { BlockNameCollector } from "./new-src/module";
 
 test("shadcnblocks2", async ({ page }) => {
 	test.setTimeout(60 * 1000);

@@ -1,13 +1,9 @@
-/**
- * cURL 解析和 cookies 管理
- */
-
-import { toJsonObject } from "curlconverter";
 import fse from "fs-extra";
-import path from "path";
-import { cookiesToString } from "./utils";
-
-const CRAWLER_DIR = ".crawler";
+import { cookiesToString } from "../../../shared/utils";
+import type { OutputOptions, ParsedCurl } from "../types";
+import { getCurlPath } from "../utils";
+import { fetchBlock } from "./fetch-block";
+import { saveBlockCode } from "./save-block-code";
 
 // Cookie 格式正则：-b/--cookie 或 -H 'Cookie: ...'
 const COOKIE_PATTERNS = {
@@ -17,34 +13,40 @@ const COOKIE_PATTERNS = {
 	header: /-H\s+['"]Cookie:\s*[^'"]*['"]/,
 };
 
-export interface ParsedCurl {
-	url: string;
-	method: string;
-	headers: Record<string, string>;
-	cookies: Record<string, string>;
-}
+/** 刷新授权：请求第一个 block，更新 cookies */
+export async function refreshAuthorization(
+	parsed: ParsedCurl,
+	domain: string,
+	firstBlock: string,
+	codePath: string,
+	outputOptions: OutputOptions,
+): Promise<ParsedCurl> {
+	console.log(`🔄 刷新授权中（请求 ${firstBlock}）...`);
 
-/** 获取 cURL 文件路径 */
-function getCurlPath(domain: string): string {
-	return path.join(CRAWLER_DIR, domain, "request.bash");
-}
+	const { data, setCookies } = await fetchBlock(parsed, firstBlock, false);
 
-/** 解析 cURL 命令文件 */
-export async function parseCurlFile(domain: string): Promise<ParsedCurl> {
-	const curlPath = getCurlPath(domain);
-	const curlCommand = await fse.readFile(curlPath, "utf-8");
-	const parsed = toJsonObject(curlCommand);
+	// 解析并验证 Set-Cookie（会在 deleted 时抛出错误）
+	const newCookies = parseAndValidateSetCookies(setCookies, parsed.cookies);
 
-	return {
-		url: parsed.url as string,
-		method: (parsed.method as string) || "GET",
-		headers: (parsed.headers as Record<string, string>) || {},
-		cookies: (parsed.cookies as Record<string, string>) || {},
-	};
+	// 检查是否有更新
+	const hasUpdates =
+		JSON.stringify(newCookies) !== JSON.stringify(parsed.cookies);
+
+	if (hasUpdates) {
+		parsed.cookies = newCookies;
+		await updateCurlCookies(domain, newCookies);
+		console.log("✅ 授权已刷新并持久化");
+	}
+
+	// 保存第一个 block 的代码
+	await saveBlockCode(domain, firstBlock, data, codePath, outputOptions);
+	console.log(`✓ ${firstBlock}`);
+
+	return parsed;
 }
 
 /** 更新 cURL 文件中的 cookies */
-export async function updateCurlCookies(
+async function updateCurlCookies(
 	domain: string,
 	newCookies: Record<string, string>,
 ): Promise<void> {
@@ -68,23 +70,10 @@ export async function updateCurlCookies(
 }
 
 /**
- * 从 Set-Cookie 字符串中提取 cookie 名和值
- */
-function parseSingleCookie(
-	setCookie: string,
-): { name: string; value: string } | null {
-	const match = setCookie.match(/^([^=]+)=([^;]*)/);
-	if (match) {
-		return { name: match[1], value: match[2] };
-	}
-	return null;
-}
-
-/**
  * 解析 Set-Cookie 数组并检查是否有 deleted 的 cookie
  * @throws 如果有 cookie 值为 "deleted"，抛出错误
  */
-export function parseAndValidateSetCookies(
+function parseAndValidateSetCookies(
 	setCookies: string[],
 	existingCookies: Record<string, string>,
 ): Record<string, string> {
@@ -116,9 +105,15 @@ export function parseAndValidateSetCookies(
 	return newCookies;
 }
 
-/** 构建请求 URL（替换最后一段为 blockName） */
-export function buildUrl(baseUrl: string, blockName: string): string {
-	const urlParts = baseUrl.split("/");
-	urlParts[urlParts.length - 1] = blockName;
-	return urlParts.join("/");
+/**
+ * 从 Set-Cookie 字符串中提取 cookie 名和值
+ */
+function parseSingleCookie(
+	setCookie: string,
+): { name: string; value: string } | null {
+	const match = setCookie.match(/^([^=]+)=([^;]*)/);
+	if (match) {
+		return { name: match[1], value: match[2] };
+	}
+	return null;
 }

@@ -1,5 +1,5 @@
-import { test } from "@playwright/test";
 import { BlockCrawler } from "@huaguang/block-crawler";
+import { test } from "@playwright/test";
 
 test("shadcnblocks", async ({ page }) => {
 	test.setTimeout(3 * 60 * 1000); // 3 分钟
