@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 /**
  * 从 JSON 对象中根据路径提取值
  * @param obj - JSON 对象
@@ -52,4 +55,40 @@ export function cookiesToString(cookies: Record<string, string>): string {
 	return Object.entries(cookies)
 		.map(([key, value]) => `${key}=${value}`)
 		.join("; ");
+}
+
+/** 寻找根目录 */
+export function findProjectRoot(): string {
+	const gitDir = findNearestFile(".git");
+	if (!gitDir) {
+		throw new Error("未找到项目根目录（无 .git 目录）");
+	}
+	return path.dirname(gitDir);
+}
+
+/**
+ * 向上查找文件或目录
+ * @param targetName 目标文件或目录名
+ * @param startDir 开始查找的目录，默认为 process.cwd()
+ * @returns 找到的完整路径，未找到返回 null
+ */
+export function findNearestFile(
+	targetName: string,
+	startDir: string = process.cwd(),
+): string | null {
+	let currentDir = startDir;
+	const { root } = path.parse(currentDir);
+
+	while (true) {
+		const fullPath = path.join(currentDir, targetName);
+		if (fs.existsSync(fullPath)) {
+			return fullPath;
+		}
+
+		if (currentDir === root) {
+			return null;
+		}
+
+		currentDir = path.dirname(currentDir);
+	}
 }
